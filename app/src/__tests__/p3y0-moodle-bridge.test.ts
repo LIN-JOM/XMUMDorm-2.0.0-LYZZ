@@ -1,4 +1,6 @@
 import courses from './fixtures/moodle/courses.json';
+import state from './fixtures/moodle/state.json';
+import events from './fixtures/moodle/events.json';
 import { buildMoodleReadScript, parseMoodleBridgeMessage, type MoodleReadRequest } from '@/features/tools/moodle/bridge';
 
 async function runScript(data: unknown = courses, origin = 'https://l.xmu.edu.my', error?: object,
@@ -40,6 +42,16 @@ it.each([
   const { messages } = await runScript(courses, undefined, { errorcode, message: 'private exception sesskey=secret' });
   expect(parseMoodleBridgeMessage(messages[0])).toEqual({ requestId: 'request-1', method: 'courses', status });
   expect(messages[0]).not.toMatch(/private|secret|errorcode/);
+});
+
+it('executes state and paginated events with the official parameter shape', async () => {
+  const stateResult = await runScript(JSON.stringify(state), undefined, undefined, { request: { method: 'state', courseId: 42 } });
+  expect(stateResult.calls).toEqual([{ methodname: 'core_courseformat_get_state', args: { courseid: 42 } }]);
+  expect(parseMoodleBridgeMessage(stateResult.messages[0])).toMatchObject({ method: 'state', status: 'success', data: { courseId: 42 } });
+  const eventResult = await runScript(events, undefined, undefined, { request: { method: 'events', afterEventId: 540 } });
+  expect(eventResult.calls).toEqual([{ methodname: 'core_calendar_get_action_events_by_timesort',
+    args: { timesortfrom: 1, aftereventid: 540, limitnum: 50 } }]);
+  expect(parseMoodleBridgeMessage(eventResult.messages[0])).toMatchObject({ method: 'events', status: 'success', data: { lastId: 540 } });
 });
 
 it.each([
