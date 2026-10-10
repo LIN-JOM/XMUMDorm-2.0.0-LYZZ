@@ -169,7 +169,7 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
       const accessVisible = enabled(standard ? item.accessVisible : item.accessvisible);
       const module = {
         id: id, sectionId: sectionId, type: type, name: name,
-        url: userVisible && accessVisible ? safeUrl(item.url) : null,
+        url: userVisible ? safeUrl(item.url) : null,
         visible: true, userVisible: userVisible, accessVisible: accessVisible,
       };
       modules.push(module);
@@ -207,8 +207,11 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
       const time = integer(standard ? item.time : item.timesort, 0);
       if (id === null || courseId === null || name === null || time === null || seen[String(id)]) continue;
       const action = record(item.action);
+      const viewUrl = safeUrl(item.viewurl);
+      const fallbackUrl = viewUrl !== null && viewUrl.indexOf('/calendar/') < 0 ? viewUrl : null;
       events.push({ id: id, courseId: courseId, moduleId: integer(standard ? item.moduleId : item.instance, 1),
-        name: name, time: time, url: safeUrl(standard ? item.url : action === null ? item.viewurl : action.url) });
+        name: name, time: time, url: standard ? safeUrl(item.url)
+          : safeUrl(item.url) ?? safeUrl(action === null ? null : action.url) ?? fallbackUrl });
       seen[String(id)] = true;
     }
     return { events: events, firstId: firstId, lastId: lastId };

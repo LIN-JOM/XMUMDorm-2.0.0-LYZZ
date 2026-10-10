@@ -24,4 +24,6 @@ sourceURLs：
 
 投影边界：只接受 HTTPS、同源 `l.xmu.edu.my` 的 URL，保留常用数值导航 query。
 其他 query、fragment 和凭据字段不进入标准对象。
-原始可见性缺失按隐藏处理；可展示的受限模块保留限制布尔值并移除打开链接。
+原始可见性缺失按隐藏处理；模块仅在 uservisible 明确为真时保留安全链接。
+accessvisible 描述是否对所有人均可用，不替代当前用户的 uservisible 权限。
+事件优先使用官方 url，其次使用安全 action.url；不把删去定位参数的 viewurl 当作模块链接。
