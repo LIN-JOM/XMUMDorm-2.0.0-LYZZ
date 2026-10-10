@@ -67,4 +67,27 @@ describe('Moodle response projection', () => {
     });
   });
 
+  it('reprojects standard responses into fresh whitelist objects', () => {
+    const inputs = { courses: coursesFixture, state: stateFixture, events: eventsFixture };
+    for (const method of ['courses', 'state', 'events'] as const) {
+      const projected = parseMoodleResponse(method, inputs[method]);
+      expect(projected).not.toBeNull();
+      const polluted = { ...projected, sesskey: 'synthetic-secret' };
+      const second = parseMoodleResponse(method, polluted);
+      expect(second).toEqual(projected);
+      expect(second).not.toBe(projected);
+      expect(JSON.stringify(second)).not.toContain('synthetic-secret');
+    }
+  });
+
+  it('executes the same projection without native module closure dependencies', () => {
+    const injected: typeof parseMoodleResponse = new Function(`return (${parseMoodleResponse.toString()});`)();
+    expect(injected('courses', coursesFixture)).toEqual(parseMoodleResponse('courses', coursesFixture));
+    expect(injected('state', JSON.stringify(stateFixture))).toEqual(parseMoodleResponse('state', stateFixture));
+    expect(injected('events', eventsFixture)).toEqual(parseMoodleResponse('events', eventsFixture));
+  });
+
+  it.each<MoodleMethod>(['courses', 'state', 'events'])('rejects invalid top-level %s payloads', (method) => {
+    for (const value of [null, [], 1, 'bad json', {}]) expect(parseMoodleResponse(method, value)).toBeNull();
+  });
 });
