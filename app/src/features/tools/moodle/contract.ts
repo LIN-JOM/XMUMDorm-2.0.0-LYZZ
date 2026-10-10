@@ -103,44 +103,49 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
   const raw = record(decoded);
   if (raw === null) return null;
   if (method === 'courses') {
-    const offset = integer(raw.nextoffset, 0);
+    const standard = raw.nextOffset !== undefined;
+    const offset = integer(standard ? raw.nextOffset : raw.nextoffset, 0);
     if (!Array.isArray(raw.courses) || offset === null) return null;
     const courses: MoodleCourse[] = [];
     for (let index = 0; index < raw.courses.length; index += 1) {
       const item = record(raw.courses[index]);
       if (item === null || !enabled(item.visible)) continue;
       const id = integer(item.id, 1);
-      const name = text(item.fullname);
+      const name = text(standard ? item.name : item.fullname);
       if (id === null || name === null) continue;
       courses.push({
         id: id,
         name: name,
-        shortName: text(item.shortname),
-        url: safeUrl(item.viewurl),
-        startDate: integer(item.startdate, 0),
-        endDate: integer(item.enddate, 0),
+        shortName: text(standard ? item.shortName : item.shortname),
+        url: safeUrl(standard ? item.url : item.viewurl),
+        startDate: integer(standard ? item.startDate : item.startdate, 0),
+        endDate: integer(standard ? item.endDate : item.enddate, 0),
         visible: true,
       });
     }
     return { courses: courses, nextOffset: offset };
   }
   if (method === 'state') {
+    const standard = raw.courseId !== undefined;
     const course = record(raw.course);
-    const courseId = course === null ? null : integer(course.id, 1);
-    if (courseId === null || !Array.isArray(raw.section) || !Array.isArray(raw.cm)) return null;
+    const courseId = standard ? integer(raw.courseId, 1) : course === null ? null : integer(course.id, 1);
+    const rawSections = standard ? raw.sections : raw.section;
+    const rawModules = standard ? raw.modules : raw.cm;
+    if (courseId === null || !Array.isArray(rawSections) || !Array.isArray(rawModules)) return null;
     const sections: MoodleSection[] = [];
     const sectionsById: Record<string, MoodleSection> = {};
-    for (let index = 0; index < raw.section.length; index += 1) {
-      const item = record(raw.section[index]);
-      if (item === null || !enabled(item.visible)) continue;
+    for (let index = 0; index < rawSections.length; index += 1) {
+      const item = record(rawSections[index]);
+      if (item === null || (!standard && !enabled(item.visible))) continue;
       const id = integer(item.id, 1);
       const number = integer(item.number, 0);
       const title = text(item.title);
-      if (id === null || number === null || title === null || !Array.isArray(item.cmlist)) continue;
+      const list = standard ? item.moduleIds : item.cmlist;
+      if (id === null || number === null || title === null || !Array.isArray(list)) continue;
       if (sectionsById[String(id)]) continue;
       const moduleIds: number[] = [];
-      for (let moduleIndex = 0; moduleIndex < item.cmlist.length; moduleIndex += 1) {
-        const moduleId = integer(item.cmlist[moduleIndex], 1);
+      for (let moduleIndex = 0; moduleIndex < list.length; moduleIndex += 1) {
+        const moduleId = integer(list[moduleIndex], 1);
         if (moduleId !== null && moduleIds.indexOf(moduleId) < 0) moduleIds.push(moduleId);
       }
       const section = { id: id, number: number, title: title, moduleIds: moduleIds };
@@ -149,19 +154,19 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
     }
     const modules: MoodleModule[] = [];
     const modulesById: Record<string, MoodleModule> = {};
-    for (let index = 0; index < raw.cm.length; index += 1) {
-      const item = record(raw.cm[index]);
+    for (let index = 0; index < rawModules.length; index += 1) {
+      const item = record(rawModules[index]);
       if (item === null || !enabled(item.visible)) continue;
       const id = integer(item.id, 1);
-      const sectionId = integer(item.sectionid, 1);
-      const type = text(item.module);
+      const sectionId = integer(standard ? item.sectionId : item.sectionid, 1);
+      const type = text(standard ? item.type : item.module);
       const name = text(item.name);
       if (id === null || sectionId === null || type === null || name === null) continue;
       if (!/^[a-z][a-z0-9_]*$/.test(type) || modulesById[String(id)]) continue;
       const section = sectionsById[String(sectionId)];
       if (!section || section.moduleIds.indexOf(id) < 0) continue;
-      const userVisible = enabled(item.uservisible);
-      const accessVisible = enabled(item.accessvisible);
+      const userVisible = enabled(standard ? item.userVisible : item.uservisible);
+      const accessVisible = enabled(standard ? item.accessVisible : item.accessvisible);
       const module = {
         id: id, sectionId: sectionId, type: type, name: name,
         url: userVisible && accessVisible ? safeUrl(item.url) : null,
@@ -184,23 +189,26 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
   }
   if (method === 'events') {
     if (!Array.isArray(raw.events)) return null;
-    const firstId = raw.firstid === null ? null : integer(raw.firstid, 1);
-    const lastId = raw.lastid === null ? null : integer(raw.lastid, 1);
-    if ((firstId === null && raw.firstid !== null) || (lastId === null && raw.lastid !== null)) return null;
+    const standard = raw.lastId !== undefined;
+    const first = standard ? raw.firstId : raw.firstid;
+    const last = standard ? raw.lastId : raw.lastid;
+    const firstId = first === null ? null : integer(first, 1);
+    const lastId = last === null ? null : integer(last, 1);
+    if ((firstId === null && first !== null) || (lastId === null && last !== null)) return null;
     const events: MoodleActionEvent[] = [];
     const seen: Record<string, boolean> = {};
     for (let index = 0; index < raw.events.length; index += 1) {
       const item = record(raw.events[index]);
-      if (item === null || !enabled(item.visible)) continue;
+      if (item === null || ((!standard || item.visible !== undefined) && !enabled(item.visible))) continue;
       const course = record(item.course);
-      const courseId = course === null ? null : integer(course.id, 1);
+      const courseId = standard ? integer(item.courseId, 1) : course === null ? null : integer(course.id, 1);
       const id = integer(item.id, 1);
       const name = text(item.name);
-      const time = integer(item.timesort, 0);
+      const time = integer(standard ? item.time : item.timesort, 0);
       if (id === null || courseId === null || name === null || time === null || seen[String(id)]) continue;
       const action = record(item.action);
-      events.push({ id: id, courseId: courseId, moduleId: integer(item.instance, 1),
-        name: name, time: time, url: safeUrl(action === null ? item.viewurl : action.url) });
+      events.push({ id: id, courseId: courseId, moduleId: integer(standard ? item.moduleId : item.instance, 1),
+        name: name, time: time, url: safeUrl(standard ? item.url : action === null ? item.viewurl : action.url) });
       seen[String(id)] = true;
     }
     return { events: events, firstId: firstId, lastId: lastId };
