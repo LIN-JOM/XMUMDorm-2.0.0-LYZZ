@@ -67,6 +67,21 @@ describe('Moodle response projection', () => {
     });
   });
 
+  it('retains links for this user even when availability is restricted for others', () => {
+    const input = { ...stateFixture, cm: [{ ...stateFixture.cm[0], uservisible: true, accessvisible: false }] };
+    expect(parseMoodleResponse('state', input)?.modules[0]).toMatchObject({
+      url: 'https://l.xmu.edu.my/mod/assign/view.php?id=100', userVisible: true, accessVisible: false,
+    });
+  });
+
+  it('uses the official event module URL before a generic calendar view', () => {
+    const input = { events: [{ id: 501, course: { id: 42 }, instance: 100, visible: true,
+      name: 'Tutorial deadline', timesort: 1791513000, url: '/mod/assign/view.php?id=100',
+      viewurl: '/calendar/view.php?view=day&time=1791513000' }], firstid: 501, lastid: 501 };
+    expect(parseMoodleResponse('events', input)?.events[0].url)
+      .toBe('https://l.xmu.edu.my/mod/assign/view.php?id=100');
+  });
+
   it('reprojects standard responses into fresh whitelist objects', () => {
     const inputs = { courses: coursesFixture, state: stateFixture, events: eventsFixture };
     for (const method of ['courses', 'state', 'events'] as const) {
