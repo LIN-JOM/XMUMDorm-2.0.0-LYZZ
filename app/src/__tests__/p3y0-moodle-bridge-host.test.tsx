@@ -7,6 +7,8 @@ import { SchoolSystemWebView, type SchoolSystemWebViewHandle } from '@/features/
 import { SCHOOL_SYSTEMS } from '@/features/tools/schoolSystems';
 import { MOODLE_MESSAGE_KIND } from '@/features/tools/moodle/bridge';
 import courses from './fixtures/moodle/courses.json';
+import { clearSchoolSession } from '@/features/tools/schoolSession';
+import { readMoodleCache, selectMoodleCourses } from '@/features/tools/moodle/cache';
 
 const mockInject = jest.fn();
 let mockProps: WebViewProps;
@@ -92,4 +94,30 @@ it('finishes a lost native response as timeout and ignores later data', async ()
     expect(onResult.mock.calls[0][0].status).toBe('timeout');
     await result.unmount();
   } finally { jest.useRealTimers(); }
+});
+
+it('rejects a pending native callback after the user clears Moodle', async () => {
+  const { ref, onResult } = await mount();
+  await navigate();
+  selectMoodleCourses([42]);
+  const id = ref.current!.readMoodle({ method: 'courses' })!;
+  await clearSchoolSession('moodle');
+  await respond(id);
+  expect(onResult).not.toHaveBeenCalled();
+  expect(readMoodleCache().courses).toEqual([]);
+});
+
+it('stores only selected objects and clears them on navigation and unmount', async () => {
+  const { ref, result } = await mount();
+  await navigate();
+  selectMoodleCourses([42]);
+  await respond(ref.current!.readMoodle({ method: 'courses' })!);
+  expect(readMoodleCache().courses.map((course) => course.id)).toEqual([42]);
+  await navigate('https://l.xmu.edu.my/course/view.php?id=42');
+  expect(readMoodleCache().courses).toEqual([]);
+  selectMoodleCourses([43]);
+  await respond(ref.current!.readMoodle({ method: 'courses' })!, 'https://l.xmu.edu.my/course/view.php?id=42');
+  expect(readMoodleCache().courses.map((course) => course.id)).toEqual([43]);
+  await result.unmount();
+  expect(readMoodleCache().courses).toEqual([]);
 });
