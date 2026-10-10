@@ -30,9 +30,9 @@ async function mount(id: 'moodle' | 'ac' = 'moodle') {
 async function navigate(url = 'https://l.xmu.edu.my/my/') {
   await act(() => mockProps.onNavigationStateChange?.({ url, loading: false } as WebViewNavigation));
 }
-async function respond(requestId: string, url = 'https://l.xmu.edu.my/my/') {
+async function respond(requestId: string, url = 'https://l.xmu.edu.my/my/', status = 'success') {
   await act(() => mockProps.onMessage?.({ nativeEvent: { url, data: JSON.stringify({
-    kind: MOODLE_MESSAGE_KIND, requestId, method: 'courses', status: 'success', data: courses,
+    kind: MOODLE_MESSAGE_KIND, requestId, method: 'courses', status, data: courses,
   }) } } as WebViewMessageEvent));
 }
 
@@ -48,4 +48,48 @@ it('pairs an existing WebView command with one projected native callback', async
   expect(onResult).toHaveBeenCalledTimes(1);
   expect(onResult.mock.calls[0][0]).toMatchObject({ requestId: id, status: 'success', data: { nextOffset: 25 } });
   expect(JSON.stringify(onResult.mock.calls)).not.toContain('fixture-only');
+});
+
+it.each(['moodle', 'ac'] as const)('refuses an external page or other system: %s', async (id) => {
+  const { ref, onResult } = await mount(id);
+  await navigate(id === 'moodle' ? 'https://external.example' : undefined);
+  expect(ref.current!.readMoodle({ method: 'courses' })).toBeNull();
+  await respond('invented');
+  expect(onResult).not.toHaveBeenCalled();
+});
+
+it('rejects external messages and responses cancelled by navigation', async () => {
+  const { ref, onResult } = await mount();
+  await navigate();
+  const id = ref.current!.readMoodle({ method: 'courses' })!;
+  await respond(id, 'https://external.example');
+  expect(onResult).not.toHaveBeenCalled();
+  await navigate('https://l.xmu.edu.my/course/view.php?id=42');
+  await respond(id);
+  expect(onResult).not.toHaveBeenCalled();
+});
+
+it('expires all concurrent reads when Moodle reports a lost session', async () => {
+  const { ref, onResult } = await mount();
+  await navigate();
+  const first = ref.current!.readMoodle({ method: 'courses' })!;
+  const second = ref.current!.readMoodle({ method: 'courses' })!;
+  await respond(first, undefined, 'expired');
+  await respond(second);
+  expect(onResult).toHaveBeenCalledTimes(1);
+  expect(onResult.mock.calls[0][0].status).toBe('expired');
+});
+
+it('finishes a lost native response as timeout and ignores later data', async () => {
+  const { ref, onResult, result } = await mount();
+  await navigate();
+  jest.useFakeTimers();
+  try {
+    const id = ref.current!.readMoodle({ method: 'courses' })!;
+    await act(() => { jest.advanceTimersByTime(12000); });
+    await respond(id);
+    expect(onResult).toHaveBeenCalledTimes(1);
+    expect(onResult.mock.calls[0][0].status).toBe('timeout');
+    await result.unmount();
+  } finally { jest.useRealTimers(); }
 });
