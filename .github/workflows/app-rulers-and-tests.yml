@@ -12,6 +12,14 @@ on:
       - 'shared/**'
       - 'tokens/**'
       - 'scripts/**'
+      - 'routes/**'
+      - 'server.js'
+      - 'database.js'
+      - 'middleware/**'
+      - 'services/**'
+      - 'utils/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/app-rulers-and-tests.yml'
   pull_request:
     paths:
@@ -19,6 +27,14 @@ on:
       - 'shared/**'
       - 'tokens/**'
       - 'scripts/**'
+      - 'routes/**'
+      - 'server.js'
+      - 'database.js'
+      - 'middleware/**'
+      - 'services/**'
+      - 'utils/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/app-rulers-and-tests.yml'
 
 jobs:
@@ -82,3 +98,22 @@ jobs:
       #   App 侧的 `MessageKey`/类型检查管不到这里，所以单列一个 job。
       - name: 共享层单测
         run: npx jest __tests__/shared --ci
+
+  backend-route-gate:
+    name: 后端 CommonJS 路由与加载门禁
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+      - name: 安装依赖（npm ci，锁文件生效）
+        run: npm ci
+      - name: 路由必须按 CommonJS 解析
+        run: npm run check:routes-cjs
+      - name: 加载真实 server 路由图（不监听端口）
+        run: npm run check:server-load
+      - name: 路由测试
+        run: npm test -- --runInBand __tests__/routes
