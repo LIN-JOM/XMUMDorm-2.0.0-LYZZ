@@ -96,7 +96,11 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
     }
   }
 
-  const raw = record(data);
+  let decoded = data;
+  if (method === 'state' && typeof decoded === 'string') {
+    try { decoded = JSON.parse(decoded); } catch { return null; }
+  }
+  const raw = record(decoded);
   if (raw === null) return null;
   if (method === 'courses') {
     const offset = integer(raw.nextoffset, 0);
@@ -119,6 +123,64 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
       });
     }
     return { courses: courses, nextOffset: offset };
+  }
+  if (method === 'state') {
+    const course = record(raw.course);
+    const courseId = course === null ? null : integer(course.id, 1);
+    if (courseId === null || !Array.isArray(raw.section) || !Array.isArray(raw.cm)) return null;
+    const sections: MoodleSection[] = [];
+    const sectionsById: Record<string, MoodleSection> = {};
+    for (let index = 0; index < raw.section.length; index += 1) {
+      const item = record(raw.section[index]);
+      if (item === null || !enabled(item.visible)) continue;
+      const id = integer(item.id, 1);
+      const number = integer(item.number, 0);
+      const title = text(item.title);
+      if (id === null || number === null || title === null || !Array.isArray(item.cmlist)) continue;
+      if (sectionsById[String(id)]) continue;
+      const moduleIds: number[] = [];
+      for (let moduleIndex = 0; moduleIndex < item.cmlist.length; moduleIndex += 1) {
+        const moduleId = integer(item.cmlist[moduleIndex], 1);
+        if (moduleId !== null && moduleIds.indexOf(moduleId) < 0) moduleIds.push(moduleId);
+      }
+      const section = { id: id, number: number, title: title, moduleIds: moduleIds };
+      sections.push(section);
+      sectionsById[String(id)] = section;
+    }
+    const modules: MoodleModule[] = [];
+    const modulesById: Record<string, MoodleModule> = {};
+    for (let index = 0; index < raw.cm.length; index += 1) {
+      const item = record(raw.cm[index]);
+      if (item === null || !enabled(item.visible)) continue;
+      const id = integer(item.id, 1);
+      const sectionId = integer(item.sectionid, 1);
+      const type = text(item.module);
+      const name = text(item.name);
+      if (id === null || sectionId === null || type === null || name === null) continue;
+      if (!/^[a-z][a-z0-9_]*$/.test(type) || modulesById[String(id)]) continue;
+      const section = sectionsById[String(sectionId)];
+      if (!section || section.moduleIds.indexOf(id) < 0) continue;
+      const userVisible = enabled(item.uservisible);
+      const accessVisible = enabled(item.accessvisible);
+      const module = {
+        id: id, sectionId: sectionId, type: type, name: name,
+        url: userVisible && accessVisible ? safeUrl(item.url) : null,
+        visible: true, userVisible: userVisible, accessVisible: accessVisible,
+      };
+      modules.push(module);
+      modulesById[String(id)] = module;
+    }
+    for (let index = 0; index < sections.length; index += 1) {
+      const section = sections[index];
+      const retained: number[] = [];
+      for (let moduleIndex = 0; moduleIndex < section.moduleIds.length; moduleIndex += 1) {
+        const id = section.moduleIds[moduleIndex];
+        const module = modulesById[String(id)];
+        if (module && module.sectionId === section.id) retained.push(id);
+      }
+      section.moduleIds = retained;
+    }
+    return { courseId: courseId, sections: sections, modules: modules };
   }
   return null;
 }
