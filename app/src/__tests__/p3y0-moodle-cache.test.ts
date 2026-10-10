@@ -2,7 +2,7 @@ import courses from './fixtures/moodle/courses.json';
 import state from './fixtures/moodle/state.json';
 import events from './fixtures/moodle/events.json';
 import { clearSchoolSession } from '@/features/tools/schoolSession';
-import { clearMoodleCache, moodleCacheGeneration, readMoodleCache, selectMoodleCourses, writeMoodleCache } from '@/features/tools/moodle/cache';
+import { beginMoodleCourseSync, clearMoodleCache, moodleCacheGeneration, readMoodleCache, selectMoodleCourses, writeMoodleCache } from '@/features/tools/moodle/cache';
 
 beforeEach(() => { clearMoodleCache(); });
 
@@ -53,4 +53,22 @@ it('preserves Moodle data when AC observation state is cleared', async () => {
   await clearSchoolSession('ac');
   expect(moodleCacheGeneration()).toBe(generation);
   expect(readMoodleCache().courses).toHaveLength(1);
+});
+
+it('starts a fresh course scan without reviving hidden or missing courses from the previous scan', () => {
+  selectMoodleCourses([42, 43]);
+  const old = moodleCacheGeneration();
+  writeMoodleCache('courses', courses, old);
+  writeMoodleCache('state', state, old);
+  writeMoodleCache('events', events, old);
+  const fresh = beginMoodleCourseSync();
+  expect(readMoodleCache()).toMatchObject({ courses: [], states: [], events: [] });
+  const hidden = { courses: [{ id: 42, fullname: 'X', visible: false }], nextoffset: 1 };
+  writeMoodleCache('courses', hidden, fresh);
+  expect(readMoodleCache().courses).toEqual([]);
+  expect(writeMoodleCache('state', state, fresh)).toBe(false);
+  expect(writeMoodleCache('courses', courses, old)).toBe(false);
+  // Next pages accumulate within this fresh scan and retain the user's choices.
+  writeMoodleCache('courses', { courses: [courses.courses[1]], nextoffset: 2 }, fresh);
+  expect(readMoodleCache().courses.map((course) => course.id)).toEqual([43]);
 });

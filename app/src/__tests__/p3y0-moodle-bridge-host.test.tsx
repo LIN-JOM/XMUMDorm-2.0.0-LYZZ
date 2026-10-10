@@ -75,7 +75,7 @@ it('expires all concurrent reads when Moodle reports a lost session', async () =
   const { ref, onResult } = await mount();
   await navigate();
   const first = ref.current!.readMoodle({ method: 'courses' })!;
-  const second = ref.current!.readMoodle({ method: 'courses' })!;
+  const second = ref.current!.readMoodle({ method: 'courses', offset: 25 })!;
   await respond(first, undefined, 'expired');
   await respond(second);
   expect(onResult).toHaveBeenCalledTimes(1);
@@ -120,4 +120,14 @@ it('stores only selected objects and clears them on navigation and unmount', asy
   expect(readMoodleCache().courses.map((course) => course.id)).toEqual([43]);
   await result.unmount();
   expect(readMoodleCache().courses).toEqual([]);
+});
+
+it('starts a new scan on offset zero and empties the old visible-course snapshot', async () => {
+  const { ref } = await mount();
+  await navigate();
+  selectMoodleCourses([42]);
+  await respond(ref.current!.readMoodle({ method: 'courses' })!);
+  expect(readMoodleCache().courses).toHaveLength(1);
+  ref.current!.readMoodle({ method: 'courses', offset: 0 });
+  expect(readMoodleCache()).toMatchObject({ courses: [], states: [], events: [] });
 });
