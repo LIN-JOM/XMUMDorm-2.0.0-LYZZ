@@ -182,5 +182,28 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
     }
     return { courseId: courseId, sections: sections, modules: modules };
   }
+  if (method === 'events') {
+    if (!Array.isArray(raw.events)) return null;
+    const firstId = raw.firstid === null ? null : integer(raw.firstid, 1);
+    const lastId = raw.lastid === null ? null : integer(raw.lastid, 1);
+    if ((firstId === null && raw.firstid !== null) || (lastId === null && raw.lastid !== null)) return null;
+    const events: MoodleActionEvent[] = [];
+    const seen: Record<string, boolean> = {};
+    for (let index = 0; index < raw.events.length; index += 1) {
+      const item = record(raw.events[index]);
+      if (item === null || !enabled(item.visible)) continue;
+      const course = record(item.course);
+      const courseId = course === null ? null : integer(course.id, 1);
+      const id = integer(item.id, 1);
+      const name = text(item.name);
+      const time = integer(item.timesort, 0);
+      if (id === null || courseId === null || name === null || time === null || seen[String(id)]) continue;
+      const action = record(item.action);
+      events.push({ id: id, courseId: courseId, moduleId: integer(item.instance, 1),
+        name: name, time: time, url: safeUrl(action === null ? item.viewurl : action.url) });
+      seen[String(id)] = true;
+    }
+    return { events: events, firstId: firstId, lastId: lastId };
+  }
   return null;
 }
