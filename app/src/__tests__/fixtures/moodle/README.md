@@ -21,6 +21,7 @@ sourceURLs：
 - [cm state](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/course/format/classes/output/local/state/cm.php#L67)定义 module 机器类型与限制态。
 - [事件分页](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/calendar/classes/external/events_exporter.php#L61)定义 firstid 与 lastid。
 - [事件字段](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/calendar/classes/external/event_exporter_base.php#L64)定义 instance 与 timesort。
+- [事件游标查询](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/calendar/classes/local/event/data_access/event_vault.php#L96)仅在非零时间边界下应用 aftereventid；桥的每页固定 timesortfrom=1。
 
 投影边界：只接受 HTTPS、同源 `l.xmu.edu.my` 的 URL，保留常用数值导航 query。
 其他 query、fragment 和凭据字段不进入标准对象。

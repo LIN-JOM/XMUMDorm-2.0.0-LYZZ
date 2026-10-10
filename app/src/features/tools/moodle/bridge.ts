@@ -36,7 +36,9 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
     case 'events':
       if (!nonnegative(request.afterEventId ?? 0)) return null;
       methodname = 'core_calendar_get_action_events_by_timesort';
-      args = { aftereventid: request.afterEventId ?? 0, limitnum: 50 };
+      // Moodle 4.5 only applies the event cursor when its lower time bound is nonzero.
+      // Keep the same bound on every page; never derive it afresh from the device clock.
+      args = { timesortfrom: 1, aftereventid: request.afterEventId ?? 0, limitnum: 50 };
       break;
     default: return null;
   }
