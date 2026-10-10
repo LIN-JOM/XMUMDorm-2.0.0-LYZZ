@@ -89,14 +89,15 @@ export const SchoolSystemWebView = React.forwardRef<
     for (const item of pending.current.values()) clearTimeout(item.timer);
     pending.current.clear();
   }, []);
+  const invalidateMoodleData = React.useCallback(() => {
+    cancelMoodleReads();
+    if (system.id === 'moodle') clearMoodleCache();
+  }, [cancelMoodleReads, system.id]);
   React.useEffect(() => {
     currentUrl.current = null;
-    if (system.id === 'moodle') clearMoodleCache();
-    return () => {
-      cancelMoodleReads();
-      if (system.id === 'moodle') clearMoodleCache();
-    };
-  }, [system.id, cancelMoodleReads]);
+    invalidateMoodleData();
+    return invalidateMoodleData;
+  }, [invalidateMoodleData]);
 
   // 17.3：把真实 insets 交给内嵌页（它自己的 env(safe-area-inset-*) 恒为 0）
   const insetScript = React.useMemo(() => buildInsetBootstrapScript(insets), [insets]);
@@ -150,8 +151,7 @@ export const SchoolSystemWebView = React.forwardRef<
         clearTimeout(item.timer);
         pending.current.delete(moodle.requestId);
         if (moodle.status === 'expired' || moodle.status === 'wrong-origin') {
-          cancelMoodleReads();
-          clearMoodleCache();
+          invalidateMoodleData();
         }
         if (moodle.status === 'success') writeMoodleCache(moodle.method, moodle.data, item.generation);
         onMoodleResponse?.(moodle, item.generation);
@@ -160,8 +160,7 @@ export const SchoolSystemWebView = React.forwardRef<
       const message = parseWebViewMessage(event.nativeEvent.data);
       if (message.kind === 'session') {
         if (system.id === 'moodle' && message.hasPasswordField) {
-          cancelMoodleReads();
-          clearMoodleCache();
+          invalidateMoodleData();
         }
         onSessionProbe?.({ hasPasswordField: message.hasPasswordField });
         return;
@@ -171,7 +170,7 @@ export const SchoolSystemWebView = React.forwardRef<
         onScheduleMessage?.(message.raw);
       }
     },
-    [onScheduleMessage, onSessionProbe, onMoodleResponse, system.id, cancelMoodleReads]
+    [onScheduleMessage, onSessionProbe, onMoodleResponse, system.id, invalidateMoodleData]
   );
 
   /**
@@ -189,8 +188,7 @@ export const SchoolSystemWebView = React.forwardRef<
   const handleNavigation = React.useCallback(
     (event: WebViewNavigation) => {
       if (event.loading || event.url !== currentUrl.current) {
-        cancelMoodleReads();
-        if (system.id === 'moodle') clearMoodleCache();
+        invalidateMoodleData();
       }
       currentUrl.current = event.loading ? null : event.url;
       onNavigationStateChange?.(event);
@@ -199,7 +197,7 @@ export const SchoolSystemWebView = React.forwardRef<
         webRef.current?.injectJavaScript(probeScript);
       }
     },
-    [onNavigationStateChange, probeScript, cancelMoodleReads, system.id]
+    [onNavigationStateChange, probeScript, invalidateMoodleData]
   );
 
   return (
@@ -225,8 +223,7 @@ export const SchoolSystemWebView = React.forwardRef<
         onMessage={handleMessage}
         onLoadStart={() => {
           currentUrl.current = null;
-          cancelMoodleReads();
-          if (system.id === 'moodle') clearMoodleCache();
+          invalidateMoodleData();
         }}
         onLoadEnd={handleLoadEnd}
         onNavigationStateChange={handleNavigation}
