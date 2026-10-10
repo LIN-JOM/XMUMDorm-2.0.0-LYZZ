@@ -35,6 +35,7 @@ import type { SchoolSystem } from './schoolSystems';
 import { buildMoodleReadScript, isMoodleOrigin, parseMoodleBridgeMessage,
   type MoodleReadRequest, type MoodleBridgeResult } from './moodle/bridge';
 import type { MoodleStateResponse } from './moodle/contract';
+import { clearMoodleCache, moodleCacheGeneration, writeMoodleCache } from './moodle/cache';
 
 /** 交给宿主页的命令式接口（`T-05` 工具栏的"读取本页课表"要用） */
 export type SchoolSystemWebViewHandle = {
@@ -51,7 +52,7 @@ export type SchoolSystemWebViewProps = {
   /** 是否在加载完成后尝试读表（只有 AC 的课表页需要） */
   scrapeSchedule?: boolean;
   onScheduleMessage?: (raw: string) => void;
-  onMoodleResponse?: (response: MoodleBridgeResult) => void;
+  onMoodleResponse?: (response: MoodleBridgeResult, generation: number) => void;
   /**
    * 会话探测结果（P1-14）：`hasPasswordField === true` 表示**当前这页是登录页**。
    * ⛔ 这是"观察到的事实"，不是"校方系统的权威状态"。
@@ -82,14 +83,19 @@ export const SchoolSystemWebView = React.forwardRef<
   const webRef = React.useRef<WebView>(null);
   const currentUrl = React.useRef<string | null>(null);
   const sequence = React.useRef(0);
-  const pending = React.useRef(new Map<string, { request: MoodleReadRequest; timer: ReturnType<typeof setTimeout> }>());
+  const pending = React.useRef(new Map<string, { request: MoodleReadRequest; generation: number;
+    timer: ReturnType<typeof setTimeout> }>());
   const cancelMoodleReads = React.useCallback(() => {
     for (const item of pending.current.values()) clearTimeout(item.timer);
     pending.current.clear();
   }, []);
   React.useEffect(() => {
     currentUrl.current = null;
-    return cancelMoodleReads;
+    if (system.id === 'moodle') clearMoodleCache();
+    return () => {
+      cancelMoodleReads();
+      if (system.id === 'moodle') clearMoodleCache();
+    };
   }, [system.id, cancelMoodleReads]);
 
   // 17.3：把真实 insets 交给内嵌页（它自己的 env(safe-area-inset-*) 恒为 0）
@@ -112,11 +118,13 @@ export const SchoolSystemWebView = React.forwardRef<
         const requestId = `moodle:${++sequence.current}`;
         const script = buildMoodleReadScript(requestId, request);
         if (!script) return null;
+        const generation = moodleCacheGeneration();
         const timer = setTimeout(() => {
           if (!pending.current.delete(requestId)) return;
-          onMoodleResponse?.({ requestId, method: request.method, status: 'timeout' });
+          if (generation !== moodleCacheGeneration()) return;
+          onMoodleResponse?.({ requestId, method: request.method, status: 'timeout' }, generation);
         }, 12000);
-        pending.current.set(requestId, { request: { ...request }, timer });
+        pending.current.set(requestId, { request: { ...request }, generation, timer });
         webRef.current.injectJavaScript(script);
         return requestId;
       },
@@ -131,17 +139,29 @@ export const SchoolSystemWebView = React.forwardRef<
         const item = pending.current.get(moodle.requestId);
         if (system.id !== 'moodle' || !currentUrl.current || !isMoodleOrigin(currentUrl.current)
           || !isMoodleOrigin(event.nativeEvent.url) || !item || item.request.method !== moodle.method) return;
+        if (item.generation !== moodleCacheGeneration()) {
+          clearTimeout(item.timer);
+          pending.current.delete(moodle.requestId);
+          return;
+        }
         if (moodle.status === 'success' && item.request.method === 'state'
           && (moodle.data as MoodleStateResponse).courseId !== item.request.courseId) return;
         clearTimeout(item.timer);
         pending.current.delete(moodle.requestId);
-        if (moodle.status === 'expired' || moodle.status === 'wrong-origin') cancelMoodleReads();
-        onMoodleResponse?.(moodle);
+        if (moodle.status === 'expired' || moodle.status === 'wrong-origin') {
+          cancelMoodleReads();
+          clearMoodleCache();
+        }
+        if (moodle.status === 'success') writeMoodleCache(moodle.method, moodle.data, item.generation);
+        onMoodleResponse?.(moodle, item.generation);
         return;
       }
       const message = parseWebViewMessage(event.nativeEvent.data);
       if (message.kind === 'session') {
-        if (system.id === 'moodle' && message.hasPasswordField) cancelMoodleReads();
+        if (system.id === 'moodle' && message.hasPasswordField) {
+          cancelMoodleReads();
+          clearMoodleCache();
+        }
         onSessionProbe?.({ hasPasswordField: message.hasPasswordField });
         return;
       }
@@ -167,7 +187,10 @@ export const SchoolSystemWebView = React.forwardRef<
 
   const handleNavigation = React.useCallback(
     (event: WebViewNavigation) => {
-      if (event.loading || event.url !== currentUrl.current) cancelMoodleReads();
+      if (event.loading || event.url !== currentUrl.current) {
+        cancelMoodleReads();
+        if (system.id === 'moodle') clearMoodleCache();
+      }
       currentUrl.current = event.loading ? null : event.url;
       onNavigationStateChange?.(event);
       // 导航结束（含 SPA 内部跳转）后再探一次 —— 这是"登录成功后状态变 signedIn"的来源
@@ -175,7 +198,7 @@ export const SchoolSystemWebView = React.forwardRef<
         webRef.current?.injectJavaScript(probeScript);
       }
     },
-    [onNavigationStateChange, probeScript, cancelMoodleReads]
+    [onNavigationStateChange, probeScript, cancelMoodleReads, system.id]
   );
 
   return (
@@ -199,7 +222,11 @@ export const SchoolSystemWebView = React.forwardRef<
         injectedJavaScriptBeforeContentLoaded={insetScript}
         injectedJavaScript={probeScript}
         onMessage={handleMessage}
-        onLoadStart={() => { currentUrl.current = null; cancelMoodleReads(); }}
+        onLoadStart={() => {
+          currentUrl.current = null;
+          cancelMoodleReads();
+          if (system.id === 'moodle') clearMoodleCache();
+        }}
         onLoadEnd={handleLoadEnd}
         onNavigationStateChange={handleNavigation}
         allowsBackForwardNavigationGestures={false}
