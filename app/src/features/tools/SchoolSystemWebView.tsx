@@ -32,6 +32,9 @@ import {
   parseWebViewMessage,
 } from './injectedScripts';
 import type { SchoolSystem } from './schoolSystems';
+import { buildMoodleReadScript, isMoodleOrigin, parseMoodleBridgeMessage,
+  type MoodleReadRequest, type MoodleBridgeResult } from './moodle/bridge';
+import type { MoodleStateResponse } from './moodle/contract';
 
 /** 交给宿主页的命令式接口（`T-05` 工具栏的"读取本页课表"要用） */
 export type SchoolSystemWebViewHandle = {
@@ -39,6 +42,8 @@ export type SchoolSystemWebViewHandle = {
   readSchedule: () => void;
   /** 立刻再探一次会话状态（"是不是登录页"） */
   probeSession: () => void;
+  /** Null means this page/request is not eligible. Navigation cancels pending reads. */
+  readMoodle: (request: MoodleReadRequest) => string | null;
 };
 
 export type SchoolSystemWebViewProps = {
@@ -46,6 +51,7 @@ export type SchoolSystemWebViewProps = {
   /** 是否在加载完成后尝试读表（只有 AC 的课表页需要） */
   scrapeSchedule?: boolean;
   onScheduleMessage?: (raw: string) => void;
+  onMoodleResponse?: (response: MoodleBridgeResult) => void;
   /**
    * 会话探测结果（P1-14）：`hasPasswordField === true` 表示**当前这页是登录页**。
    * ⛔ 这是"观察到的事实"，不是"校方系统的权威状态"。
@@ -63,6 +69,7 @@ export const SchoolSystemWebView = React.forwardRef<
     system,
     scrapeSchedule = false,
     onScheduleMessage,
+    onMoodleResponse,
     onSessionProbe,
     onNavigationStateChange,
     testID,
@@ -73,6 +80,17 @@ export const SchoolSystemWebView = React.forwardRef<
   // S7 + S2：覆盖层需要 insets，但只能从唯一容器拿
   const { insets } = useScreenInsets();
   const webRef = React.useRef<WebView>(null);
+  const currentUrl = React.useRef<string | null>(null);
+  const sequence = React.useRef(0);
+  const pending = React.useRef(new Map<string, { request: MoodleReadRequest; timer: ReturnType<typeof setTimeout> }>());
+  const cancelMoodleReads = React.useCallback(() => {
+    for (const item of pending.current.values()) clearTimeout(item.timer);
+    pending.current.clear();
+  }, []);
+  React.useEffect(() => {
+    currentUrl.current = null;
+    return cancelMoodleReads;
+  }, [system.id, cancelMoodleReads]);
 
   // 17.3：把真实 insets 交给内嵌页（它自己的 env(safe-area-inset-*) 恒为 0）
   const insetScript = React.useMemo(() => buildInsetBootstrapScript(insets), [insets]);
@@ -89,14 +107,40 @@ export const SchoolSystemWebView = React.forwardRef<
       probeSession: () => {
         webRef.current?.injectJavaScript(probeScript);
       },
+      readMoodle: (request) => {
+        if (system.id !== 'moodle' || !currentUrl.current || !isMoodleOrigin(currentUrl.current) || !webRef.current) return null;
+        const requestId = `moodle:${++sequence.current}`;
+        const script = buildMoodleReadScript(requestId, request);
+        if (!script) return null;
+        const timer = setTimeout(() => {
+          if (!pending.current.delete(requestId)) return;
+          onMoodleResponse?.({ requestId, method: request.method, status: 'timeout' });
+        }, 12000);
+        pending.current.set(requestId, { request, timer });
+        webRef.current.injectJavaScript(script);
+        return requestId;
+      },
     }),
-    [scrapeScript, probeScript]
+    [scrapeScript, probeScript, system.id, onMoodleResponse]
   );
 
   const handleMessage = React.useCallback(
     (event: WebViewMessageEvent) => {
+      const moodle = parseMoodleBridgeMessage(event.nativeEvent.data);
+      if (moodle) {
+        const item = pending.current.get(moodle.requestId);
+        if (system.id !== 'moodle' || !currentUrl.current || !isMoodleOrigin(currentUrl.current)
+          || !isMoodleOrigin(event.nativeEvent.url) || !item || item.request.method !== moodle.method) return;
+        if (moodle.status === 'success' && item.request.method === 'state'
+          && (moodle.data as MoodleStateResponse).courseId !== item.request.courseId) return;
+        clearTimeout(item.timer);
+        pending.current.delete(moodle.requestId);
+        onMoodleResponse?.(moodle);
+        return;
+      }
       const message = parseWebViewMessage(event.nativeEvent.data);
       if (message.kind === 'session') {
+        if (system.id === 'moodle' && message.hasPasswordField) cancelMoodleReads();
         onSessionProbe?.({ hasPasswordField: message.hasPasswordField });
         return;
       }
@@ -105,7 +149,7 @@ export const SchoolSystemWebView = React.forwardRef<
         onScheduleMessage?.(message.raw);
       }
     },
-    [onScheduleMessage, onSessionProbe]
+    [onScheduleMessage, onSessionProbe, onMoodleResponse, system.id, cancelMoodleReads]
   );
 
   /**
@@ -122,13 +166,15 @@ export const SchoolSystemWebView = React.forwardRef<
 
   const handleNavigation = React.useCallback(
     (event: WebViewNavigation) => {
+      if (event.loading || event.url !== currentUrl.current) cancelMoodleReads();
+      currentUrl.current = event.loading ? null : event.url;
       onNavigationStateChange?.(event);
       // 导航结束（含 SPA 内部跳转）后再探一次 —— 这是"登录成功后状态变 signedIn"的来源
       if (!event.loading) {
         webRef.current?.injectJavaScript(probeScript);
       }
     },
-    [onNavigationStateChange, probeScript]
+    [onNavigationStateChange, probeScript, cancelMoodleReads]
   );
 
   return (
@@ -152,6 +198,7 @@ export const SchoolSystemWebView = React.forwardRef<
         injectedJavaScriptBeforeContentLoaded={insetScript}
         injectedJavaScript={probeScript}
         onMessage={handleMessage}
+        onLoadStart={() => { currentUrl.current = null; cancelMoodleReads(); }}
         onLoadEnd={handleLoadEnd}
         onNavigationStateChange={handleNavigation}
         allowsBackForwardNavigationGestures={false}
