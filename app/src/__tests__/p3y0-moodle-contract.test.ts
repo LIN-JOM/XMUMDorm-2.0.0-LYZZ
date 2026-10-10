@@ -21,4 +21,33 @@ describe('Moodle response projection', () => {
     });
   });
 
+  it('decodes the official state JSON string and takes machine type from module', () => {
+    expect(parseMoodleResponse('state', JSON.stringify(stateFixture))).toEqual({
+      courseId: 42,
+      sections: [
+        { id: 10, number: 0, title: 'General', moduleIds: [100, 101, 102, 106] },
+        { id: 11, number: 1, title: 'Week 1', moduleIds: [] },
+      ],
+      modules: [
+        {
+          id: 100, sectionId: 10, type: 'assign', name: 'Tutorial 1',
+          url: 'https://l.xmu.edu.my/mod/assign/view.php?id=100',
+          visible: true, userVisible: true, accessVisible: true,
+        },
+        {
+          id: 101, sectionId: 10, type: 'resource', name: 'Restricted notes', url: null,
+          visible: true, userVisible: false, accessVisible: false,
+        },
+        {
+          id: 102, sectionId: 10, type: 'label', name: 'Chapter introduction', url: null,
+          visible: true, userVisible: true, accessVisible: true,
+        },
+        {
+          id: 106, sectionId: 10, type: 'folder', name: 'Unknown access', url: null,
+          visible: true, userVisible: false, accessVisible: false,
+        },
+      ],
+    });
+  });
+
 });
