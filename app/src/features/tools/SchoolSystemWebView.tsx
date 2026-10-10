@@ -35,7 +35,7 @@ import type { SchoolSystem } from './schoolSystems';
 import { buildMoodleReadScript, isMoodleOrigin, parseMoodleBridgeMessage,
   type MoodleReadRequest, type MoodleBridgeResult } from './moodle/bridge';
 import type { MoodleStateResponse } from './moodle/contract';
-import { clearMoodleCache, moodleCacheGeneration, writeMoodleCache } from './moodle/cache';
+import { beginMoodleCourseSync, clearMoodleCache, moodleCacheGeneration, writeMoodleCache } from './moodle/cache';
 
 /** 交给宿主页的命令式接口（`T-05` 工具栏的"读取本页课表"要用） */
 export type SchoolSystemWebViewHandle = {
@@ -118,7 +118,8 @@ export const SchoolSystemWebView = React.forwardRef<
         const requestId = `moodle:${++sequence.current}`;
         const script = buildMoodleReadScript(requestId, request);
         if (!script) return null;
-        const generation = moodleCacheGeneration();
+        const generation = request.method === 'courses' && (request.offset ?? 0) === 0
+          ? beginMoodleCourseSync() : moodleCacheGeneration();
         const timer = setTimeout(() => {
           if (!pending.current.delete(requestId)) return;
           if (generation !== moodleCacheGeneration()) return;

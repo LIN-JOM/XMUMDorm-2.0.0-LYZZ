@@ -10,12 +10,20 @@ const courses = new Map<number, MoodleCourse>();
 const states = new Map<number, MoodleStateResponse>();
 const events = new Map<number, MoodleActionEvent>();
 
-export function clearMoodleCache(): void {
+function clearData(): void {
   generation += 1;
-  selected.clear();
   courses.clear();
   states.clear();
   events.clear();
+}
+
+export function clearMoodleCache(): void { clearData(); selected.clear(); }
+
+/** Start before offset zero; later pages append only within this generation. */
+export function beginMoodleCourseSync(): number {
+  moodleCacheGeneration();
+  clearData();
+  return generation;
 }
 
 /** The project epoch is only an invalidation signal, never a school-account partition. */
@@ -36,6 +44,7 @@ export function selectMoodleCourses(ids: readonly number[]): void {
   for (const [id, event] of events) if (!selected.has(event.courseId)) events.delete(id);
 }
 
+/** Append projected pages from the current scan, never merge two separate scans. */
 export function writeMoodleCache(method: MoodleMethod, raw: unknown, expectedGeneration: number): boolean {
   if (expectedGeneration !== moodleCacheGeneration()) return false;
   if (method === 'courses') {
