@@ -1,0 +1,32 @@
+{
+  "courses": [
+    {
+      "id": 42,
+      "fullname": " Algorithms ",
+      "shortname": "CS101",
+      "viewurl": "https://l.xmu.edu.my/course/view.php?id=42&sesskey=fixture-only-secret#private-fragment",
+      "startdate": 1791158400,
+      "enddate": 1806883200,
+      "visible": 1,
+      "hidden": false,
+      "summary": "Synthetic private course description",
+      "sesskey": "fixture-only-secret"
+    },
+    {
+      "id": 43,
+      "fullname": "Discrete Mathematics",
+      "shortname": "MA101",
+      "viewurl": "https://outside.example/course/43",
+      "startdate": 1791158400,
+      "enddate": 0,
+      "visible": true,
+      "hidden": true,
+      "courseimage": "https://l.xmu.edu.my/pluginfile.php/1/fixture.png"
+    },
+    { "id": 44, "fullname": "Hidden course", "visible": 0 },
+    { "id": 45, "fullname": "Unknown visibility" },
+    { "id": "46", "fullname": "Invalid id", "visible": 1 }
+  ],
+  "nextoffset": 25,
+  "Cookie": "fixture-only-cookie"
+}
