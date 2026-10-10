@@ -50,4 +50,21 @@ describe('Moodle response projection', () => {
     });
   });
 
+  it('keeps event cmid, Unix seconds and server cursors independently of filtered rows', () => {
+    expect(parseMoodleResponse('events', eventsFixture)).toEqual({
+      events: [
+        {
+          id: 501, courseId: 42, moduleId: 100, name: 'Tutorial 1 deadline',
+          time: 1791513000, url: 'https://l.xmu.edu.my/mod/assign/view.php?id=100',
+        },
+        {
+          id: 502, courseId: 43, moduleId: null, name: 'Course event',
+          time: 1791599400, url: 'https://l.xmu.edu.my/course/view.php?id=43',
+        },
+      ],
+      firstId: 501,
+      lastId: 540,
+    });
+  });
+
 });
