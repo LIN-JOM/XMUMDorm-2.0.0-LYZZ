@@ -1,6 +1,7 @@
 import courses from './fixtures/moodle/courses.json';
 import state from './fixtures/moodle/state.json';
 import events from './fixtures/moodle/events.json';
+import { clearToken, saveToken } from '@/features/auth/tokenStore';
 import { clearSchoolSession } from '@/features/tools/schoolSession';
 import { beginMoodleCourseSync, clearMoodleCache, moodleCacheGeneration, readMoodleCache, selectMoodleCourses, writeMoodleCache } from '@/features/tools/moodle/cache';
 
@@ -71,4 +72,15 @@ it('starts a fresh course scan without reviving hidden or missing courses from t
   // Next pages accumulate within this fresh scan and retain the user's choices.
   writeMoodleCache('courses', { courses: [courses.courses[1]], nextoffset: 2 }, fresh);
   expect(readMoodleCache().courses.map((course) => course.id)).toEqual([43]);
+});
+
+it('uses the project epoch only to invalidate school data across token changes', async () => {
+  await clearToken();
+  selectMoodleCourses([42]);
+  const generation = moodleCacheGeneration();
+  writeMoodleCache('courses', courses, generation);
+  await saveToken('synthetic-project-session');
+  expect(writeMoodleCache('courses', courses, generation)).toBe(false);
+  expect(readMoodleCache().courses).toEqual([]);
+  await clearToken();
 });

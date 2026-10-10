@@ -9,6 +9,8 @@ import { MOODLE_MESSAGE_KIND } from '@/features/tools/moodle/bridge';
 import courses from './fixtures/moodle/courses.json';
 import { clearSchoolSession } from '@/features/tools/schoolSession';
 import { readMoodleCache, selectMoodleCourses } from '@/features/tools/moodle/cache';
+import { SESSION_KIND } from '@/features/tools/injectedScripts';
+import state from './fixtures/moodle/state.json';
 
 const mockInject = jest.fn();
 let mockProps: WebViewProps;
@@ -130,4 +132,34 @@ it('starts a new scan on offset zero and empties the old visible-course snapshot
   expect(readMoodleCache().courses).toHaveLength(1);
   ref.current!.readMoodle({ method: 'courses', offset: 0 });
   expect(readMoodleCache()).toMatchObject({ courses: [], states: [], events: [] });
+});
+
+it('checks method and requested course before accepting a state response', async () => {
+  const { ref, onResult } = await mount();
+  await navigate();
+  const id = ref.current!.readMoodle({ method: 'state', courseId: 42 })!;
+  await respond(id);
+  expect(onResult).not.toHaveBeenCalled();
+  async function sendState(courseId: number) {
+    await act(() => mockProps.onMessage?.({ nativeEvent: { url: 'https://l.xmu.edu.my/my/',
+      data: JSON.stringify({ kind: MOODLE_MESSAGE_KIND, requestId: id, method: 'state', status: 'success',
+        data: { ...state, course: { id: courseId } } }) } } as WebViewMessageEvent));
+  }
+  await sendState(43);
+  expect(onResult).not.toHaveBeenCalled();
+  await sendState(42);
+  expect(onResult).toHaveBeenCalledTimes(1);
+});
+
+it('clears cached school objects and pending reads when the page shows a password field', async () => {
+  const { ref, onResult } = await mount();
+  await navigate();
+  selectMoodleCourses([42]);
+  await respond(ref.current!.readMoodle({ method: 'courses' })!);
+  const id = ref.current!.readMoodle({ method: 'events' })!;
+  await act(() => mockProps.onMessage?.({ nativeEvent: { url: 'https://l.xmu.edu.my/my/',
+    data: JSON.stringify({ kind: SESSION_KIND, hasPasswordField: true }) } } as WebViewMessageEvent));
+  expect(readMoodleCache().courses).toEqual([]);
+  await respond(id);
+  expect(onResult).toHaveBeenCalledTimes(1);
 });
