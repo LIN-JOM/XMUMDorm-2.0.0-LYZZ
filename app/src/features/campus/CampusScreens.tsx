@@ -53,11 +53,12 @@ function snapshotKey(kind:CampusKind){
  return [...(kind==='wall'?QK.confessionWindow('_guest'):QK.postsInfinite('_guest',10)), 'campusReadSnapshot'];
 }
 
-export function CampusListScreen({initialTab='confession', ...screenProps}:{initialTab?:CampusKind} & Omit<ScreenProps, 'children' | 'titleKey'>={}):React.ReactElement {
+export function CampusListScreen({initialTab='confession', beforeTabs, ...screenProps}:{initialTab?:CampusKind;beforeTabs?:React.ReactNode} & Omit<ScreenProps, 'children' | 'titleKey'>={}):React.ReactElement {
  const {t}=useI18n();const router=useRouter();const [selected,setSelected]=React.useState<CampusKind>(initialTab);
  React.useEffect(() => setSelected(initialTab), [initialTab]);
  return <Screen titleKey="screen.campus" showMailbox={false} testID="campus-screen" {...screenProps}>
-  <TopTabStrip tabs={getSecondaryTabs('campus')} selectedKey={selected} onSelect={key=>{
+  {beforeTabs}
+  <TopTabStrip tabs={getSecondaryTabs('square')} selectedKey={selected} onSelect={key=>{
    if(key!=='confession'&&key!=='wall')return;
    setSelected(key);router.setParams({tab:key});
   }}/>
@@ -73,7 +74,7 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,cursor:null,hasMore:true});
  const [rows,setRows]=React.useState(snapshot.current.rows),[revision,setRevision]=React.useState(0);
- const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query?undefined:{primaryTab:'campus',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
+ const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query?undefined:{primaryTab:'square',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
  const persistScrollOffset=React.useCallback((offset:number)=>{
   if(query){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
   else persistTabScrollOffset(offset);
@@ -162,7 +163,7 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
   message={['failed','denied','invalid','login'].includes(actions.report.state)?t(actions.report.state==='login'?'screen.campus.write.login':actions.report.state==='denied'?'screen.campus.write.denied':'screen.campus.report.failed'):undefined}
   action={actions.report.state==='login'?{label:t('screen.campus.write.login'),onPress:()=>{setReportOpen(false);router.push('/login');}}:undefined}
   labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
- const back=()=>published?router.replace('/(tabs)/campus' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/campus?tab=wall':'/campus') as never);
+ const back=()=>published?router.replace('/' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/?tab=wall':'/') as never);
  const images=Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
  return <DetailScreen testID="campus-detail" title={kind==='wall'?t('screen.campus.read.wallTitle'):post?.title||t('screen.campus.read.title')}
   author={post?.author ? {kind:'named',name:post.author.nickname||post.author.username||t('screen.campus.read.author')} : {kind:'anonymous'}}

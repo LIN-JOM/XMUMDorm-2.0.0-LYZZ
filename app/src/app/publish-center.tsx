@@ -1,5 +1,5 @@
 /**
- * 发布中心（P-01）—— 第 5 格的落点，**推入式全屏目的地**（宪法 4.9.2）。
+ * 发布中心（P-01）—— 中央发布格的落点，**推入式全屏目的地**（宪法 4.9.2）。
  *
  * **条目 100% 来自注册表**（`features/publish/registry.ts`）：
  *   ⛔ 本文件**不得**出现任何硬编码的发布类型数组/按钮列表（4.9.5）。
@@ -37,7 +37,7 @@ export default function PublishCenterScreen(): React.ReactElement {
 
   const openForm = React.useCallback(
     (id: string) => {
-      // 关闭发布中心 → 再进表单：返回时仍落回点击第 5 格之前的位置（4.9.2-②）
+      // 关闭发布中心 → 再进表单：返回时仍落回点击中央发布格之前的位置（4.9.2-②）
       router.push(formRouteFor(id as Parameters<typeof formRouteFor>[0]));
     },
     [router]

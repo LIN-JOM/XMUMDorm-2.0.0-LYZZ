@@ -46,7 +46,7 @@ describe('P2D-02 安全区 10 条清单', () => {
   });
 
   it('第 2 条 · 底部留白归属唯一：`bottomMode:"tabbar"` 必须传 `tabBarHeight`（⛔ 不双倍）', () => {
-    for (const file of ['index.tsx', 'tools.tsx', 'campus.tsx', 'me.tsx']) {
+    for (const file of ['index.tsx', 'tools.tsx', 'mailbox.tsx', 'me.tsx']) {
       const code = stripComments(readApp(path.join('(tabs)', file)));
       // `me.tsx` 是一行转发壳 → 跟到页面组合再断言（同 P2B-01 的处理）
       const forwarded = code.match(/from '@\/([^']+)'/);

@@ -38,7 +38,7 @@ function withProviders(node: React.ReactElement): React.ReactElement {
   );
 }
 
-const CAMPUS_TABS = getSecondaryTabs('campus');
+const SQUARE_TABS = getSecondaryTabs('square');
 
 describe('P0-06 二级顶部 Tab 条', () => {
   describe('TC-P0-06-1A · R2 每个二级 Tab 独立保持状态', () => {
@@ -70,19 +70,18 @@ describe('P0-06 二级顶部 Tab 条', () => {
     it('同样的二级键名在不同一级格下互不干扰', () => {
       const store = new SecondaryTabStore();
       store.update('square', 'wall', { scrollOffset: 10 });
-      store.update('campus', 'wall', { scrollOffset: 999 });
+      store.update('tools', 'wall', { scrollOffset: 999 });
       expect(store.get('square', 'wall').scrollOffset).toBe(10);
-      expect(store.get('campus', 'wall').scrollOffset).toBe(999);
+      expect(store.get('tools', 'wall').scrollOffset).toBe(999);
     });
   });
 
   describe('集合声明：已定的落库，未定的留空（C-03/C-04/C-05）', () => {
-    it('「校园里」= 树洞 / 万能墙（宪法 4.1.1 已定）', () => {
-      expect(CAMPUS_TABS.map((tab) => tab.key)).toEqual(['confession', 'wall']);
+    it('「广场」= 树洞 / 万能墙（宪法 4.1.1 已定）', () => {
+      expect(SQUARE_TABS.map((tab) => tab.key)).toEqual(['confession', 'wall']);
     });
 
-    it('广场 / 工具 / 我的 暂为空（待所有者拍板，⛔ 不猜）', () => {
-      expect(SECONDARY_TABS.square).toEqual([]);
+    it('工具 / 我的 暂为空（待所有者拍板，⛔ 不猜）', () => {
       expect(SECONDARY_TABS.tools).toEqual([]);
       expect(SECONDARY_TABS.me).toEqual([]);
     });
@@ -119,7 +118,7 @@ describe('P0-06 二级顶部 Tab 条', () => {
     it('渲染两个子栏目，选中项暴露 selected 状态', async () => {
       const view = await render(
         withProviders(
-          <TopTabStrip tabs={CAMPUS_TABS} selectedKey="confession" onSelect={() => undefined} />
+          <TopTabStrip tabs={SQUARE_TABS} selectedKey="confession" onSelect={() => undefined} />
         )
       );
       expect(view.getByText('树洞')).toBeTruthy();
@@ -131,7 +130,7 @@ describe('P0-06 二级顶部 Tab 条', () => {
     it('角色是 tab（⛔ 不是 button），且标签里带位置播报', async () => {
       const view = await render(
         withProviders(
-          <TopTabStrip tabs={CAMPUS_TABS} selectedKey="confession" onSelect={() => undefined} />
+          <TopTabStrip tabs={SQUARE_TABS} selectedKey="confession" onSelect={() => undefined} />
         )
       );
       const first = view.getByTestId('top-tab-confession');

@@ -153,7 +153,7 @@ describe('P0-07 注册表驱动的发布中心', () => {
       }
     });
 
-    it('⛔ 发布入口只有第 5 格：没有第二个打开发布中心的地方，也没有启用 FAB 降级', () => {
+    it('⛔ 发布入口只有中央发布格：没有第二个打开发布中心的地方，也没有启用 FAB 降级', () => {
       const files = walkSource(SRC_ROOT);
       const openers = files.filter((f) => {
         const content = fs.readFileSync(f, 'utf8');

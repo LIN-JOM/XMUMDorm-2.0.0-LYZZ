@@ -68,7 +68,7 @@ export type ScreenProps = {
   titleKey?: MessageKey;
   topMode?: TopMode;
   bottomMode?: BottomMode;
-  /** 顶栏是否显示信箱唯一动作（默认显示，宪法 4.7-3 常态可见） */
+  /** 顶栏是否显示旧信箱动作（默认不显示；消息格是唯一一级入口） */
   showMailbox?: boolean;
   unreadCount?: number;
   onMailboxPress?: () => void;
@@ -90,7 +90,7 @@ export function Screen({
   titleKey,
   topMode = titleKey ? 'topbar' : 'none',
   bottomMode = 'none',
-  showMailbox = true,
+  showMailbox = false,
   unreadCount = 0,
   onMailboxPress,
   tabBarHeight,

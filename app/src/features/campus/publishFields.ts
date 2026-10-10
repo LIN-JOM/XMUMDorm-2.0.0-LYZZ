@@ -46,10 +46,10 @@ export function createWallPublishDescriptor(t: Translate): PublishFormDescriptor
       const result = await createConfession({content: values.content, template_key: values.template_key});
       if (!Number.isSafeInteger(result?.id) || result.id <= 0) throw {kind: 'unknown'};
       getQueryClient().removeQueries({queryKey: QK.confessionWindow('_guest')});
-      secondaryTabStore.update('campus', 'wall', {scrollOffset: 0, cursor: null});
+      secondaryTabStore.update('square', 'wall', {scrollOffset: 0, cursor: null});
       return {id: result.id};
     },
-    routeAfterSubmit: () => '/(tabs)/campus?tab=wall',
+    routeAfterSubmit: () => '/?tab=wall',
   };
   return descriptor;
 }

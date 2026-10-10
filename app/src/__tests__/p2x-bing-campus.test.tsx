@@ -341,7 +341,7 @@ it('发布后的详情返回树洞列表，普通阅读仍走原返回栈',async
  detail.mockResolvedValue({id:7,title:'新帖',content:'新内容'});
  const v=await renderApp(<CampusDetailScreen postId="7" published/>);
  await waitFor(()=>expect(v.getByText('新内容')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockReplace).toHaveBeenCalledWith('/(tabs)/campus');expect(mockBack).not.toHaveBeenCalled();
+ await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockReplace).toHaveBeenCalledWith('/');expect(mockBack).not.toHaveBeenCalled();
 });
 
 it('树洞列表卸载时解绑查询缓存订阅',async()=>{

@@ -48,8 +48,9 @@ export const zh = {
   'tab.square': '广场',
   'tab.tools': '工具',
   'tab.campus': '校园里',
+  'tab.messages': '消息',
   'tab.me': '我的',
-  // 第 5 格：只有加号无可见标签，但**必须**有可读标签（骨架规范 §3.4）
+  // 中央发布格：只有加号无可见标签，但**必须**有可读标签（骨架规范 §3.4）
   'tab.publish': '发布',
   'tab.publishHint': '打开发布中心',
 

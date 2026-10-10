@@ -47,6 +47,7 @@ export const en: Record<MessageKey, string> = {
   'tab.square': 'Square',
   'tab.tools': 'Tools',
   'tab.campus': 'Campus',
+  'tab.messages': 'Messages',
   'tab.me': 'Me',
   'tab.publish': 'Publish',
   'tab.publishHint': 'Open publish center',

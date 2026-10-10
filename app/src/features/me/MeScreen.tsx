@@ -41,7 +41,7 @@ import { getTodayTodos } from '../../../../shared/api/todos';
 import { getScheduleWeek } from '../../../../shared/api/schedule';
 import { clampWeek, currentTeachingWeek } from '../../../../shared/config/semesters';
 import { useTimetableWeek } from '@/features/tools/timetable';
-import { useMailboxBadge } from '@/features/mailbox/useUnread';
+import { useUnread } from '@/features/mailbox/useUnread';
 import {
   courseLineParams,
   meetingsOf,
@@ -72,7 +72,7 @@ export function MeScreen(): React.ReactElement {
   const { t } = useI18n();
   const theme = useTheme();
   const router = useRouter();
-  const badge = useMailboxBadge();
+  const { total: unreadTotal } = useUnread();
 
   const [profile, setProfile] = React.useState<Loadable<MeProfile>>({
     data: EMPTY_PROFILE,
@@ -139,7 +139,6 @@ export function MeScreen(): React.ReactElement {
       titleKey="screen.me"
       bottomMode="tabbar"
       tabBarHeight={TAB_BAR_CLEARANCE}
-      {...badge}
     >
       <View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
         {/* ── 资料卡：头像 + 昵称 + 等级 + 经验 ─────────────────────── */}
@@ -189,7 +188,7 @@ export function MeScreen(): React.ReactElement {
 
         {/* ── 指标行：未读 / 今日待办 / 今日课程 ───────────────────── */}
         <MetricRow testID="me-metrics">
-          <StatTile testID="me-stat-unread" value={badge.unreadCount} label={t('me.stat.unread')} />
+          <StatTile testID="me-stat-unread" value={unreadTotal ?? 0} label={t('me.stat.unread')} />
           <StatTile
             testID="me-stat-todos"
             value={todos.loading ? null : todos.data.active}
