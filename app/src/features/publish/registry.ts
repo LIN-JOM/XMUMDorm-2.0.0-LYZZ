@@ -14,7 +14,11 @@
  *   4. **合规门禁**（A-05）挂在**每个发布表单的提交链路**上，见 `complianceGate.ts`
  */
 
+import type { Href } from 'expo-router';
+
 import type { MessageKey } from '@/i18n';
+
+type StringHref = Extract<Href, string>;
 
 /** 发布类型 id（也是表单路由的参数段） */
 export type PublishId =
@@ -43,8 +47,8 @@ export type Viewer = {
 /** 表单承载路由：**一条动态路由**承载所有发布表单（宪法 9.2 的参数化框架） */
 export const PUBLISH_FORM_ROUTE_PATTERN = '/publish/[type]';
 
-export function formRouteFor(id: PublishId): string {
-  return `/publish/${id}`;
+export function formRouteFor(id: PublishId): StringHref {
+  return `/publish/${id}` as StringHref;
 }
 
 export type PublishEntry = {

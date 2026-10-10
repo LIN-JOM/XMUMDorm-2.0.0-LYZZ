@@ -17,7 +17,7 @@
 
 import * as React from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Badge } from '@/components/ui/Badge';
@@ -47,12 +47,14 @@ import {
 import { toMailboxError } from './conversations';
 import { useUnread } from './useUnread';
 
+type StringHref = Extract<Href, string>;
+
 /**
  * 通知目标 → App 内路由。
  * ⛔ **本轮故意几乎全空**：`target.path` 是 Web 路径，硬套会跳到不存在的页面。
  * 等 **S03 DeepLinkRouter** 落地后，这里改成用它（页面清单 §5 的深链表）。
  */
-export function resolveNotificationRoute(_row: NotificationRow): string | null {
+export function resolveNotificationRoute(_row: NotificationRow): StringHref | null {
   return null;
 }
 

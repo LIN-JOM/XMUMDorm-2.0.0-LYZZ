@@ -40,7 +40,7 @@ function validDescriptor(): PublishFormDescriptor {
       },
     ],
     submit: async () => ({ id: 7 }),
-    routeAfterSubmit: (result) => `/post/${(result as { id?: number })?.id ?? ''}`,
+    routeAfterSubmit: (result) => `/campus/${(result as { id?: number })?.id ?? ''}`,
   };
 }
 
@@ -156,9 +156,9 @@ describe('P2A-01 发布描述符契约与缺口账本', () => {
 
     it('去向：结果里的 route 优先，否则走 routeAfterSubmit', () => {
       const descriptor = validDescriptor();
-      expect(resolvePublishDestination(descriptor, { route: '/x' })).toBe('/x');
-      expect(resolvePublishDestination(descriptor, { id: 3 })).toBe('/post/3');
-      expect(resolvePublishDestination(descriptor, undefined)).toBe('/post/');
+      expect(resolvePublishDestination(descriptor, { route: '/market' })).toBe('/market');
+      expect(resolvePublishDestination(descriptor, { id: 3 })).toBe('/campus/3');
+      expect(resolvePublishDestination(descriptor, undefined)).toBe('/campus/');
     });
   });
 

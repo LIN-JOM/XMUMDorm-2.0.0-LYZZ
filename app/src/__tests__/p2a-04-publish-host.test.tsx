@@ -54,7 +54,7 @@ function makeDescriptor(overrides: Partial<PublishFormDescriptor> = {}): Publish
       },
     ],
     submit: jest.fn(async () => ({ id: 42 })),
-    routeAfterSubmit: (result) => `/post/${(result as { id?: number })?.id ?? ''}`,
+    routeAfterSubmit: (result) => `/campus/${(result as { id?: number })?.id ?? ''}`,
     ...overrides,
   };
 }
@@ -174,7 +174,7 @@ describe('P2A-04 发布表单宿主与提交门控', () => {
       await act(async () => {
         hostRef.current?.onSettled(postSubmitPlan('create'));
       });
-      expect(routerState.replaced).toEqual(['/post/42']);
+      expect(routerState.replaced).toEqual(['/campus/42']);
       expect(routerState.backCount).toBe(0);
     });
 

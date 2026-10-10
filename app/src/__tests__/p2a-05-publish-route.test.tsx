@@ -92,7 +92,7 @@ function makeDescriptor(overrides: Partial<PublishFormDescriptor> = {}): Publish
       },
     ],
     submit: jest.fn(async () => ({ id: 9 })),
-    routeAfterSubmit: (result) => `/post/${(result as { id?: number })?.id ?? ''}`,
+    routeAfterSubmit: (result) => `/campus/${(result as { id?: number })?.id ?? ''}`,
     ...overrides,
   };
 }
@@ -163,7 +163,7 @@ describe('P2A-05 发布表单路由接线与端到端', () => {
       expect(descriptor.submit).toHaveBeenCalledWith(
         expect.objectContaining({ body: '今天的树洞' })
       );
-      await waitFor(() => expect(routerState.replaced).toEqual(['/post/9']));
+      await waitFor(() => expect(routerState.replaced).toEqual(['/campus/9']));
     });
   });
 
