@@ -116,7 +116,7 @@ export const SchoolSystemWebView = React.forwardRef<
           if (!pending.current.delete(requestId)) return;
           onMoodleResponse?.({ requestId, method: request.method, status: 'timeout' });
         }, 12000);
-        pending.current.set(requestId, { request, timer });
+        pending.current.set(requestId, { request: { ...request }, timer });
         webRef.current.injectJavaScript(script);
         return requestId;
       },
@@ -135,6 +135,7 @@ export const SchoolSystemWebView = React.forwardRef<
           && (moodle.data as MoodleStateResponse).courseId !== item.request.courseId) return;
         clearTimeout(item.timer);
         pending.current.delete(moodle.requestId);
+        if (moodle.status === 'expired' || moodle.status === 'wrong-origin') cancelMoodleReads();
         onMoodleResponse?.(moodle);
         return;
       }
