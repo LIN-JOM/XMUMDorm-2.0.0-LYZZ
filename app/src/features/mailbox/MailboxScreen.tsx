@@ -2,7 +2,7 @@
  * 信箱页（`F-01`）—— 页面级组合（P2B-04）
  *
  * 形态依据：
- *   · **推入式全屏目的地**：⛔ 不是模态、⛔ 不是 Tab、⛔ 不进收纳处（宪法 4.7-1）
+ *   · **消息一级目的地**：原生 Tab 内容区，复用唯一底栏净空。
  *   · **列表骨架**：`P2` → `K05 ListScreen`（四态与分页状态机只在骨架里）
  *   · **分类切换**：`C14 SegmentedControl` 的 `withCount`（P2B-05 裁决：这是**页内筛选**，不是导航）
  *     → 因此它进 `filterChips`/自己的位置，⛔ **不进 `tabs` 槽位**（4.8.1-R4）
@@ -28,6 +28,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
+import { TAB_BAR_HEIGHT } from '@/features/navigation/tabConfig';
 import {
   clearNotificationsByCategory,
   getNotifications,
@@ -165,7 +166,12 @@ export function MailboxScreen(): React.ReactElement {
   const canClear = rows.some((row) => isClearable(row.type));
 
   return (
-    <Screen testID="screen-mailbox" titleKey="screen.mailbox" bottomMode="none" showMailbox={false}>
+    <Screen
+      testID="screen-mailbox"
+      titleKey="screen.mailbox"
+      bottomMode="tabbar"
+      tabBarHeight={TAB_BAR_HEIGHT}
+    >
       <View style={{ flex: 1 }}>
         <View
           style={{

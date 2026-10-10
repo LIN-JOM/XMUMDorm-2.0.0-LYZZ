@@ -58,6 +58,12 @@ describe('P2D-02 安全区 10 条清单', () => {
     expect(stripComments(readApp(path.join('(tabs)', '_layout.tsx')))).toContain('TAB_BAR_CLEARANCE');
   });
 
+  it('第 2 条 · 消息改为一级 Tab 后，列表复用唯一 Tab 栏净空（⛔ 沿用旧全屏模式）', () => {
+    const mailbox = stripComments(read(path.join('features', 'mailbox', 'MailboxScreen.tsx')));
+    expect(mailbox).toContain('bottomMode="tabbar"');
+    expect(mailbox).toContain('tabBarHeight={TAB_BAR_HEIGHT}');
+  });
+
   it('第 4 条 · 键盘：走容器显式计算（⛔ 不用 `KeyboardAvoidingView` 的隐式行为）', () => {
     const screen = stripComments(readUi('Screen.tsx'));
     expect(screen).not.toContain('KeyboardAvoidingView');
