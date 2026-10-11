@@ -4,7 +4,7 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { TimetableScreen, type TimetableRenderProps } from '@/features/tools/TimetableScreen';
 import { courseAccent, weekdayTimetableWeek } from '@/features/tools/timetableView';
-import { normalizeTimetableWeek, timetableCacheKey } from '@/features/tools/timetable';
+import { normalizeTimetableWeek, safeTimetableWeekCount, timetableCacheKey } from '@/features/tools/timetable';
 import { clearNamespace, setItem } from '@/shared/storage';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
@@ -61,4 +61,21 @@ it('keeps an import action for a week with no weekday meetings', async () => {
   const view = await renderApp(<TimetableScreen renderGrid={grid} />);
   await waitFor(() => expect(view.getByTestId('timetable-empty')).toBeTruthy());
   expect(view.getByText('课表导入')).toBeTruthy();
+});
+
+it.each([1e308, 1000000, NaN, Infinity, -1, 0, 1.5])('falls back to the configured twenty-week count for unsafe response %s', (count) => {
+  expect(safeTimetableWeekCount(count)).toBe(20);
+  expect(normalizeTimetableWeek({ week: 1, days: {}, totalWeeks: count })?.totalWeeks).toBe(20);
+});
+
+it('keeps every valid configured teaching week and recovers the filter after an extreme response', async () => {
+  expect(safeTimetableWeekCount(14)).toBe(14);
+  expect(safeTimetableWeekCount(20)).toBe(20);
+  api.getScheduleWeek.mockImplementation(async (week: number) => ({ ...payload(week), totalWeeks: 1e308 }));
+  const view = await renderApp(<TimetableScreen renderGrid={grid} />);
+  await waitFor(() => expect(view.getByTestId('grid-probe')).toBeTruthy());
+  expect(view.getByTestId('week-number-20')).toBeTruthy();
+  expect(view.queryByTestId('week-number-21')).toBeNull();
+  await fireEvent.press(view.getByTestId('week-number-20'));
+  await waitFor(() => expect(gridProps?.week.week).toBe(20));
 });
