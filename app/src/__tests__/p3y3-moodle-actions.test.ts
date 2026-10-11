@@ -34,3 +34,22 @@ it('p3y3 reminds only explicit actionable events; false or unknown never become 
   expect(buckets.valid).toHaveLength(3);
   expect(planMoodleDeadlineReminders(buckets, now)).toEqual([{ id: 'moodle:1:1', fireAt: now + 86400000 - 1800000 }]);
 });
+
+it('p3y3 accepts only known machine deadline types without guessing from event names', () => {
+  const quiz = { ...state.modules[0], id: 102, type: 'quiz', url: 'https://l.xmu.edu.my/mod/quiz/view.php?id=102' };
+  const folder = { ...state.modules[0], id: 103, type: 'folder', url: 'https://l.xmu.edu.my/mod/folder/view.php?id=103' };
+  const states = [{ ...state, modules: [...state.modules, quiz, folder] }];
+  const base = { courseId: 1, moduleId: 101, name: 'Deadline translated title', time: now / 1000 + 86400,
+    url, action: { name: 'Open', itemCount: 1, actionable: true } };
+  const events = [{ ...base, id: 1, eventType: 'due' }, { ...base, id: 2, eventType: 'open' },
+    { ...base, id: 3, eventType: 'gradingdue' }, { ...base, id: 4 },
+    { ...base, id: 5, eventType: 'plugin_unknown' }, { ...base, id: 6, eventType: 'close', url: quiz.url },
+    { ...base, id: 7, eventType: 'expectcompletionon', url: folder.url }];
+  expect(planMoodleDeadlineReminders(partitionMoodleDeadlines(states, events, now), now).map((item) => item.id))
+    .toEqual(['moodle:1:1', 'moodle:1:6', 'moodle:1:7']);
+  const raw = { events: [{ id: 8, course: { id: 1 }, instance: 101, visible: true, name: 'Due',
+    timesort: now / 1000 + 86400, url, eventtype: 'due' }], firstid: 8, lastid: 8 };
+  const projected = parseMoodleResponse('events', raw)!;
+  expect(projected.events[0].eventType).toBe('due');
+  expect(parseMoodleResponse('events', projected)).toEqual(projected);
+});
