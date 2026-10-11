@@ -7,7 +7,7 @@ import { DishDetail } from '@/features/square/DishDetail';
 import { ReviewScreen } from '@/features/square/ReviewScreen';
 import { DishActions } from '@/features/square/DishActions';
 import { getProduct, getProductFavoriteStatus } from '../../../shared/api/canteen';
-jest.mock('lucide-react-native/icons/heart', () => { const React = jest.requireActual('react'); const { View } = jest.requireActual('react-native'); return (props: object) => React.createElement(View, { ...props, testID: 'favorite-heart-glyph' }); });
+jest.mock('lucide-react-native/icons/heart', () => { const React = jest.requireActual('react'); const { View } = jest.requireActual('react-native'); return function MockHeart(props: object) { return React.createElement(View, { ...props, testID: 'favorite-heart-glyph' }); }; });
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: '7' }), useNavigation: () => ({ dispatch: jest.fn() }), useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => false }) }));
 jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn() }));
 jest.mock('@/features/auth/session', () => ({ useSession: () => ({ status: 'signedIn', handleAuthFailure: async () => ({ kind: 'unknown' }) }) }));
@@ -38,4 +38,16 @@ it('uses one image entry until the review limit and enables it again after remov
   await fireEvent.press(view.getByTestId('review-images-remove-1'));
   expect(view.getByTestId('review-images-add-pick')).toBeTruthy();
   expect(pick).toHaveBeenCalledTimes(3);
+});
+
+it('opens a root reply as a local form and returns to the same dish on cancel', async () => {
+  jest.mocked(getProduct).mockResolvedValue({ id: 7, name: 'Rice', images: [], comments: { list: [{ id: 1, parent_id: null, content: 'Root review', rating: '顶级', author: { nickname: null, avatar: null } }], page: 1, pageSize: 10, hasMore: false } });
+  const view = await renderApp(<DishDetail />);
+  await waitFor(() => expect(view.getByLabelText('回复')).toBeTruthy());
+  await fireEvent.press(view.getByLabelText('回复'));
+  expect(view.getByTestId('review-form')).toBeTruthy();
+  expect(view.queryByTestId('screen-dish')).toBeNull();
+  await fireEvent.press(view.getByTestId('review-form-cancel'));
+  expect(view.getByTestId('screen-dish')).toBeTruthy();
+  expect(view.queryByTestId('review-form')).toBeNull();
 });

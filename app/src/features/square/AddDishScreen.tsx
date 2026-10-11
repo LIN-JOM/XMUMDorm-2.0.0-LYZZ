@@ -32,7 +32,7 @@ function AddDishForm({ categories, ...props }: AddDishProps & { categories: read
   const session = useSession();
   const router = useRouter();
   const badge = useMailboxBadge();
-  const committed = React.useRef<number | null>(null);
+  const committed = React.useRef<{ id: number; owner: number } | null>(null);
   const fields = React.useMemo<readonly FormFieldDescriptor[]>(() => [
     { name: 'category_id', kind: 'select', labelKey: labels.categoryKey, required: true, source: { kind: 'remote', options: categories.map((category) => ({ value: String(category.id), label: category.name })) },
       validate: (value) => categories.some((category) => String(category.id) === String(value)) ? undefined : labels.invalidCategoryKey },
@@ -54,8 +54,9 @@ function AddDishForm({ categories, ...props }: AddDishProps & { categories: read
           name: `dish-${index}.${image.mimeType === 'image/png' ? 'png' : image.mimeType === 'image/webp' ? 'webp' : 'jpg'}` })) });
         if (owner !== timetableIdentity().epoch) throw { kind: 'unknown' };
         if (typeof product?.id !== 'number' || !Number.isSafeInteger(product.id) || product.id <= 0) throw { kind: 'unknown' };
-        committed.current = product.id;
+        committed.current = { id: product.id, owner };
         await invalidateCanteen().catch(() => undefined);
+        if (owner !== timetableIdentity().epoch) throw { kind: 'unknown' };
       } catch (error) {
         if (owner !== timetableIdentity().epoch) throw { kind: 'unknown' };
         const classified = toToolsError(error, await session.handleAuthFailure(error));
@@ -63,7 +64,7 @@ function AddDishForm({ categories, ...props }: AddDishProps & { categories: read
       }
     } });
   return <Form testID="add-dish-form" titleKey={labels.titleKey} {...badge} semantic="create" guardNavigation form={form} sections={[{ title: labels.titleKey, fields }]}
-    onSettled={() => { if (committed.current !== null) onCreated(committed.current); }}
+    onSettled={() => { if (committed.current?.owner === timetableIdentity().epoch) onCreated(committed.current.id); }}
     onCancel={onCancel ?? (() => router.canGoBack() ? router.back() : router.replace({ pathname: '/canteen/shop/[id]', params: { id: String(shopId) } }))}
     onRetrySubmit={() => void form.submit()}
     labels={{ submit: t(labels.submitKey), cancel: t('action.cancel'), errorSummaryTitle: t(labels.failedKey), leaveTitle: t('form.leave.title'), leaveBody: t('form.leave.body'), leaveConfirm: t('form.leave.confirm'), leaveCancel: t('form.leave.cancel') }} />;

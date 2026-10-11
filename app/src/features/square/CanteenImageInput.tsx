@@ -6,9 +6,10 @@ import { IconButton } from '@/components/ui/IconButton';
 import { MediaPicker, type PickedImage, type PickResult } from '@/components/ui/MediaPicker';
 import { useI18n } from '@/i18n';
 import { useTheme } from '@/design-system/theme';
+import { pickReviewImage } from './pickReviewImage';
 import type { MessageKey } from '@/i18n';
 
-export function CanteenImageInput({ images, onChange, pickImage, limit, disabled, testID, unavailableKey = 'canteen.review.imagesUnavailable' }: {
+export function CanteenImageInput({ images, onChange, pickImage = pickReviewImage, limit, disabled, testID, unavailableKey = 'canteen.review.imagesUnavailable' }: {
   images: readonly PickedImage[]; onChange: (images: readonly PickedImage[]) => void; pickImage?: () => Promise<PickResult>;
   limit: number; disabled?: boolean; testID: string; unavailableKey?: MessageKey;
 }): React.ReactElement {

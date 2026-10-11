@@ -18,7 +18,7 @@
 
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
@@ -38,7 +38,6 @@ import {
   mergeCommentPages,
   normalizeCommentPage,
   normalizeProductDetail,
-  ratingTierLabelKey,
   type CanteenComment,
   type CanteenProductDetail,
 } from './canteen';
@@ -48,6 +47,10 @@ import { canteenCacheKey } from './canteen';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { canteenRevision } from './canteenCache';
 import { CanteenMedia } from './CanteenMedia';
+import { ReviewScreen } from './ReviewScreen';
+import { DishCommentThread } from './DishCommentThread';
+import { useSession } from '@/features/auth/session';
+import { timetableIdentity } from '@/features/tools/cacheIdentity';
 import { DishActions } from './DishActions';
 
 /** 翻页追加的评论（首屏那一页由详情接口给） */
@@ -62,6 +65,10 @@ const NO_EXTRA: ExtraComments = { list: [], page: 0, hasMore: false };
 
 export function DishDetail(): React.ReactElement {
   const badge = useMailboxBadge();
+  const router = useRouter();
+  const session = useSession();
+  const owner = timetableIdentity().epoch;
+  const [reply, setReply] = React.useState<{ productId: number; parentId: number; owner: number } | null>(null);
   const params = useLocalSearchParams<{ id?: string }>();
   const { t } = useI18n();
   const theme = useTheme();
@@ -126,6 +133,8 @@ export function DishDetail(): React.ReactElement {
       if (request === pagingVersion.current) { pagingBusy.current = false; setLoadingMore(false); }
     }
   };
+
+  if (reply && reply.productId === productId && reply.owner === owner && comments.some((comment) => comment.id === reply.parentId && comment.parentId === null)) return <ReviewScreen productId={productId} parentId={reply.parentId} titleKey="screen.campus.read.reply" onCancel={() => setReply(null)} onSettled={() => setReply(null)} />;
 
   return (
     <Screen testID="screen-dish" titleKey="canteen.dishTitle" bottomMode="own" {...badge}>
@@ -210,47 +219,10 @@ export function DishDetail(): React.ReactElement {
                 {t('canteen.noComments')}
               </Text>
             ) : (
-              <View style={{ gap: theme.space('space_3') }}>
-                {comments.map((comment) => {
-                  const tierKey = ratingTierLabelKey(comment.rating);
-                  return (
-                    <Surface
-                      key={comment.id}
-                      testID={`dish-comment-${comment.id}`}
-                      rounded="radius_medium"
-                      bordered="subtle"
-                      padding="space_3"
-                    >
-                      <View style={{ gap: theme.space('space_1') }}>
-                        {/* 匿名投影：普通评论没有昵称/头像（宪法 4.1.1） */}
-                        <Text role="caption" colorToken="text-muted">
-                          {comment.isMerchantReply
-                            ? (comment.authorNickname ?? t('canteen.merchant'))
-                            : t('canteen.anonymous')}
-                        </Text>
-                        {/* 档位标签（⛔ 不是星星） */}
-                        {tierKey ? (
-                          <View style={{ flexDirection: 'row' }}>
-                            <Surface testID={`dish-comment-${comment.id}-tier`} rounded="radius_small" bordered="subtle" padding="space_1"><Text role="caption" colorToken="text-secondary">{t(tierKey)}</Text></Surface>
-                          </View>
-                        ) : null}
-                        {/* 商家回复用**引用块**区分（⛔ 不只靠缩进或颜色） */}
-                        {comment.isMerchantReply ? (
-                          <Surface rounded="radius_small" bordered="subtle" padding="space_2">
-                            <Text role="body" colorToken="text-secondary">
-                              {comment.content}
-                            </Text>
-                          </Surface>
-                        ) : (
-                          <Text role="body" colorToken="text-secondary">
-                            {comment.content}
-                          </Text>
-                        )}
-                      </View>
-                    </Surface>
-                  );
-                })}
-              </View>
+              <DishCommentThread comments={comments} onReply={(parentId) => {
+                if (session.status !== 'signedIn') { router.push('/login'); return; }
+                if (comments.some((comment) => comment.id === parentId && comment.parentId === null)) setReply({ productId, parentId, owner });
+              }} />
             )}
 
             {moreError ? <ErrorState testID="dish-comments-error" error={moreError} onAction={() => void loadMore()} /> : null}

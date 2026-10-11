@@ -14,7 +14,7 @@ import { normalizeRanked } from './canteenRankedProducts';
 import { canteenCacheKey, CANTEEN_CACHE_TTL_MS } from './canteen';
 import { CanteenMedia } from './CanteenMedia';
 
-/** P2 full region ranking, also usable as a local second view before router integration. */
+/** P9 full region ranking, also usable as a local second view before router integration. */
 export function RegionRankingScreen({ regionId, onClose }: { regionId: number; onClose: () => void }): React.ReactElement {
   const router = useRouter();
   const { t } = useI18n();

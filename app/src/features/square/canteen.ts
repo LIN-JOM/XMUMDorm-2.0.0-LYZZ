@@ -5,7 +5,7 @@
  * `routes/canteen.js` 里这些读接口**没有** `authenticateToken`：`/regions`、
  * `/regions/:id/shops`、`/regions/:id/top-products`、`/shops/:id`、`/shops/:id/products`、
  * `/shops/:id/hot-products`、`/products/:id`、`/products/:id/comments`。
- * 所以本切片**不依赖** P1-13 的令牌；写路径（发评论、收藏）才需要（本轮不做，见 §风险）。
+ * 所以本切片**不依赖** P1-13 的令牌；写路径（发评论、收藏）才需要。
  *
  * ## ⚠️ 三处"文档与数据模型不符"（README §7-2/3/4/13）
  * | 页面清单写的 | 实际 |
@@ -213,7 +213,8 @@ export function normalizeShopDetail(data: unknown): CanteenShopDetail | null {
 
 export type CanteenComment = {
   id: number;
-  /** 五档枚举之一；`null` = 这条是**商家回复**或没带评分（回复也不带评分） */
+  parentId: number | null;
+  /** 五档枚举之一；`null` = 这条是**商家回复**或历史数据没带评分；新回复仍要求评级 */
   rating: CanteenRatingTier | null;
   content: string;
   createdAt: string | null;
@@ -229,8 +230,10 @@ export function normalizeComments(data: unknown): readonly CanteenComment[] {
   return asArray(data)
     .map((item): CanteenComment | null => {
       const comment = (item ?? {}) as Record<string, unknown>;
-      const id = asId(comment.id);
+      const id = typeof comment.id === 'number' && Number.isSafeInteger(comment.id) && comment.id > 0 ? comment.id : null;
       if (id === null) return null;
+      const parentId = comment.parent_id == null ? null : comment.parent_id;
+      if (parentId !== null && (typeof parentId !== 'number' || !Number.isSafeInteger(parentId) || parentId <= 0)) return null;
       const author = (comment.author ?? {}) as Record<string, unknown>;
       const images = asArray(comment.images)
         .map((image) => asString((image as Record<string, unknown>)?.url))
@@ -239,13 +242,14 @@ export function normalizeComments(data: unknown): readonly CanteenComment[] {
       const avatar = asString(author.avatar);
       return {
         id,
+        parentId,
         rating: isRatingTier(comment.rating) ? comment.rating : null,
         content: asString(comment.content) ?? '',
         createdAt: asString(comment.created_at),
         authorNickname: nickname,
         authorAvatar: avatar,
         // 服务端只在"商家回复"时回填昵称/头像 → 拿它反推而不是另加字段
-        isMerchantReply: nickname !== null || avatar !== null,
+        isMerchantReply: parentId !== null && (nickname !== null || avatar !== null),
         images,
       };
     })
