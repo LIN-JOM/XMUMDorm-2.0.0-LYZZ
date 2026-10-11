@@ -6,7 +6,7 @@ const modules = [101, 102, 103, 104].map((id) => ({ id, sectionId: 1, type: 'ass
   url: `https://l.xmu.edu.my/mod/assign/view.php?id=${id}`, visible: true, userVisible: true, accessVisible: true }));
 const states: MoodleStateResponse[] = [{ courseId: 1, sections: [], modules }];
 const event = (id: number, moduleId: number, time: number): MoodleActionEvent => ({ id, courseId: 1,
-  moduleId: 900 + moduleId, name: `Deadline ${id}`, time, url: modules.find((item) => item.id === moduleId)?.url ?? null });
+  eventType: 'due', action: { name: 'Submit', itemCount: 1, actionable: true }, moduleId: 900 + moduleId, name: `Deadline ${id}`, time, url: modules.find((item) => item.id === moduleId)?.url ?? null });
 
 it('p3y3 separates valid past unset and implausibly distant times', () => {
   const events = [event(1, 101, Date.parse('2026-10-12T01:00:00Z') / 1000),
@@ -36,3 +36,5 @@ it('p3y3 excludes inaccessible unselected and unresolved module events', () => {
   expect(buckets.valid).toEqual([]);
   expect(planMoodleDeadlineReminders(buckets, now)).toEqual([]);
 });
+
+

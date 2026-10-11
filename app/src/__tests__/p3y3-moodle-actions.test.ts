@@ -27,7 +27,7 @@ it('p3y3 projects official action fields through native memory cache without sec
 });
 
 it('p3y3 reminds only explicit actionable events; false or unknown never become automatic reminders', () => {
-  const base = { courseId: 1, moduleId: 101, name: 'Deadline', time: now / 1000 + 86400, url };
+  const base = { eventType: 'due', courseId: 1, moduleId: 101, name: 'Deadline', time: now / 1000 + 86400, url };
   const events = [{ ...base, id: 1, action: { name: 'Submit', itemCount: 1, actionable: true } },
     { ...base, id: 2, action: { name: 'Submit', itemCount: 1, actionable: false } }, { ...base, id: 3 }];
   const buckets = partitionMoodleDeadlines([state], events, now);
@@ -53,3 +53,4 @@ it('p3y3 accepts only known machine deadline types without guessing from event n
   expect(projected.events[0].eventType).toBe('due');
   expect(parseMoodleResponse('events', projected)).toEqual(projected);
 });
+

@@ -56,6 +56,7 @@ describe('Moodle response projection', () => {
         {
           id: 501, courseId: 42, moduleId: 100, name: 'Tutorial 1 deadline',
           time: 1791513000, url: 'https://l.xmu.edu.my/mod/assign/view.php?id=100',
+          action: { name: 'Submit', itemCount: null, actionable: null },
         },
         {
           id: 502, courseId: 43, moduleId: null, name: 'Course event',
@@ -106,3 +107,4 @@ describe('Moodle response projection', () => {
     for (const value of [null, [], 1, 'bad json', {}]) expect(parseMoodleResponse(method, value)).toBeNull();
   });
 });
+

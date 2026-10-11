@@ -33,9 +33,12 @@ export type MoodleModule = {
 export type MoodleActionEvent = {
   id: number;
   courseId: number;
-  /** Calendar activity instance; despite this legacy name it is not necessarily course_modules.id. */
+  /** Moodle 4.5 AJAX exports cm.id here; URL association also checks school adaptation differences. */
   moduleId: number | null;
   name: string;
+  /** Optional for older snapshots; values stay machine identifiers, never title-derived. */
+  eventType?: string | null;
+  action?: { name: string | null; itemCount: number | null; actionable: boolean | null };
   /** Unix seconds from timesort, not the device timezone or timestart. */
   time: number;
   url: string | null;
@@ -210,13 +213,25 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
       const action = record(item.action);
       const viewUrl = safeUrl(item.viewurl);
       const fallbackUrl = viewUrl !== null && viewUrl.indexOf('/calendar/') < 0 ? viewUrl : null;
-      events.push({ id: id, courseId: courseId, moduleId: integer(standard ? item.moduleId : item.instance, 1),
+      const event: MoodleActionEvent = { id: id, courseId: courseId, moduleId: integer(standard ? item.moduleId : item.instance, 1),
         name: name, time: time, url: standard ? safeUrl(item.url)
-          : safeUrl(item.url) ?? safeUrl(action === null ? null : action.url) ?? fallbackUrl });
+          : safeUrl(item.url) ?? safeUrl(action === null ? null : action.url) ?? fallbackUrl };
+      const eventType = standard ? item.eventType : item.eventtype;
+      if (eventType !== undefined) event.eventType = typeof eventType === 'string'
+        && /^[a-z][a-z0-9_]{0,79}$/.test(eventType) ? eventType : null;
+      if (action !== null) {
+        const actionName = text(action.name);
+        event.action = { name: actionName === null ? null : actionName.slice(0, 1000),
+          itemCount: integer(standard ? action.itemCount : action.itemcount, 0),
+          actionable: typeof action.actionable === 'boolean' ? action.actionable : null };
+      }
+      events.push(event);
       seen[String(id)] = true;
     }
     return { events: events, firstId: firstId, lastId: lastId };
   }
   return null;
 }
+
+
 

@@ -9,11 +9,17 @@ export type MoodleDeadlineBuckets = { valid: MoodleDeadline[]; past: MoodleDeadl
   futureAnomalies: MoodleDeadline[]; unset: { courseId: number; module: MoodleModule }[] };
 export type MoodleReminderPlan = { id: string; fireAt: number }[];
 
+export function isMoodleDeadlineEvent(module: MoodleModule, event: MoodleActionEvent): boolean {
+  return event.eventType === 'expectcompletionon'
+    || (module.type === 'assign' && event.eventType === 'due')
+    || (module.type === 'quiz' && event.eventType === 'close');
+}
+
 function configured(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
-/** Calendar instance IDs are not course-module IDs. Association uses the exact safe module URL. */
+/** Confirm both the selected course and exact safe module URL; never infer eligibility from event text. */
 export function partitionMoodleDeadlines(states: readonly MoodleStateResponse[], events: readonly MoodleActionEvent[],
   now: number, policy: MoodleDeadlinePolicy = {}): MoodleDeadlineBuckets {
   const result: MoodleDeadlineBuckets = { valid: [], past: [], futureAnomalies: [], unset: [] };
@@ -25,12 +31,12 @@ export function partitionMoodleDeadlines(states: readonly MoodleStateResponse[],
       const url = safeMoodleReadUrl(module.url);
       if (!url) continue;
       const matching = events.filter((event) => event.courseId === state.courseId && event.url === url
-        && Number.isSafeInteger(event.time) && event.time > 0);
+        && isMoodleDeadlineEvent(module, event) && Number.isSafeInteger(event.time) && event.time > 0);
       if (matching.length === 0) { result.unset.push({ courseId: state.courseId, module: { ...module } }); continue; }
       for (const event of matching) {
         const dueAt = event.time * 1000;
         const deadline = { courseId: state.courseId, module: { ...module }, event: { ...event }, dueAt };
-        if (!Number.isSafeInteger(dueAt)) continue;
+        if (!Number.isSafeInteger(dueAt) || !Number.isFinite(new Date(dueAt).getTime())) continue;
         if (dueAt <= now) result.past.push(deadline);
         else if (dueAt > maximum) result.futureAnomalies.push(deadline);
         else result.valid.push(deadline);
@@ -47,9 +53,12 @@ export function planMoodleDeadlineReminders(buckets: MoodleDeadlineBuckets, now:
   const lead = configured(policy.leadMinutes, MOODLE_DEADLINE_DEFAULTS.leadMinutes) * 60000;
   const planned = new Map<string, number>();
   for (const deadline of buckets.valid) {
+    if (deadline.event.action?.actionable !== true) continue;
     const fireAt = deadline.dueAt - lead;
     if (!Number.isSafeInteger(fireAt) || fireAt <= now) continue;
     planned.set(`moodle:${deadline.courseId}:${deadline.event.id}`, fireAt);
   }
   return [...planned].map(([id, fireAt]) => ({ id, fireAt })).sort((left, right) => left.fireAt - right.fireAt);
 }
+
+
