@@ -22,6 +22,7 @@ import * as React from 'react';
 
 import { getItem, setItem, removeItem, getAllNamespacedKeys, STORAGE_NAMESPACE } from '@/shared/storage';
 import { timetableIdentity } from './cacheIdentity';
+import { refreshRemindersAfterTimetableImport } from './reminders/importRefresh';
 import { FALLBACK_TOTAL_WEEKS, clampWeek, kualaLumpurCalendarParts } from '../../../../shared/config/semesters';
 import type { AppError } from '@/i18n/errors';
 
@@ -217,7 +218,10 @@ export async function invalidateTimetable(): Promise<void> {
       .map((key) => removeItem(key.slice(prefix.length))));
   });
   diskQueue = clear.catch(() => undefined);
-  try { await clear; } finally { for (const listener of listeners) listener(); }
+  try { await clear; } finally {
+    for (const listener of listeners) listener();
+    await refreshRemindersAfterTimetableImport();
+  }
 }
 
 function requestWeek(week: number, load: (week: number) => Promise<unknown>): Promise<TimetableWeek> {
