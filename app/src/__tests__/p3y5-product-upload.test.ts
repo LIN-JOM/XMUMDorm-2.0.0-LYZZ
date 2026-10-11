@@ -4,7 +4,7 @@ jest.mock('../../../shared/api/request', () => ({ request: jest.fn() }));
 const originalFormData = globalThis.FormData;
 const originalFile = Object.getOwnPropertyDescriptor(globalThis, 'File');
 const originalBlob = Object.getOwnPropertyDescriptor(globalThis, 'Blob');
-const parts: Array<[string, unknown, unknown]> = [];
+const parts: [string, unknown, unknown][] = [];
 class FakeFormData { append(key: string, value: unknown, filename?: unknown) { parts.push([key, value, filename]); } }
 beforeEach(() => {
   parts.length = 0; jest.clearAllMocks();

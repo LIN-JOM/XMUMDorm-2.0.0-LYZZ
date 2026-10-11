@@ -22,9 +22,12 @@ import { getProducts, getShop, getShopHotProducts } from '../../../../shared/api
 import { normalizeProducts, normalizeShopDetail, canteenCacheKey, CANTEEN_CACHE_TTL_MS, type CanteenProduct } from './canteen';
 import { useCanteenResource } from './useCanteenResource';
 import { normalizeRanked, type RankedProduct } from './canteenRankedProducts';
+import { AddDishScreen, type AddDishLabels } from './AddDishScreen';
+import { Button } from '@/components/ui/Button';
+import type { PickResult } from '@/components/ui/MediaPicker';
 import { CanteenMedia } from './CanteenMedia';
 
-export function ShopMenu(): React.ReactElement {
+export function ShopMenu({ contribution }: { contribution?: { labels: AddDishLabels; pickImage?: () => Promise<PickResult> } } = {}): React.ReactElement {
   const badge = useMailboxBadge();
   const params = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
@@ -42,7 +45,9 @@ export function ShopMenu(): React.ReactElement {
   const hot = useCanteenResource<readonly RankedProduct[]>(() => validId ? getShopHotProducts(shopId) : Promise.resolve([]),
     normalizeRanked, [shopId, validId], { key: canteenCacheKey('shop-hot', shopId), ttlMs: CANTEEN_CACHE_TTL_MS.rankings });
   const categories = shop.data?.categories ?? [];
+  const [addingFor, setAddingFor] = React.useState<number | null>(null);
   const openProduct = (id: number) => router.push({ pathname: '/canteen/product/[id]', params: { id: String(id) } });
+  if (addingFor === shopId && contribution) return <AddDishScreen shopId={shopId} labels={contribution.labels} pickImage={contribution.pickImage} onCancel={() => setAddingFor(null)} onCreated={(id) => { setAddingFor(null); openProduct(id); }} />;
   return <Screen testID="screen-shop-menu" titleKey="canteen.menuTitle" bottomMode="own" {...badge}>
     <View style={{ flex: 1, minHeight: 0 }}>
       {shop.stale || products.stale || hot.stale ? <OfflineBanner testID="shop-stale" variant="stale" message={t('canteen.cache.stale')} actionLabel={t('action.refresh')} onAction={() => { shop.reload(); products.reload(); hot.reload(); }} /> : null}
@@ -56,6 +61,7 @@ export function ShopMenu(): React.ReactElement {
               {shop.data?.openingHours ? <Text role="caption" colorToken="text-muted">{shop.data.openingHours}</Text> : null}
             </View>
           </View>
+          {contribution && categories.length ? <Button testID="shop-add-dish" label={t(contribution.labels.titleKey)} variant="secondary" onPress={() => setAddingFor(shopId)} /> : null}
           <View testID="shop-menu-columns" style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap: theme.space('space_2') }}>
             <View style={{ flex: 1, minWidth: theme.touchTarget, maxWidth: '35%', backgroundColor: theme.color['bg-sunken'].value }}>
               <ScrollView testID="shop-categories" showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: theme.space('space_2'), padding: theme.space('space_2') }}>

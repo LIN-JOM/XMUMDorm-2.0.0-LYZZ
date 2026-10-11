@@ -102,24 +102,25 @@ export function getProduct(productId) {
  * 创建商品（FormData: category_id, name, description, price?, images[]）
  * images 为 File 或 Blob 数组，保证逐个 append 同名字段以兼容 multipart
  */
-export function createProduct(body) {
+export function createProduct(body = {}) {
+  const images = body.images ?? [];
+  const isFile = (image) => typeof File !== 'undefined' && image instanceof File;
+  const isBlob = (image) => typeof Blob !== 'undefined' && image instanceof Blob;
+  const isNativeImage = (image) => image && typeof image === 'object' && typeof image.uri === 'string' && /^(file|content|ph):\/\//.test(image.uri) &&
+    ['image/jpeg', 'image/png', 'image/webp'].includes(image.type) && typeof image.name === 'string' && image.name.trim() && !/[\r\n]/.test(image.name);
+  if (!Array.isArray(images) || images.length > 5 || images.some((image) => !isFile(image) && !isBlob(image) && !isNativeImage(image))) return Promise.reject({ kind: 'validation' });
   const form = new FormData();
   if (body.category_id != null) form.append('category_id', String(body.category_id));
   if (body.name != null) form.append('name', String(body.name).trim());
   if (body.description != null) form.append('description', String(body.description).trim());
-  if (body.price != null && body.price !== '') {
-    form.append('price', String(Number(body.price)));
-  }
-  if (body.images && Array.isArray(body.images)) {
-    body.images.forEach((f) => {
-      if (f instanceof File || (typeof Blob !== 'undefined' && f instanceof Blob)) {
-        form.append('images', f, f instanceof File ? f.name : undefined);
-      }
-    });
+  if (body.price != null && body.price !== '') form.append('price', String(Number(body.price)));
+  for (const image of images) {
+    if (isFile(image)) form.append('images', image, image.name);
+    else if (isBlob(image)) form.append('images', image);
+    else form.append('images', image);
   }
   return request('/api/canteen/products', { method: 'POST', body: form });
 }
-
 /**
  * 更新商品。若传 imageFile 或 images 则用 FormData（会替换商品图），否则用 JSON。
  */
