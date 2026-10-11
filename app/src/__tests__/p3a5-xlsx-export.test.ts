@@ -51,7 +51,7 @@ describe('P3A5-04 原生 XLSX 导出', () => {
 
     await saveAndShareXlsx({ blob: { arrayBuffer: async () => bytes.buffer } as Blob, filename: '../club\\roster.xlsx' });
 
-    expect(filesystem.File).toHaveBeenCalledWith(filesystem.Paths.document, 'club-roster.xlsx');
+    expect(filesystem.File).toHaveBeenCalledWith(filesystem.Paths.document, 'roster.xlsx');
     expect(file.create).toHaveBeenCalledWith({ intermediates: true, overwrite: true });
     expect(file.write).toHaveBeenCalledWith(bytes);
     expect(sharing.shareAsync).toHaveBeenCalledWith(file.uri, expect.objectContaining({
