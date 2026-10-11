@@ -4,7 +4,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ALL_HOLIDAYS } from '../../../../shared/config/holidays';
 import { kualaLumpurCalendarParts } from '../../../../shared/config/semesters';
 import { Button } from '@/components/ui/Button';
-import { ListItem } from '@/components/ui/ListItem';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
@@ -30,8 +29,9 @@ export function HolidaysContent({ now, onBack }: { now: Date; onBack: () => void
     <Button testID="tools-holidays-back" label={t('action.back')} variant="ghost" onPress={onBack} />
     <SectionHeader title={t('tools.dashboard.holiday')} />
     {holidays.length === 0 ? <Text role="body" colorToken="text-secondary">{t('tools.dashboard.noHoliday')}</Text> :
-      holidays.map((holiday) => <ListItem key={holiday.id} testID={`holiday-${holiday.id}`} variant="action" disabled
-        title={t('tools.dashboard.holidayLine', { name: { zh: holiday.nameZh, en: holiday.nameEn }[locale], start: holiday.start, end: holiday.end })} />)}
+      holidays.map((holiday) => <View key={holiday.id} testID={`holiday-${holiday.id}`} style={{ paddingVertical: theme.space('space_2') }}>
+        <Text role="body">{t('tools.dashboard.holidayLine', { name: { zh: holiday.nameZh, en: holiday.nameEn }[locale], start: holiday.start, end: holiday.end })}</Text>
+      </View>)}
   </View>;
 }
 
