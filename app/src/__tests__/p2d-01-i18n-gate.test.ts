@@ -72,7 +72,7 @@ describe('P2D-01 词条门禁（Phase D）', () => {
   it('TC-P2D-01-4A · 动态 key 来源都在**登记的**文件里（加一处就要登记一次）', () => {
     // 动态 key 本身不是错误，**无登记的**动态 key 才是
     const offenders = walk(SRC_ROOT)
-      .filter((file) => /t\(`|as MessageKey/.test(fs.readFileSync(file, 'utf8')))
+      .filter((file) => /\bt\(`|as MessageKey/.test(fs.readFileSync(file, 'utf8')))
       .map((file) => path.relative(SRC_ROOT, file))
       .filter((rel) => !REGISTERED_CAST_FILES.includes(rel))
       .sort();
