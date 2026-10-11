@@ -413,6 +413,17 @@ describe('Confession Wall Routes (M09)', () => {
       expect(res.status).toBe(200);
     });
 
+    it('公告模板在白名单内并写入原始模板键', async () => {
+      mockCreateSuccess();
+
+      const res = await request()
+        .post('/api/confessions')
+        .send({ content: '停水通知', template_key: 'announcement' });
+
+      expect(res.status).toBe(200);
+      expect(query.mock.calls[0][1]).toEqual([9, 'announcement', '停水通知']);
+    });
+
     it('便签卡超过 300 字返回 400', async () => {
       const res = await request()
         .post('/api/confessions')

@@ -16,10 +16,11 @@ describe('丙：万能墙发布描述符', () => {
     expect(d.id).toBe('wall');
     expect(d.semantic).toBe('create');
     expect(fieldsOf(d).find(f => f.name === 'template_key')?.source).toEqual({kind:'constants', options:[
-      {value:'bigtype',label:'Big Type'}, {value:'letter',label:'Letter'}, {value:'note',label:'Sticky Note'}
+      {value:'bigtype',label:'Poster'}, {value:'letter',label:'Archive'}, {value:'note',label:'Sticky Note'},
+      {value:'announcement',label:'Announcement'}, {value:'dialogue',label:'Dialogue'}, {value:'checklist',label:'Checklist'}
     ]});
   });
-  it.each([['bigtype',60],['letter',1000],['note',300]])('%s 的边界准确', (template, limit) => {
+  it.each([['bigtype',60],['letter',1000],['note',300],['announcement',200],['dialogue',500],['checklist',500]])('%s 的边界准确', (template, limit) => {
     const fields = fieldsOf(descriptor());
     expect(validateAll(fields,{template_key:template,content:'字'.repeat(Number(limit))})).toEqual({});
     expect(validateAll(fields,{template_key:template,content:'字'.repeat(Number(limit)+1)}).content).toBe('publish.wall.tooLong');

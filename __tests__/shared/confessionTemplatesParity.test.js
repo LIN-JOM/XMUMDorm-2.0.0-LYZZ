@@ -54,8 +54,10 @@ describe('万能墙版式定义前后端一致性', () => {
     });
   });
 
-  it('三款版式恰好是大字卡 / 信笺卡 / 便签卡', () => {
-    expect(backend.CONFESSION_TEMPLATE_KEYS).toEqual(['bigtype', 'letter', 'note']);
+  it('六款版式恰好覆盖 D-5 的便签、公告、档案、对话、清单、海报', () => {
+    expect(backend.CONFESSION_TEMPLATE_KEYS).toEqual([
+      'bigtype', 'letter', 'note', 'announcement', 'dialogue', 'checklist',
+    ]);
   });
 
   it('未知 key 回落到 bigtype', () => {
@@ -63,9 +65,12 @@ describe('万能墙版式定义前后端一致性', () => {
     expect(frontend.normalizeTemplateKey('unknown')).toBe('bigtype');
   });
 
-  it('字数上限为 60 / 1000 / 300', () => {
+  it('六款版式各有明确字数上限', () => {
     expect(backend.getTemplateMaxLength('bigtype')).toBe(60);
     expect(backend.getTemplateMaxLength('letter')).toBe(1000);
     expect(backend.getTemplateMaxLength('note')).toBe(300);
+    expect(backend.getTemplateMaxLength('announcement')).toBe(200);
+    expect(backend.getTemplateMaxLength('dialogue')).toBe(500);
+    expect(backend.getTemplateMaxLength('checklist')).toBe(500);
   });
 });
