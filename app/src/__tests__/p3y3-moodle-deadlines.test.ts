@@ -36,5 +36,3 @@ it('p3y3 excludes inaccessible unselected and unresolved module events', () => {
   expect(buckets.valid).toEqual([]);
   expect(planMoodleDeadlineReminders(buckets, now)).toEqual([]);
 });
-
-

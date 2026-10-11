@@ -60,5 +60,3 @@ export function planMoodleDeadlineReminders(buckets: MoodleDeadlineBuckets, now:
   }
   return [...planned].map(([id, fireAt]) => ({ id, fireAt })).sort((left, right) => left.fireAt - right.fireAt);
 }
-
-

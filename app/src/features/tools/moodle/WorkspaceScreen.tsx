@@ -93,5 +93,3 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
     })}
   </ScrollView>;
 }
-
-

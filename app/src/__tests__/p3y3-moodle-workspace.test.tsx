@@ -50,4 +50,3 @@ it('p3y3 gives first login and full candidate selection distinct actions', async
   await fireEvent.press(view.getByTestId('moodle-confirm-selection'));
   expect(onChoose).toHaveBeenCalledWith([2]);
 });
-

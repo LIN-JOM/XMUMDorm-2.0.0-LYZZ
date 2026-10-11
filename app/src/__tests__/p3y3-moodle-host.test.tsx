@@ -119,6 +119,3 @@ it('p3y3 invalidates a changed project token once when a cache listener reads im
     expect(calls).toBe(1);
   } finally { unsubscribe(); if (previous === null) await clearToken(); else await saveToken(previous); moodleCacheGeneration(); }
 });
-
-
-

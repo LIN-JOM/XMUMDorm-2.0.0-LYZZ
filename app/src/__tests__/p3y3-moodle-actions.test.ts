@@ -53,4 +53,3 @@ it('p3y3 accepts only known machine deadline types without guessing from event n
   expect(projected.events[0].eventType).toBe('due');
   expect(parseMoodleResponse('events', projected)).toEqual(projected);
 });
-

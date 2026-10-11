@@ -193,7 +193,3 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     </View> : null}
   </View>;
 }
-
-
-
-

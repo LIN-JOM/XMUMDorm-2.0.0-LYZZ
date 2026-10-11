@@ -107,4 +107,3 @@ describe('Moodle response projection', () => {
     for (const value of [null, [], 1, 'bad json', {}]) expect(parseMoodleResponse(method, value)).toBeNull();
   });
 });
-

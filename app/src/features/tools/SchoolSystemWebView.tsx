@@ -260,4 +260,3 @@ export const SchoolSystemWebView = React.forwardRef<SchoolSystemWebViewHandle, S
         allowsBackForwardNavigationGestures={false} />
     </View>;
   });
-

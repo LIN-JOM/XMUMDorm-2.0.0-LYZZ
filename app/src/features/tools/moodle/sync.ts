@@ -91,7 +91,7 @@ export function createMoodleSync(port: MoodleSyncPort) {
   }
   function receive(raw: unknown, responseGeneration: number): boolean {
     if (!pending) return false;
-    
+
     let result;
     try {
       result = parseMoodleBridgeMessage(JSON.stringify({ ...(raw as object), kind: MOODLE_MESSAGE_KIND }));
@@ -140,6 +140,3 @@ export function createMoodleSync(port: MoodleSyncPort) {
   }
   return { start, choose, receive, cancel, snapshot, subscribe, adoptCache, connectRead };
 }
-
-
-

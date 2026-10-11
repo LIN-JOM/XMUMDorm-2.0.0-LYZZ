@@ -89,4 +89,3 @@ describe('p3y3 official-derived synthetic detail DOM and generated page command'
     expect(authorizeMoodleDetail(request('discussion'))).toBe(false);
   });
 });
-

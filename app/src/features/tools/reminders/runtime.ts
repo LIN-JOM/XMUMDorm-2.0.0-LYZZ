@@ -31,4 +31,3 @@ export async function loadSemesterClassReminderPlan(input: {
   }
   return buildClassReminderPlan({ semester, weeks, now });
 }
-

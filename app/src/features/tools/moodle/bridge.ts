@@ -111,4 +111,3 @@ export function parseMoodleBridgeMessage(raw: string): MoodleBridgeResult | null
   }
   return null;
 }
-

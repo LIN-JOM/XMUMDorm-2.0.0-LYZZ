@@ -232,6 +232,3 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
   }
   return null;
 }
-
-
-

@@ -168,6 +168,3 @@ export function readMoodleCache(): { generation: number; courses: MoodleCourse[]
     events: parseMoodleResponse('events', { events: [...events.values()], firstId: null, lastId: null })!.events,
   };
 }
-
-
-
