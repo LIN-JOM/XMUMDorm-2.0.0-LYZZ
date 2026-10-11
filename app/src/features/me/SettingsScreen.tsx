@@ -19,6 +19,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { useTheme } from '@/design-system/theme';
 import { useI18n, type Locale } from '@/i18n';
+import { NotificationSettingsSection } from '@/features/notifications/NotificationSettingsSection';
 import { ME_ENTRIES, visibleEntries } from './profile';
 
 const LOCALES: readonly Locale[] = ['zh', 'en'];
@@ -44,6 +45,8 @@ export function SettingsScreen(): React.ReactElement {
           value={locale}
           onChange={(next) => setLocale(next as Locale)}
         />
+
+        <NotificationSettingsSection />
 
         {entries.length > 0 ? (
           <>

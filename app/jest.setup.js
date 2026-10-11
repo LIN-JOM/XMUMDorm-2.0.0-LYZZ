@@ -43,3 +43,13 @@ jest.mock('@react-native-community/datetimepicker', () => {
  const {View} = require('react-native');
  return {__esModule:true, default:(props)=>React.createElement(View, props)};
 });
+
+// Expo Go intentionally rejects Android remote-notification registration from SDK 53.
+// Jest runs against that host, while this App's notification path is verified in a development build.
+jest.mock('expo-notifications', () => ({
+  AndroidImportance: { DEFAULT: 3 },
+  IosAuthorizationStatus: { AUTHORIZED: 2, PROVISIONAL: 3, EPHEMERAL: 4 },
+  getPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true, ios: { status: 0 } })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true, ios: { status: 2 } })),
+  setNotificationChannelAsync: jest.fn(async () => null),
+}));
