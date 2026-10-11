@@ -1,5 +1,5 @@
 import { MOODLE_MESSAGE_KIND, parseMoodleBridgeMessage, type MoodleFailure, type MoodleReadRequest } from './bridge';
-import { moodleCacheGeneration, readMoodleCache, selectMoodleCourses, writeMoodleCache } from './cache';
+import { clearMoodleCache, moodleCacheGeneration, readMoodleCache, selectMoodleCourses, writeMoodleCache } from './cache';
 import type { MoodleCourse, MoodleCoursesResponse, MoodleStateResponse, MoodleEventsResponse } from './contract';
 
 export type MoodleSyncPhase = 'idle' | 'loading-courses' | 'choosing' | 'loading-objects' | 'ready' | 'error';
@@ -13,10 +13,13 @@ export type MoodleSyncSnapshot = {
 export type MoodleSyncPort = {
   read: (request: MoodleReadRequest) => string | null;
   changed?: () => void;
+  timeoutMilliseconds?: number;
 };
 
 /** One outstanding read makes ordering explicit. All accepted data is reprojected. */
 export function createMoodleSync(port: MoodleSyncPort) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  function stopTimer() { if (timer !== null) clearTimeout(timer); timer = null; }
   let phase: MoodleSyncPhase = 'idle';
   let failure: MoodleFailure | null = null;
   let candidates = new Map<number, MoodleCourse>();
@@ -29,12 +32,15 @@ export function createMoodleSync(port: MoodleSyncPort) {
 
   function changed() { port.changed?.(); }
   function fail(reason: MoodleFailure) {
+    stopTimer();
     pending = null;
     phase = 'error';
     failure = reason;
     changed();
   }
-  function cancel() {
+  function cancel(clear = true) {
+    stopTimer();
+    if (clear) clearMoodleCache();
     pending = null;
     phase = 'idle';
     failure = null;
@@ -48,6 +54,7 @@ export function createMoodleSync(port: MoodleSyncPort) {
     generation = moodleCacheGeneration();
     if (id === null) { fail('unavailable'); return; }
     pending = { id, request };
+    timer = setTimeout(() => fail('timeout'), port.timeoutMilliseconds ?? 12500);
     changed();
   }
   function nextState() {
@@ -56,6 +63,7 @@ export function createMoodleSync(port: MoodleSyncPort) {
     else send({ method: 'events', afterEventId: 0 });
   }
   function start() {
+    stopTimer();
     pending = null;
     phase = 'loading-courses';
     failure = null;
@@ -79,12 +87,15 @@ export function createMoodleSync(port: MoodleSyncPort) {
   }
   function receive(raw: unknown, responseGeneration: number): boolean {
     if (!pending) return false;
-    if (generation !== moodleCacheGeneration() || generation !== responseGeneration) { cancel(); return false; }
+    
     let result;
     try {
       result = parseMoodleBridgeMessage(JSON.stringify({ ...(raw as object), kind: MOODLE_MESSAGE_KIND }));
     } catch { return false; }
     if (!result || result.requestId !== pending.id || result.method !== pending.request.method) return false;
+    if (result.status === 'expired' || result.status === 'wrong-origin') { fail(result.status); return true; }
+    if (generation !== moodleCacheGeneration() || generation !== responseGeneration) { cancel(false); return false; }
+    stopTimer();
     const request = pending.request;
     pending = null;
     if (result.status !== 'success') { fail(result.status); return true; }
@@ -119,3 +130,4 @@ export function createMoodleSync(port: MoodleSyncPort) {
   }
   return { start, choose, receive, cancel, snapshot };
 }
+

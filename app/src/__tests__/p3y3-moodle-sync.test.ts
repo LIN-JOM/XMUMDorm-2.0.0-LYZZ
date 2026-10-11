@@ -83,3 +83,18 @@ describe('p3y3 paginated Moodle synchronization', () => {
     expect(requests).toHaveLength(1);
   });
 });
+
+it('p3y3 ends a matched fatal response after host invalidation and bounds missing callbacks', () => {
+  jest.useFakeTimers();
+  try {
+    const { sync, requests } = harness();
+    sync.start();
+    const sent = requests[0];
+    clearMoodleCache();
+    sync.receive({ requestId: sent.id, method: 'courses', status: 'expired' }, sent.generation);
+    expect(sync.snapshot().failure).toBe('expired');
+    sync.start();
+    jest.advanceTimersByTime(12500);
+    expect(sync.snapshot().failure).toBe('timeout');
+  } finally { jest.useRealTimers(); }
+});
