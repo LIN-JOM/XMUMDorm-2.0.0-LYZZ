@@ -46,9 +46,10 @@ function validDescriptor(): PublishFormDescriptor {
 
 describe('P2A-01 发布描述符契约与缺口账本', () => {
   describe('TC-P2A-01-1A · 缺口账本与发布注册表一致', () => {
-    it('注册表里 5 条 ready 都有描述符（不多不少）', () => {
+    it('注册表里 6 条 ready 都有描述符（不多不少）', () => {
       expect(readyPublishIds().slice().sort()).toEqual([
         'clubActivity',
+        'clubPost',
         'confession',
         'errand',
         'marketplace',
@@ -61,8 +62,8 @@ describe('P2A-01 发布描述符契约与缺口账本', () => {
       expect(() => assertDescriptorLedger()).not.toThrow();
     });
 
-    it('五类已交付描述符已注册，缺口账本清空', () => {
-      expect(Object.keys(PUBLISH_DESCRIPTORS).sort()).toEqual(['clubActivity', 'confession', 'errand', 'marketplace', 'wall']);
+    it('六类已交付描述符已注册，缺口账本清空', () => {
+      expect(Object.keys(PUBLISH_DESCRIPTORS).sort()).toEqual(['clubActivity', 'clubPost', 'confession', 'errand', 'marketplace', 'wall']);
       expect(KNOWN_MISSING_DESCRIPTORS).toEqual([]);
       expect(publish_missingEqualsLedger()).toBe(true);
     });
@@ -166,6 +167,10 @@ describe('P2A-01 发布描述符契约与缺口账本', () => {
   describe('getPublishDescriptor', () => {
     it('已交付的社团活动返回描述符（宿主不再走暂未开放分支）', () => {
       expect(getPublishDescriptor('clubActivity')).toBeDefined();
+    });
+
+    it('已交付的社团帖子返回描述符（宿主不再走暂未开放分支）', () => {
+      expect(getPublishDescriptor('clubPost' as never)).toBeDefined();
     });
 
     it('字段展平工具按分节顺序返回全部字段', () => {
