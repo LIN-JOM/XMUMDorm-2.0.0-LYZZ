@@ -4,7 +4,7 @@ import { renderApp } from './helpers/renderApp';
 import { MoodleWorkspaceScreen, type MoodleWorkspaceLabels } from '@/features/tools/moodle/WorkspaceScreen';
 import type { MoodleSyncSnapshot } from '@/features/tools/moodle/sync';
 
-const labels: MoodleWorkspaceLabels = { firstLogin: 'First login', restoredNative: 'Restored native',
+const labels: MoodleWorkspaceLabels = { firstLogin: 'First login', restoredNative: 'Restored native', nativeWorkspace: 'Native workspace',
   login: 'Login', sync: 'Sync', cancel: 'Cancel', confirmSelection: 'Confirm selection',
   chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types', empty: 'Empty',
   original: 'Original', details: 'Details', unknownSection: 'Other section',
@@ -50,3 +50,4 @@ it('p3y3 gives first login and full candidate selection distinct actions', async
   await fireEvent.press(view.getByTestId('moodle-confirm-selection'));
   expect(onChoose).toHaveBeenCalledWith([2]);
 });
+

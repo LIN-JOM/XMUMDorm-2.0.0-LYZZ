@@ -10,7 +10,7 @@ import type { MoodleSyncPhase, MoodleSyncSnapshot } from './sync';
 
 /** The route owner fills these labels from the single application t function. */
 export type MoodleWorkspaceLabels = {
-  firstLogin: string; restoredNative: string; login: string; sync: string; cancel: string;
+  firstLogin: string; restoredNative: string; nativeWorkspace: string; login: string; sync: string; cancel: string;
   confirmSelection: string; chooseCourses: string; courses: string; allTypes: string;
   empty: string; original: string; details: string; unknownSection: string;
   phase: (value: MoodleSyncPhase) => string;
@@ -20,7 +20,7 @@ export type MoodleWorkspaceLabels = {
 export type MoodleWorkspaceScreenProps = {
   labels: MoodleWorkspaceLabels;
   snapshot: MoodleSyncSnapshot;
-  entry: 'first-login' | 'restored-native';
+  entry: 'first-login' | 'current-native' | 'restored-native';
   onLogin: () => void; onSync: () => void; onCancel: () => void;
   onChoose: (ids: number[]) => void;
   onModule: (courseId: number, module: MoodleModule) => void;
@@ -30,10 +30,10 @@ export type MoodleWorkspaceScreenProps = {
 export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync, onCancel,
   onChoose, onModule, onOriginal }: MoodleWorkspaceScreenProps): React.ReactElement {
   const theme = useTheme();
-  const [draft, setDraft] = React.useState(snapshot.selectedIds);
+  const [choice, setChoice] = React.useState({ generation: snapshot.data.generation, ids: snapshot.selectedIds });
+  const draft = choice.generation === snapshot.data.generation ? choice.ids : snapshot.selectedIds;
   const [courseId, setCourseId] = React.useState<number | null>(null);
   const [type, setType] = React.useState<string | null>(null);
-  React.useEffect(() => { setDraft(snapshot.selectedIds); }, [snapshot.selectedIds]);
   const currentCourse = snapshot.data.courses.find((course) => course.id === courseId)
     ?? snapshot.data.courses[0];
   const courseState = snapshot.data.states.find((state) => state.courseId === currentCourse?.id);
@@ -49,20 +49,20 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
   const busy = snapshot.phase === 'loading-courses' || snapshot.phase === 'loading-objects';
   return <ScrollView testID="moodle-workspace" contentContainerStyle={{ padding: theme.space('space_4'),
     gap: theme.space('space_4') }}>
-    <Text testID="moodle-entry">{entry === 'first-login' ? labels.firstLogin : labels.restoredNative}</Text>
+    <Text testID="moodle-entry">{entry === 'first-login' ? labels.firstLogin : entry === 'restored-native' ? labels.restoredNative : labels.nativeWorkspace}</Text>
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
       <Button testID="moodle-login" label={labels.login} onPress={onLogin} variant="secondary" />
       <Button testID="moodle-sync" label={labels.sync} onPress={onSync} disabled={busy} />
       {busy ? <Button testID="moodle-cancel" label={labels.cancel} onPress={onCancel} variant="ghost" /> : null}
     </View>
     <Text testID="moodle-phase">{labels.phase(snapshot.phase)}</Text>
-    {snapshot.failure ? <Text colorToken="state-danger">{labels.failure(snapshot.failure)}</Text> : null}
+    {snapshot.failure ? <Text colorToken="text-danger">{labels.failure(snapshot.failure)}</Text> : null}
     {snapshot.phase === 'choosing' ? <View style={{ gap: theme.space('space_2') }}>
       <Text role="title">{labels.chooseCourses}</Text>
       {snapshot.candidates.map((course) => <Checkbox key={course.id} testID={`moodle-select-${course.id}`}
         label={course.name} state={draft.includes(course.id) ? 'checked' : 'unchecked'}
-        onPress={() => setDraft((previous) => previous.includes(course.id)
-          ? previous.filter((id) => id !== course.id) : [...previous, course.id])} />)}
+        onPress={() => setChoice({ generation: snapshot.data.generation, ids: draft.includes(course.id)
+          ? draft.filter((id) => id !== course.id) : [...draft, course.id] })} />)}
       <Button testID="moodle-confirm-selection" label={labels.confirmSelection} onPress={() => onChoose(draft)} />
     </View> : null}
     <Text role="title">{labels.courses}</Text>
@@ -93,4 +93,5 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
     })}
   </ScrollView>;
 }
+
 

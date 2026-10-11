@@ -222,7 +222,8 @@ export const SchoolSystemWebView = React.forwardRef<SchoolSystemWebViewHandle, S
       }
       const message = parseWebViewMessage(event.nativeEvent.data);
       if (message.kind === 'session') {
-        if (system.id === 'moodle' && message.hasPasswordField && nativeUrl === url) invalidateMoodleData();
+        if (system.id === 'moodle' && (!isMoodleOrigin(nativeUrl) || (url !== null && nativeUrl !== url))) return;
+        if (system.id === 'moodle' && message.hasPasswordField) invalidateMoodleData();
         callbacks.current.onSessionProbe?.({ hasPasswordField: message.hasPasswordField });
       } else if (message.kind === 'schedule') callbacks.current.onScheduleMessage?.(message.raw);
     }, [system.id, invalidateMoodleData]);
@@ -259,3 +260,4 @@ export const SchoolSystemWebView = React.forwardRef<SchoolSystemWebViewHandle, S
         allowsBackForwardNavigationGestures={false} />
     </View>;
   });
+

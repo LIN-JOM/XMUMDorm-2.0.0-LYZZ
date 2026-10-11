@@ -20,6 +20,8 @@ export type MoodleSyncPort = {
 export function createMoodleSync(port: MoodleSyncPort) {
   let timer: ReturnType<typeof setTimeout> | null = null;
   function stopTimer() { if (timer !== null) clearTimeout(timer); timer = null; }
+  let read = port.read;
+  function connectRead(next: MoodleSyncPort['read']) { read = next; }
   let phase: MoodleSyncPhase = 'idle';
   let failure: MoodleFailure | null = null;
   let candidates = new Map<number, MoodleCourse>();
@@ -30,7 +32,9 @@ export function createMoodleSync(port: MoodleSyncPort) {
   let eventCursors = new Set<number>();
   let remaining: number[] = [];
 
-  function changed() { port.changed?.(); }
+  const listeners = new Set<() => void>();
+  function changed() { port.changed?.(); for (const listener of listeners) listener(); }
+  function subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; }
   function fail(reason: MoodleFailure) {
     stopTimer();
     pending = null;
@@ -50,7 +54,7 @@ export function createMoodleSync(port: MoodleSyncPort) {
     changed();
   }
   function send(request: MoodleReadRequest) {
-    const id = port.read(request);
+    const id = read(request);
     generation = moodleCacheGeneration();
     if (id === null) { fail('unavailable'); return; }
     pending = { id, request };
@@ -128,6 +132,14 @@ export function createMoodleSync(port: MoodleSyncPort) {
     return { phase, failure, candidates: [...candidates.values()].map((course) => ({ ...course })),
       selectedIds: [...selectedIds], data };
   }
-  return { start, choose, receive, cancel, snapshot };
+  function adoptCache() {
+    stopTimer(); pending = null; failure = null;
+    const data = readMoodleCache(); generation = data.generation;
+    candidates = new Map(data.courses.map((course) => [course.id, course]));
+    selectedIds = data.courses.map((course) => course.id); phase = 'ready'; changed();
+  }
+  return { start, choose, receive, cancel, snapshot, subscribe, adoptCache, connectRead };
 }
+
+
 

@@ -122,7 +122,7 @@ export function beginMoodleCourseSync(): number {
 export function moodleCacheGeneration(): number {
   const epoch = timetableIdentity().epoch;
   if (projectEpoch === undefined) projectEpoch = epoch;
-  else if (projectEpoch !== epoch) { clearMoodleCache(); projectEpoch = epoch; }
+  else if (projectEpoch !== epoch) { projectEpoch = epoch; clearMoodleCache(); }
   return generation;
 }
 
@@ -168,5 +168,6 @@ export function readMoodleCache(): { generation: number; courses: MoodleCourse[]
     events: parseMoodleResponse('events', { events: [...events.values()], firstId: null, lastId: null })!.events,
   };
 }
+
 
 

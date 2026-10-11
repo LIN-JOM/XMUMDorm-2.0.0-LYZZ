@@ -7,7 +7,7 @@ import { MoodleWorkspaceHost, type MoodleWorkspaceHostLabels } from '@/features/
 import { clearMoodleCache, settleMoodleStorage, confirmMoodleSchoolIdentity, selectMoodleCourses,
   writeMoodleCache, moodleCacheGeneration, persistMoodleSnapshot, closeMoodleCache, readMoodleCache,
   subscribeMoodleInvalidation } from '@/features/tools/moodle/cache';
-import { tokenStore } from '@/lib/tokenStore';
+import { readTokenSync, saveToken, clearToken } from '@/features/auth/tokenStore';
 
 const mockInject = jest.fn();
 let mockProps: WebViewProps;
@@ -25,7 +25,8 @@ const labels: MoodleWorkspaceHostLabels = { firstLogin: 'First login', restoredN
   confirmSelection: 'Choose', chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types',
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}`,
-  back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines',
+  back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines', otherEvents: 'Other events',
+  eventType: (value) => 'event type ' + String(value), actionableStatus: (value) => 'actionable ' + String(value),
   deadlineBucket: (value) => `bucket ${value}`, formatTime: (value) => new Date(value).toISOString(),
   detailStatus: (value) => `detail ${value}`, reminderStatus: (value) => `reminders ${value}`,
   submissionStatus: (value) => `submission ${value}`, gradingStatus: (value) => `grading ${value}`,
@@ -67,7 +68,7 @@ it('p3y3 workspace closes login sync details original and reminder callbacks', a
   await fireEvent.press(view.getByTestId('moodle-confirm-selection'));
   await core('state', state);
   await core('events', { events: [{ id: 5, courseId: 1, moduleId: 999, name: 'Deadline',
-    time: now / 1000 + 86400, url: moduleUrl }], firstId: 5, lastId: 5 });
+    time: now / 1000 + 86400, eventType: 'expectcompletionon', url: moduleUrl, action: { name: 'Open', itemCount: 1, actionable: true } }], firstId: 5, lastId: 5 });
   await core('events', { events: [], firstId: null, lastId: null });
   expect(onPlan).toHaveBeenLastCalledWith([{ id: 'moodle:1:5', fireAt: now + 86400000 - 1800000 }]);
   await fireEvent.press(view.getByTestId('moodle-module-101'));
@@ -107,14 +108,17 @@ it('p3y3 requires a fresh proof before showing stored native courses', async () 
   await view.unmount(); await settleMoodleStorage();
 });
 
-it('p3y3 invalidates a changed project token once when a cache listener reads immediately', () => {
-  const previous = tokenStore.get();
+it('p3y3 invalidates a changed project token once when a cache listener reads immediately', async () => {
+  const previous = readTokenSync();
   let calls = 0;
   moodleCacheGeneration();
   const unsubscribe = subscribeMoodleInvalidation(() => { calls += 1; readMoodleCache(); });
   try {
-    tokenStore.set('new-project-token-y3');
+    await saveToken('new-project-token-y3');
     readMoodleCache();
     expect(calls).toBe(1);
-  } finally { unsubscribe(); tokenStore.set(previous); moodleCacheGeneration(); }
+  } finally { unsubscribe(); if (previous === null) await clearToken(); else await saveToken(previous); moodleCacheGeneration(); }
 });
+
+
+
