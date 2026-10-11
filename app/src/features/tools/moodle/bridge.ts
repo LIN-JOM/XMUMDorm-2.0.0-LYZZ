@@ -1,3 +1,4 @@
+import { inspectMoodleIdentity } from './identity';
 import { parseMoodleResponse, type MoodleMethod, type MoodleResponse } from './contract';
 
 export const MOODLE_MESSAGE_KIND = 'dorm:moodle';
@@ -17,8 +18,9 @@ export function isMoodleOrigin(url: string): boolean {
 }
 
 /** core/ajax owns sesskey and cookies inside the page. Neither crosses this bridge. */
-export function buildMoodleReadScript(requestId: string, request: MoodleReadRequest): string | null {
+export function buildMoodleReadScript(requestId: string, request: MoodleReadRequest, userId?: number): string | null {
   if (!/^[a-zA-Z0-9:_-]{1,80}$/.test(requestId)) return null;
+  if (userId !== undefined && (!Number.isSafeInteger(userId) || userId <= 0)) return null;
   let methodname: string;
   let args: object;
   const nonnegative = (value: number) => Number.isSafeInteger(value) && value >= 0;
@@ -45,6 +47,13 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
   }
   return `(function () {
     var done = false, timer;
+    var inspectIdentity = (${inspectMoodleIdentity.toString()});
+    function sameIdentity() {
+      var expected = ${JSON.stringify(userId ?? null)};
+      if (expected === null) return !document.querySelector('input[type=password]');
+      var result = inspectIdentity(document, window.location.origin, window.M && window.M.cfg && window.M.cfg.userId);
+      return result.status === 'confirmed' && result.userId === expected;
+    }
     var project = (${parseMoodleResponse.toString()});
     function send(status, data) {
       if (done) return;
@@ -62,7 +71,7 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
       else send('unavailable');
     }
     if (window.location.origin !== 'https://l.xmu.edu.my') { send('wrong-origin'); return; }
-    if (document.querySelector('input[type=password]')) { send('expired'); return; }
+    if (!sameIdentity()) { send('expired'); return; }
     if (typeof window.require !== 'function') { send('unavailable'); return; }
     timer = setTimeout(function () { send('timeout'); }, 10000);
     try {
@@ -71,6 +80,7 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
           Promise.resolve(ajax.call([{ methodname: ${JSON.stringify(methodname)}, args: ${JSON.stringify(args)} }])[0])
             .then(function (raw) {
               if (window.location.origin !== 'https://l.xmu.edu.my') { send('wrong-origin'); return; }
+              if (!sameIdentity()) { send('expired'); return; }
               var data = project(${JSON.stringify(request.method)}, raw);
               if (data === null) send('invalid-data'); else send('success', data);
             }).catch(failure);
@@ -101,3 +111,4 @@ export function parseMoodleBridgeMessage(raw: string): MoodleBridgeResult | null
   }
   return null;
 }
+

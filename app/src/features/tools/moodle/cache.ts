@@ -1,8 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { timetableIdentity } from '../cacheIdentity';
 import { parseMoodleResponse, type MoodleMethod, type MoodleCourse, type MoodleStateResponse,
   type MoodleActionEvent } from './contract';
 
-// Deliberately memory-only: a project JWT cannot identify the school account.
+// Disk restoration requires a fresh, page-confirmed school account. A project JWT only invalidates.
 let generation = 0;
 let projectEpoch: number | undefined;
 let selected = new Set<number>();
@@ -17,7 +18,98 @@ function clearData(): void {
   events.clear();
 }
 
-export function clearMoodleCache(): void { clearData(); selected.clear(); }
+const SNAPSHOT_PREFIX = '@dorm:moodle:v1:l.xmu.edu.my:';
+let schoolUserId: number | null = null;
+let lastSchoolUserId: number | null = null;
+let storageEpoch = 0;
+let storageQueue: Promise<void> = Promise.resolve();
+const invalidationListeners = new Set<() => void>();
+
+function enqueue<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
+  const result = storageQueue.then(operation).catch(() => fallback);
+  storageQueue = result.then(() => undefined);
+  return result;
+}
+function notifyInvalidated() {
+  for (const listener of invalidationListeners) { try { listener(); } catch { /* Privacy clearing still completes. */ } }
+}
+export function subscribeMoodleInvalidation(listener: () => void): () => void {
+  invalidationListeners.add(listener);
+  return () => { invalidationListeners.delete(listener); };
+}
+export function settleMoodleStorage(): Promise<void> { return storageQueue; }
+
+/** Clear is synchronous in memory and serialized after every already-started disk operation. */
+export function clearMoodleCache(): void {
+  clearData(); selected.clear(); schoolUserId = null; lastSchoolUserId = null; storageEpoch += 1;
+  void enqueue(async () => {
+    const keys = (await AsyncStorage.getAllKeys()).filter((key) => key.startsWith(SNAPSHOT_PREFIX));
+    if (keys.length) await AsyncStorage.multiRemove(keys);
+  }, undefined);
+  notifyInvalidated();
+}
+
+/** On opt-in startup, hide private memory while waiting for the current page proof. No disk is read. */
+export function prepareMoodlePage(): void {
+  clearData(); selected.clear(); schoolUserId = null;
+}
+export function confirmedMoodleSchoolIdentity(): number | null { moodleCacheGeneration(); return schoolUserId; }
+export function confirmMoodleSchoolIdentity(userId: number): boolean {
+  moodleCacheGeneration();
+  if (!Number.isSafeInteger(userId) || userId <= 0) return false;
+  if (lastSchoolUserId !== null && lastSchoolUserId !== userId) clearMoodleCache();
+  schoolUserId = userId; lastSchoolUserId = userId;
+  return true;
+}
+
+export function persistMoodleSnapshot(): Promise<boolean> {
+  const data = readMoodleCache();
+  const userId = schoolUserId, epoch = storageEpoch;
+  if (userId === null) return Promise.resolve(false);
+  const payload = JSON.stringify({ version: 1, userId, selectedIds: [...selected],
+    courses: data.courses, states: data.states, events: data.events });
+  return enqueue(async () => {
+    if (epoch !== storageEpoch) return false;
+    await AsyncStorage.setItem(`${SNAPSHOT_PREFIX}${userId}`, payload);
+    return epoch === storageEpoch;
+  }, false);
+}
+
+export function restoreMoodleSnapshot(): Promise<boolean> {
+  const userId = confirmedMoodleSchoolIdentity(), epoch = storageEpoch, expectedGeneration = generation;
+  if (userId === null) return Promise.resolve(false);
+  return enqueue(async () => {
+    const raw = await AsyncStorage.getItem(`${SNAPSHOT_PREFIX}${userId}`);
+    if (!raw || raw.length > 2_000_000 || epoch !== storageEpoch || schoolUserId !== userId
+      || expectedGeneration !== moodleCacheGeneration()) return false;
+    let value: Record<string, unknown>;
+    try { value = JSON.parse(raw) as Record<string, unknown>; } catch { return false; }
+    if (!value || value.version !== 1 || value.userId !== userId || !Array.isArray(value.selectedIds)
+      || !Array.isArray(value.states)) return false;
+    const courseData = parseMoodleResponse('courses', { courses: value.courses, nextOffset: 0 });
+    const eventData = parseMoodleResponse('events', { events: value.events, firstId: null, lastId: null });
+    if (!courseData || !eventData) return false;
+    const allowed = new Set(courseData.courses.map((course) => course.id));
+    selectMoodleCourses(value.selectedIds.filter((id): id is number => typeof id === 'number' && allowed.has(id)));
+    const current = moodleCacheGeneration();
+    if (epoch !== storageEpoch || schoolUserId !== userId) return false;
+    writeMoodleCache('courses', courseData, current);
+    for (const state of value.states) writeMoodleCache('state', state, current);
+    writeMoodleCache('events', eventData, current);
+    return true;
+  }, false);
+}
+
+/** Default Y0 behavior clears. Only a currently confirmed school account can preserve on close. */
+export function closeMoodleCache(preserveSnapshotOnClose: boolean): boolean {
+  if (preserveSnapshotOnClose && confirmedMoodleSchoolIdentity() !== null) {
+    void persistMoodleSnapshot();
+    prepareMoodlePage();
+    return true;
+  }
+  clearMoodleCache();
+  return false;
+}
 
 /** Start before offset zero; later pages append only within this generation. */
 export function beginMoodleCourseSync(): number {
@@ -29,7 +121,8 @@ export function beginMoodleCourseSync(): number {
 /** The project epoch is only an invalidation signal, never a school-account partition. */
 export function moodleCacheGeneration(): number {
   const epoch = timetableIdentity().epoch;
-  if (projectEpoch !== epoch) { clearMoodleCache(); projectEpoch = epoch; }
+  if (projectEpoch === undefined) projectEpoch = epoch;
+  else if (projectEpoch !== epoch) { clearMoodleCache(); projectEpoch = epoch; }
   return generation;
 }
 
@@ -75,3 +168,5 @@ export function readMoodleCache(): { generation: number; courses: MoodleCourse[]
     events: parseMoodleResponse('events', { events: [...events.values()], firstId: null, lastId: null })!.events,
   };
 }
+
+
