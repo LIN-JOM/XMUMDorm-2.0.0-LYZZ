@@ -8,8 +8,6 @@ import { Screen } from '@/components/ui/Screen';
 import { useMailboxBadge } from '@/features/mailbox/useUnread';
 import { SearchField } from '@/components/ui/SearchField';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { Surface } from '@/components/ui/Surface';
-import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import { toResourceError } from './useCanteenResource';
@@ -75,7 +73,7 @@ export function CanteenSearchScreen(): React.ReactElement {
         onRetryRefresh={() => void load(queryRef.current, typeRef.current, 'refresh')} onRetryAppend={() => void load(queryRef.current, typeRef.current, 'append')}
         labels={{ empty: { kind: 'noResult', title: t(problem === 'tooLong' ? 'canteen.search.tooLong' : problem === 'empty' ? 'canteen.search.enterQuery' : 'canteen.search.noResults'), description: t('canteen.search.emptyHelp'), actionLabel: t('canteen.search.submit'), onAction: submit }, retryLabel: t('action.retry'), endLabel: t('canteen.search.end') }}
         renderItem={(row) => row.kind === 'product' ? <EntityCard testID={`search-product-${row.id}`} domain="food" title={row.title} subtitle={row.subtitle ?? undefined} mediaUri={row.cover ? getUploadUrl(row.cover) : null} score={row.score} onPress={() => router.push({ pathname: '/canteen/product/[id]', params: { id: String(row.id) } })} /> :
-          <Surface testID={`search-article-${row.id}`} padding="space_3" bordered="subtle"><Text role="body" emphasis="strong">{row.title}</Text><Text role="caption" colorToken="text-secondary">{row.subtitle ?? t('canteen.anonymous')}</Text></Surface>} />
+          <EntityCard testID={`search-article-${row.id}`} domain="post" title={row.title} authorLabel={row.subtitle ?? t('canteen.anonymous')} mediaUri={row.cover ? getUploadUrl(row.cover) : null} onPress={() => router.push({ pathname: '/campus/[id]', params: { id: String(row.id) } })} />} />
     </View>
   </Screen>;
 }

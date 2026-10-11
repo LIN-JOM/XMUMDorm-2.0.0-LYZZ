@@ -37,6 +37,7 @@ import { getRegions, pickRandomMeal } from '../../../../shared/api/canteen';
 import { normalizeRegions, canteenCacheKey, CANTEEN_CACHE_TTL_MS } from './canteen';
 import { useCanteenResource } from './useCanteenResource';
 import { SearchField } from '@/components/ui/SearchField';
+import { FoodArticleFeed } from './FoodArticleFeed';
 import { CanteenRankings } from './CanteenRankings';
 import type { RankingTab } from './canteenRankingModel';
 
@@ -83,8 +84,8 @@ export function CanteenHome({ rankingTabs = [{ key: 'hotProducts', labelKey: 'ca
   };
 
   return (
-    <Screen testID="screen-canteen" titleKey="canteen.title" bottomMode="own" scroll {...badge}>
-      <View style={{ flex: 1, padding: theme.space('space_4'), gap: theme.space('space_4') }}>
+    <Screen testID="screen-canteen" titleKey="canteen.title" bottomMode="own" {...badge}>
+      <FoodArticleFeed header={<View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
         <SearchField testID="canteen-home-search" appearance="full" value={query} onChangeText={setQuery} placeholder={t('canteen.search.placeholder')} clearLabel={t('action.clear')} onSubmit={() => router.push({ pathname: '/canteen/search', params: { query: query.trim() } })} />
         <CanteenRankings tabs={rankingTabs} />
         {regions.stale ? <OfflineBanner testID="canteen-stale" variant="stale" message={t('canteen.cache.stale')} actionLabel={t('action.refresh')} onAction={regions.reload} /> : null}
@@ -117,7 +118,7 @@ export function CanteenHome({ rankingTabs = [{ key: 'hotProducts', labelKey: 'ca
             void pickForMe();
           }}
         />
-      </View>
+      </View>} />
     </Screen>
   );
 }

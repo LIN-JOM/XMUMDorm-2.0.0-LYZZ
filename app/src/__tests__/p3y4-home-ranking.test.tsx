@@ -10,7 +10,7 @@ import { normalizeRanking } from '@/features/square/canteenRankingModel';
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: (target: unknown) => mockTargets.push(target) }), targets: [] }));
 jest.mock('@/features/mailbox/useUnread', () => ({ useMailboxBadge: () => ({}) }));
 jest.mock('../../../shared/api/rankings', () => ({ getRankingsHotProducts: jest.fn(), getRankingsBusyShops: jest.fn(), getRankingsTopShops: jest.fn(), getRankingsNewHitProducts: jest.fn(), getRankingsActiveUsers: jest.fn() }));
-jest.mock('../../../shared/api/canteen', () => ({ getRegions: jest.fn(), pickRandomMeal: jest.fn() }));
+jest.mock('../../../shared/api/canteen', () => ({ getRegions: jest.fn(), getFoodArticles: jest.fn().mockResolvedValue({ list: [], hasMore: false }), pickRandomMeal: jest.fn() }));
 const api = jest.mocked(rankingApi);
 beforeEach(() => {
   jest.clearAllMocks();

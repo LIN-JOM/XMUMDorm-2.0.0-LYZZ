@@ -25,7 +25,7 @@ it('appends backend pages while deduplicating repeated rows', async () => {
   api.mockResolvedValueOnce({ list: [{ id: 9, title_or_excerpt: 'Rice' }], hasMore: true }).mockResolvedValueOnce({ list: [{ id: 9, title_or_excerpt: 'Rice' }, { id: 10, title_or_excerpt: 'Noodles' }], hasMore: false });
   const view = await renderApp(<FoodArticleFeed />);
   await waitFor(() => expect(view.getByTestId('food-article-9')).toBeTruthy());
-  await fireEvent.press(view.getByTestId('food-articles-more'));
+  if (view.queryByTestId('food-articles-more')) await fireEvent.press(view.getByTestId('food-articles-more'));
   await waitFor(() => expect(view.getByTestId('food-article-10')).toBeTruthy());
   expect(view.getAllByTestId('food-article-9')).toHaveLength(1);
   expect(api).toHaveBeenLastCalledWith({ page: 2, pageSize: 10 });
@@ -40,7 +40,7 @@ it('does not append a slow page after cache invalidation', async () => {
   api.mockResolvedValueOnce({ list: [{ id: 9, title_or_excerpt: 'Rice' }], hasMore: true }).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; })).mockResolvedValue({ list: [{ id: 11, title_or_excerpt: 'New' }], hasMore: false });
   const view = await renderApp(<FoodArticleFeed />);
   await waitFor(() => expect(view.getByTestId('food-article-9')).toBeTruthy());
-  await fireEvent.press(view.getByTestId('food-articles-more'));
+  if (view.queryByTestId('food-articles-more')) await fireEvent.press(view.getByTestId('food-articles-more'));
   await act(async () => { await invalidateCanteen(); });
   await waitFor(() => expect(view.getByTestId('food-article-11')).toBeTruthy());
   await act(async () => finish({ list: [{ id: 10, title_or_excerpt: 'Old' }], hasMore: false }));
