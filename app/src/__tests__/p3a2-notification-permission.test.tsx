@@ -11,6 +11,9 @@ jest.mock('@/features/notifications/permissions', () => ({
     openSettings: jest.fn(),
   },
 }));
+jest.mock('@/features/auth/session', () => ({
+  useSession: () => ({ logout: jest.fn() }),
+}));
 
 const mockPermission = jest.requireMock('@/features/notifications/permissions').notificationPermission as {
   read: jest.Mock;

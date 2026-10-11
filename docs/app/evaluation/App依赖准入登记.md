@@ -19,6 +19,7 @@
 | `expo-font` | 57.0.4 | MIT | **有** | 有 | 2026-09-11 | 否（**注意**：本项目只用系统字体，见宪法 2.5；它是 `expo-symbols` 的 peer，不是用来加载自定义字体） |
 | `expo-linking` | 57.0.11 | MIT | **有** | 有 | 2026-09-24 | 否 |
 | `expo-localization` | 57.0.2 | MIT | **有** | 有 | 2026-09-11 | 否 |
+| `expo-notifications` | 57.0.22 | MIT | **有**（android/ ios/） | 有 | 2026-09-11 | 否（系统通知权限、渠道与设置跳转的 SDK 57 宿主；真机能力不等同于 Expo Go） |
 | `expo-router` | 57.0.24 | MIT | **有** | 有 | 2026-09-29 | 否 |
 | `expo-secure-store` | 57.0.4 | MIT | **有** | 有 | 2026-09-11 | 否 |
 | `expo-status-bar` | 57.0.1 | MIT | **有**（android/） | 有 | 2026-07-15 | 否 |
