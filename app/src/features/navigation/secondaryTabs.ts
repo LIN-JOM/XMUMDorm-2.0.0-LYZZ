@@ -19,8 +19,7 @@ export type SecondaryTabKey = string;
 
 export type SecondaryTabDefinition = {
   key: SecondaryTabKey;
-  labelKey: MessageKey;
-};
+} & ({ labelKey: MessageKey; label?: never } | { label: string; labelKey?: never });
 
 /** 一级格 → 该格的二级 Tab 集合（空数组 = 该格没有二级 Tab，不显示 Tab 条） */
 export type SecondaryTabRegistry = Record<string, readonly SecondaryTabDefinition[]>;
@@ -81,8 +80,8 @@ export function assertSecondaryTabInvariants(
     }
 
     for (const tab of tabs) {
-      if (!dictionaryKeys.includes(tab.labelKey)) {
-        throw new Error(`二级 Tab 的 labelKey 不在词条表：${primaryTab}/${tab.key} → ${tab.labelKey}`);
+      if (typeof tab.labelKey !== 'string' || !dictionaryKeys.includes(tab.labelKey)) {
+        throw new Error(`二级 Tab 的 labelKey 不在词条表：${primaryTab}/${tab.key}`);
       }
     }
   }

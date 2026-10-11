@@ -445,6 +445,7 @@ export const zh = {
   'action.save': '保存',
   'publish.viewDetail': '查看详情',
   'square.guides.title': '新生指南',
+  'square.guides.all': '全部',
   'square.guides.empty': '还没有指南',
   'square.guides.author': '作者',
   'square.guides.like': '赞',

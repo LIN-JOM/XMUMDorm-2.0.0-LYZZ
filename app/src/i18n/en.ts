@@ -437,6 +437,7 @@ export const en: Record<MessageKey, string> = {
   'action.save': 'Save',
   'publish.viewDetail': 'View details',
   'square.guides.title': 'New student guides',
+  'square.guides.all': 'All',
   'square.guides.empty': 'No guides yet',
   'square.guides.author': 'Author',
   'square.guides.like': 'Like',

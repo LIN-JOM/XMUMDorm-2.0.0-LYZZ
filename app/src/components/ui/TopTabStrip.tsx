@@ -78,6 +78,7 @@ export function TopTabStrip({
       >
         {tabs.map((tab, index) => {
           const selected = tab.key === selectedKey;
+          const label = tab.labelKey === undefined ? tab.label : t(tab.labelKey);
           return (
             <Pressable
               key={tab.key}
@@ -90,7 +91,7 @@ export function TopTabStrip({
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               // 读屏要播报**位置**，不得只念标签（4.8.2）
-              accessibilityLabel={`${t(tab.labelKey)} · ${t('a11y.tabPosition', {
+              accessibilityLabel={`${label} · ${t('a11y.tabPosition', {
                 i: index + 1,
                 n: tabs.length,
               })}`}
@@ -105,7 +106,7 @@ export function TopTabStrip({
                 emphasis={selected ? 'strong' : 'regular'}
                 colorToken={selected ? 'text-brand' : 'text-secondary'}
               >
-                {t(tab.labelKey)}
+                {label}
               </Text>
               {/* 指示器：表达"当前在哪"。取值未冻结（宪法 15.4），此处用品牌色令牌 */}
               <View
