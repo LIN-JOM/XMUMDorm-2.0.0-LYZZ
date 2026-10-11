@@ -8,25 +8,21 @@
  *
  * ⚠️ **评分不是星星**（README §7-13）：评论的 `rating` 是**五档中文枚举**
  *    （`RATING_ENUM`，`routes/canteen.js:37`），权重 `10/7/4/1/−1` 由服务端算综合分。
- *    → 页面**画档位标签**（`C12 Chip` + `canteen.rating.*` 词条），⛔ 不用 `StarRating`
+ *    → 页面**画档位标签**（`Text` + `canteen.rating.*` 词条），⛔ 不用 `StarRating`
  *      （1–5 星在这里没有对应字段，画星星等于**编一个不存在的数据**）。
  *
  * ⚠️ **评论是匿名的**（宪法 4.1.1 匿名投影）：服务端只对**商家回复**回填昵称/头像，
  *    普通评论两者恒为 `null` → 界面显示"匿名"，⛔ 不编昵称、不显示灰头像。
  *
- * ⛔ 本轮不做：发评论（要先选五档之一，而档位选择器是已暂缓的 `O07 PickerSheet`）、
- *    `ActionSheet`（举报/删除等动作）、收藏（写路径；读接口虽公开，但一个"只读不写"的
- *    星标会误导用户 —— 见 P1-17 §6 风险）。
  */
 
 import * as React from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/Button';
-import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
@@ -51,6 +47,7 @@ import type { AppError } from '@/i18n/errors';
 import { canteenCacheKey } from './canteen';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { canteenRevision } from './canteenCache';
+import { CanteenMedia } from './CanteenMedia';
 import { DishActions } from './DishActions';
 
 /** 翻页追加的评论（首屏那一页由详情接口给） */
@@ -68,6 +65,7 @@ export function DishDetail(): React.ReactElement {
   const params = useLocalSearchParams<{ id?: string }>();
   const { t } = useI18n();
   const theme = useTheme();
+  const [actionsHeight, setActionsHeight] = React.useState(theme.touchTarget + theme.space('space_4'));
 
   const productId = Number(params.id);
   const validId = Number.isInteger(productId) && productId > 0;
@@ -130,8 +128,9 @@ export function DishDetail(): React.ReactElement {
   };
 
   return (
-    <Screen testID="screen-dish" titleKey="canteen.dishTitle" bottomMode="own" scroll {...badge}>
-      <View style={{ flex: 1, padding: theme.space('space_4'), gap: theme.space('space_4') }}>
+    <Screen testID="screen-dish" titleKey="canteen.dishTitle" bottomMode="own" {...badge}>
+      <View style={{ flex: 1 }}>
+      <ScrollView testID="dish-scroll" contentContainerStyle={{ padding: theme.space('space_4'), gap: theme.space('space_4'), paddingBottom: actionsHeight + theme.space('space_4') }}>
         {detail.stale ? <OfflineBanner testID="dish-stale" variant="stale" message={t('canteen.cache.stale')} actionLabel={t('action.refresh')} onAction={detail.reload} /> : null}
         {detail.loading && detail.data === null ? (
           <LoadingState testID="dish-loading" />
@@ -147,12 +146,11 @@ export function DishDetail(): React.ReactElement {
           />
         ) : (
           <>
-            {/* 图片（0 张时 `MediaGrid` 自己整块不渲染） */}
-            <MediaGrid
+            {detail.data.product.images.length === 0 ? <CanteenMedia testID="dish-images" uri={null} name={detail.data.product.name} style={{ width: '100%', height: undefined, aspectRatio: 16 / 9 }} /> : <MediaGrid
               testID="dish-images"
               uris={detail.data.product.images}
               alt={detail.data.product.images.map(() => detail.data?.product.name ?? '')}
-            />
+            />}
 
             <View style={{ gap: theme.space('space_2') }}>
               <Text role="title" emphasis="strong" colorToken="text-primary">
@@ -207,7 +205,6 @@ export function DishDetail(): React.ReactElement {
             </Surface>
 
             <SectionHeader title={t('canteen.comments')} />
-            <DishActions productId={productId} />
             {comments.length === 0 ? (
               <Text role="caption" colorToken="text-muted" testID="dish-no-comments">
                 {t('canteen.noComments')}
@@ -234,11 +231,7 @@ export function DishDetail(): React.ReactElement {
                         {/* 档位标签（⛔ 不是星星） */}
                         {tierKey ? (
                           <View style={{ flexDirection: 'row' }}>
-                            <Chip
-                              testID={`dish-comment-${comment.id}-tier`}
-                              label={t(tierKey)}
-                              variant="static"
-                            />
+                            <Surface testID={`dish-comment-${comment.id}-tier`} rounded="radius_small" bordered="subtle" padding="space_1"><Text role="caption" colorToken="text-secondary">{t(tierKey)}</Text></Surface>
                           </View>
                         ) : null}
                         {/* 商家回复用**引用块**区分（⛔ 不只靠缩进或颜色） */}
@@ -274,6 +267,10 @@ export function DishDetail(): React.ReactElement {
             ) : null}
           </>
         )}
+      </ScrollView>
+      {detail.data ? <View testID="dish-actions-overlay" onLayout={(event) => setActionsHeight(event.nativeEvent.layout.height)} style={{ position: 'absolute', bottom: theme.space('space_2'), left: theme.space('space_4'), right: theme.space('space_4') }}>
+        <Surface rounded="radius_medium" bordered="subtle" padding="space_2"><DishActions productId={productId} /></Surface>
+      </View> : null}
       </View>
     </Screen>
   );

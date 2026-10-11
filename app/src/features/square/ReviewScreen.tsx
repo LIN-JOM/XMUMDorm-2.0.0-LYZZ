@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Form, useForm } from '@/components/ui/Form';
 import type { FormFieldDescriptor } from '@/components/ui/FormField';
-import { MediaPicker, type PickedImage, type PickResult } from '@/components/ui/MediaPicker';
+import { type PickedImage, type PickResult } from '@/components/ui/MediaPicker';
 import { RatingScale, type RatingTierKey } from '@/components/ui/RatingScale';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -14,6 +13,7 @@ import { toToolsError } from '@/features/tools/requestError';
 import { useI18n } from '@/i18n';
 import { postProductComment } from '../../../../shared/api/canteen';
 import { REVIEW_CONTENT_FIELD, REVIEW_IMAGES_FIELD, reviewRating } from './review';
+import { CanteenImageInput } from './CanteenImageInput';
 import { invalidateCanteen } from './canteenCache';
 
 function ReviewForm({ productId, pickImage, badge }: { productId: number; pickImage?: () => Promise<PickResult>; badge: MailboxBadge }): React.ReactElement {
@@ -27,10 +27,7 @@ function ReviewForm({ productId, pickImage, badge }: { productId: number; pickIm
     REVIEW_CONTENT_FIELD,
     { ...REVIEW_IMAGES_FIELD, render: ({ value, onChange, disabled }) => {
       const images = Array.isArray(value) ? value as PickedImage[] : [];
-      return <View>{[0, 1, 2].map((index) => <MediaPicker key={index} testID={`review-image-${index}`} value={images[index] ?? null} disabled={disabled}
-        onChange={(image) => { const next = [...images]; if (image) next[index] = image; else next.splice(index, 1); onChange(next.filter(Boolean)); }}
-        onPick={pickImage} maxBytes={8 * 1024 * 1024} allowGif={false} pickLabel={t('canteen.review.pickImage')} removeLabel={t('canteen.review.removeImage')}
-        unavailableLabel={t('canteen.review.imagesUnavailable')} failureLabel={t('canteen.review.pickFailed')} tooLargeLabel={t('canteen.review.imageTooLarge')} gifNotAllowedLabel={t('canteen.review.imageFormat')} />)}</View>;
+      return <CanteenImageInput testID="review-images" images={images} onChange={onChange} disabled={disabled} pickImage={pickImage} limit={3} />;
     } },
   ], [t, pickImage]);
   const form = useForm({ formId: `canteen-review-${timetableIdentity().scope}-${productId}`, fields, initialValues: { rating: null, content: '', images: [] },

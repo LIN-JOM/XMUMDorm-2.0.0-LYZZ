@@ -61,7 +61,7 @@ it('submits three selected images with native multipart metadata', async () => {
   const view = await renderApp(<ReviewScreen productId={9} pickImage={pick} />);
   await fireEvent.press(view.getByTestId('review-rating-hot'));
   await fireEvent.changeText(view.getByLabelText(/正文/), 'Good');
-  for (const index of [0, 1, 2]) await fireEvent.press(view.getByTestId(`review-image-${index}-pick`));
+  for (const _ of [0, 1, 2]) await fireEvent.press(view.getByTestId('review-images-add-pick'));
   await fireEvent.press(view.getByTestId('review-form-submit'));
   await waitFor(() => expect(api.postProductComment).toHaveBeenCalledWith(9, expect.objectContaining({ imageFiles: [0, 1, 2].map((index) => ({ uri: 'file:///dish.png', type: 'image/png', name: `review-${index}.png` })) })));
 });

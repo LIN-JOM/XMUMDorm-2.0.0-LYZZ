@@ -1,31 +1,30 @@
 import * as React from 'react';
-import { fireEvent, waitFor } from '@testing-library/react-native';
-import { ScrollView, StyleSheet } from 'react-native';
-import Heart from 'lucide-react-native/icons/heart';
+import { fireEvent, waitFor, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { renderApp } from './helpers/renderApp';
 import { clearNamespace } from '@/shared/storage';
 import { DishDetail } from '@/features/square/DishDetail';
 import { ReviewScreen } from '@/features/square/ReviewScreen';
 import { DishActions } from '@/features/square/DishActions';
 import { getProduct, getProductFavoriteStatus } from '../../../shared/api/canteen';
+jest.mock('lucide-react-native/icons/heart', () => { const React = jest.requireActual('react'); const { View } = jest.requireActual('react-native'); return (props: object) => React.createElement(View, { ...props, testID: 'favorite-heart-glyph' }); });
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({ id: '7' }), useNavigation: () => ({ dispatch: jest.fn() }), useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => false }) }));
 jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn() }));
 jest.mock('@/features/auth/session', () => ({ useSession: () => ({ status: 'signedIn', handleAuthFailure: async () => ({ kind: 'unknown' }) }) }));
 jest.mock('@/features/mailbox/useUnread', () => ({ useMailboxBadge: () => ({}) }));
 jest.mock('../../../shared/api/canteen', () => ({ getProduct: jest.fn(), getProductCommentsRaw: jest.fn(), getProductFavoriteStatus: jest.fn(), addFavoriteProduct: jest.fn(), removeFavoriteProduct: jest.fn(), postProductComment: jest.fn() }));
-beforeEach(async () => { await clearNamespace(); jest.clearAllMocks(); jest.mocked(getProductFavoriteStatus).mockResolvedValue({ favorited: false }); jest.mocked(getProduct).mockResolvedValue({ product: { id: 7, name: 'Rice', images: [] }, comments: { list: [], page: 1, pageSize: 10, hasMore: false } }); });
+beforeEach(async () => { await clearNamespace(); jest.clearAllMocks(); jest.mocked(getProductFavoriteStatus).mockResolvedValue({ favorited: false }); jest.mocked(getProduct).mockResolvedValue({ id: 7, name: 'Rice', images: [], comments: { list: [], page: 1, pageSize: 10, hasMore: false } }); });
 it('offers a labelled heart favorite action with a visible state', async () => {
   const view = await renderApp(<DishActions productId={7} />);
   await waitFor(() => expect(view.getByTestId('dish-favorite').props.accessibilityState.disabled).toBe(false));
-  expect(view.getByTestId('dish-favorite').findAllByType(Heart)).toHaveLength(1);
+  expect(view.getByTestId('favorite-heart-glyph').props.fill).toBe('none');
   expect(view.getByTestId('dish-favorite').props.accessibilityLabel).toBe('收藏');
 });
 it('keeps review outside the scrolling content with reserved measured space and missing-image fallback', async () => {
   const view = await renderApp(<DishDetail />);
   await waitFor(() => expect(view.getByText('Rice')).toBeTruthy());
   const overlay = view.getByTestId('dish-actions-overlay');
-  let ancestor = overlay.parent;
-  while (ancestor) { expect(ancestor.type).not.toBe(ScrollView); ancestor = ancestor.parent; }
+  expect(within(view.getByTestId('dish-scroll')).queryByTestId('dish-actions-overlay')).toBeNull();
   await fireEvent(overlay, 'layout', { nativeEvent: { layout: { height: 100 } } });
   expect(StyleSheet.flatten(view.getByTestId('dish-scroll').props.contentContainerStyle).paddingBottom).toBeGreaterThan(100);
   expect(view.getByTestId('dish-images-placeholder')).toBeTruthy();
