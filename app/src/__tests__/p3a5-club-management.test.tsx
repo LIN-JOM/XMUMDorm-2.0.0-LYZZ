@@ -60,7 +60,8 @@ describe('P3A5-04 我的社团与管理入口', () => {
     await waitFor(() => expect(view.getByTestId('club-manage-remove-2')).toBeTruthy());
     const user = require('@testing-library/react-native').userEvent.setup();
     await user.press(view.getByTestId('club-manage-remove-2'));
-    await user.press(within(view.getByTestId('club-manage-remove-dialog')).getByText('移除成员'));
+    const confirmActions = within(view.getByTestId('club-manage-remove-dialog')).getAllByText('移除成员');
+    await user.press(confirmActions[confirmActions.length - 1]);
     await waitFor(() => expect(api.removeClubMember).toHaveBeenCalledWith(7, 2));
     expect(api.getClubProfile).toHaveBeenCalledTimes(2);
   });
