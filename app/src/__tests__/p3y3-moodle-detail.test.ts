@@ -79,7 +79,7 @@ describe('p3y3 official-derived synthetic detail DOM and generated page command'
     selectMoodleCourses([1]);
     const generation = moodleCacheGeneration();
     writeMoodleCache('courses', { courses: [{ id: 1, name: 'Course', visible: true }], nextOffset: 0 }, generation);
-    writeMoodleCache('state', { courseId: 1, sections: [], modules: [{ id: 101, sectionId: 1,
+    writeMoodleCache('state', { courseId: 1, sections: [{ id: 1, number: 0, title: 'General', moduleIds: [101] }], modules: [{ id: 101, sectionId: 1,
       type: 'assign', name: 'Homework', url: request('assign').url, visible: true, userVisible: true, accessVisible: true }] }, generation);
     expect(authorizeMoodleDetail(request('assign'))).toBe(true);
     expect(authorizeMoodleDetail({ ...request('assign'), courseId: 2 })).toBe(false);
@@ -89,3 +89,4 @@ describe('p3y3 official-derived synthetic detail DOM and generated page command'
     expect(authorizeMoodleDetail(request('discussion'))).toBe(false);
   });
 });
+
