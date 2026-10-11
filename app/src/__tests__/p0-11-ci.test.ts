@@ -69,7 +69,9 @@ describe('P0-11 四把尺子接入 CI', () => {
   it('Web 改动在干净锁文件环境运行 lint、构建和源码守卫', () => {
     expect(workflowText).toContain("'frontend/**'");
     expect(workflowText).toContain('web-quality:');
-    expect(workflowText).toContain('cache-dependency-path: frontend/package-lock.json');
+    expect(workflowText).toMatch(
+      /cache-dependency-path:\s*\|[\s\S]*frontend\/package-lock\.json/
+    );
     expect(workflowText).toContain('working-directory: frontend');
     expect(workflowText).toContain('npm run lint');
     expect(workflowText).toContain('npm run build');
