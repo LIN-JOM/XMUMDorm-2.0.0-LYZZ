@@ -3,8 +3,7 @@ import {useRouter} from 'expo-router';
 import {Screen} from '@/components/ui/Screen';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
-import {FilterChips} from '@/components/ui/FilterChips';
-import {SegmentedControl} from '@/components/ui/SegmentedControl';
+import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
 import {Input} from '@/components/ui/Input';
 import {SearchField} from '@/components/ui/SearchField';
 import {Button} from '@/components/ui/Button';
@@ -41,8 +40,8 @@ export function MarketListScreen():React.ReactElement {
  };
  return <Screen titleKey="screen.market.title" showMailbox={false} testID="market-screen">
   <SearchField testID="market-search-field" appearance="full" value={q} onChangeText={setQ} onSubmit={apply} placeholder={t('screen.market.query')}/>
-  <FilterChips testID="market-categories" options={categories} selected={[filters.category??'all']} onToggle={key=>select({...filters,category:key==='all'?undefined:key})}/>
-  <SegmentedControl testID="market-status" value={filters.status??'all'} options={['all','on_sale','sold'].map(value=>({value,label:t(statusKeys[value as keyof typeof statusKeys])}))} onChange={status=>select({...filters,status:status==='all'?undefined:status})}/>
+  <UnderlineFilter testID="filter-chip" options={categories} selectedKey={filters.category??'all'} onSelect={key=>select({...filters,category:key==='all'?undefined:key})}/>
+  <UnderlineFilter testID="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
   <Input testID="market-min-input" value={min} onChangeText={setMin} label={t('screen.market.min')} kind="number"/>
   <Input testID="market-max-input" value={max} onChangeText={setMax} label={t('screen.market.max')} kind="number"/>
   {invalid?<Text role="body">{t('screen.market.priceInvalid')}</Text>:null}

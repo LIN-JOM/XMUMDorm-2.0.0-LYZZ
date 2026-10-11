@@ -5,7 +5,7 @@ import {useRouter} from 'expo-router';
 import {Screen} from '@/components/ui/Screen';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
-import {SegmentedControl} from '@/components/ui/SegmentedControl';
+import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
 import {Button} from '@/components/ui/Button';
 import {Text} from '@/components/ui/Text';
 import {DetailScreen} from '@/proto/P3';
@@ -35,8 +35,8 @@ export function ErrandListScreen():React.ReactElement {
  const [filters,setFilters]=React.useState<Filters>(()=>client.getQueryData<Filters>(['bing-errand','selected'])??{});
  const select=(next:Filters)=>{client.setQueryData(['bing-errand','selected'],next);setFilters(next);};
  return <Screen titleKey="screen.errand.title" showMailbox={false} testID="errand-screen">
-  <SegmentedControl testID="errand-type" value={filters.type??'all'} options={(['all','delivery','purchase','urgent'] as const).map(value=>({value,label:t(typeKeys[value as keyof typeof typeKeys])}))} onChange={type=>select({...filters,type:type==='all'?undefined:type})}/>
-  <SegmentedControl testID="errand-status" value={filters.status??'all'} options={(['all','open','taken','done'] as const).map(value=>({value,label:t(statusKeys[value])}))} onChange={status=>select({...filters,status:status==='all'?undefined:status})}/>
+  <UnderlineFilter testID="errand-type" options={(['all','delivery','purchase','urgent'] as const).map(key=>({key,labelKey:typeKeys[key]}))} selectedKey={filters.type??'all'} onSelect={type=>select({...filters,type:type==='all'?undefined:type})}/>
+  <UnderlineFilter testID="errand-status" options={(['all','open','taken','done'] as const).map(key=>({key,labelKey:statusKeys[key]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
   <ErrandFeed key={JSON.stringify(filters)} filters={filters}/>
  </Screen>;
 }
