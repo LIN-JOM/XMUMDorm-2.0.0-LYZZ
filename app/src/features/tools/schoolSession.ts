@@ -28,6 +28,7 @@ import * as React from 'react';
 import { getItem, removeItem, setItem } from '@/shared/storage';
 import type { SchoolSystemSessionState } from '@/components/ui/SchoolSystemCard';
 import { SCHOOL_SYSTEMS, type SchoolSystemId } from './schoolSystems';
+import { clearMoodleCache } from './moodle/cache';
 
 /* ────────────────────────── 纯规则 ────────────────────────── */
 
@@ -92,6 +93,7 @@ export async function writeSchoolSession(
 }
 
 export async function clearSchoolSession(id: SchoolSystemId): Promise<void> {
+  if (id === 'moodle') clearMoodleCache();
   await removeItem(schoolSessionKey(id));
 }
 
