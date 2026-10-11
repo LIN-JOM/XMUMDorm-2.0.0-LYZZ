@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { BackHandler, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ALL_HOLIDAYS } from '../../../../shared/config/holidays';
 import { kualaLumpurCalendarParts } from '../../../../shared/config/semesters';
 import { Button } from '@/components/ui/Button';
@@ -20,11 +20,6 @@ export function HolidaysContent({ now, onBack }: { now: Date; onBack: () => void
   const { t, locale } = useI18n();
   const theme = useTheme();
   const holidays = upcomingSchoolHolidays(now);
-  useFocusEffect(React.useCallback(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => { onBack(); return true; });
-    return () => subscription.remove();
-  }, [onBack]));
-
   return <View testID="tools-holidays-content" style={{ padding: theme.space('space_4'), gap: theme.space('space_3') }}>
     <Button testID="tools-holidays-back" label={t('action.back')} variant="ghost" onPress={onBack} />
     <SectionHeader title={t('tools.dashboard.holiday')} />
