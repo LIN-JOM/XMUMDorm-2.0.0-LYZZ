@@ -84,13 +84,14 @@ describe('P2C-05 设置与法务三页', () => {
     await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
 
     fireEvent.press(view.getByTestId('settings-deactivate'));
-    expect(view.getByTestId('settings-deactivate-dialog')).toBeTruthy();
+    await waitFor(() => expect(view.getByText(zh['me.settings.deactivate.confirm'])).toBeTruthy());
     fireEvent.press(view.getByText(zh['me.settings.deactivate.confirm']));
     await waitFor(() => expect(users.deactivateMyAccount).toHaveBeenCalledTimes(1));
     expect(mockLogout).toHaveBeenCalledTimes(2);
 
     users.deactivateMyAccount.mockRejectedValueOnce({ kind: 'offline' });
     fireEvent.press(view.getByTestId('settings-deactivate'));
+    await waitFor(() => expect(view.getByText(zh['me.settings.deactivate.confirm'])).toBeTruthy());
     fireEvent.press(view.getByText(zh['me.settings.deactivate.confirm']));
     await waitFor(() => expect(users.deactivateMyAccount).toHaveBeenCalledTimes(2));
     expect(mockLogout).toHaveBeenCalledTimes(2);

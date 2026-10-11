@@ -14,23 +14,44 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ListItem } from '@/components/ui/ListItem';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { InlineNotice } from '@/components/ui/InlineNotice';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { useTheme } from '@/design-system/theme';
 import { useI18n, type Locale } from '@/i18n';
 import { NotificationSettingsSection } from '@/features/notifications/NotificationSettingsSection';
+import { useSession } from '@/features/auth/session';
+import { deactivateMyAccount } from '../../../../shared/api/users';
 import { ME_ENTRIES, visibleEntries } from './profile';
 
 const LOCALES: readonly Locale[] = ['zh', 'en'];
+
+export function isDeactivationAcknowledged(value: unknown): boolean {
+  return !!value && typeof value === 'object' && (value as { status?: unknown }).status === 0;
+}
 
 export function SettingsScreen(): React.ReactElement {
   const { t, locale, setLocale } = useI18n();
   const theme = useTheme();
   const router = useRouter();
+  const session = useSession();
+  const [deactivateOpen, setDeactivateOpen] = React.useState(false);
+  const [deactivationFailed, setDeactivationFailed] = React.useState(false);
 
   // 入口来自**同一份**账本（`ME_ENTRIES`）：能进去的才显示，⛔ 不在这里另写一份列表
   const entries = visibleEntries(ME_ENTRIES).filter((entry) => entry.key !== 'posts');
+  const deactivate = async (): Promise<void> => {
+    setDeactivateOpen(false);
+    setDeactivationFailed(false);
+    try {
+      if (!isDeactivationAcknowledged(await deactivateMyAccount())) throw new Error('deactivation was not acknowledged');
+      await session.logout();
+    } catch {
+      setDeactivationFailed(true);
+    }
+  };
 
   return (
     <Screen testID="screen-me-settings" titleKey="me.settings.title" bottomMode="none">
@@ -48,6 +69,11 @@ export function SettingsScreen(): React.ReactElement {
 
         <NotificationSettingsSection />
 
+        <SectionHeader title={t('me.settings.account')} />
+        <ListItem testID="settings-logout" title={t('auth.logout')} variant="action" onPress={() => void session.logout()} />
+        <ListItem testID="settings-deactivate" title={t('me.settings.deactivate')} variant="danger" onPress={() => setDeactivateOpen(true)} />
+        {deactivationFailed ? <InlineNotice testID="settings-deactivate-failed" tone="warning" message={t('me.settings.deactivate.failed')} /> : null}
+
         {entries.length > 0 ? (
           <>
             <SectionHeader title={t('me.settings.more')} />
@@ -63,6 +89,17 @@ export function SettingsScreen(): React.ReactElement {
           </>
         ) : null}
       </View>
+      <AlertDialog
+        testID="settings-deactivate-dialog"
+        visible={deactivateOpen}
+        variant="danger"
+        title={t('me.settings.deactivate.title')}
+        body={t('me.settings.deactivate.body')}
+        confirmLabel={t('me.settings.deactivate.confirm')}
+        cancelLabel={t('action.cancel')}
+        onConfirm={() => void deactivate()}
+        onCancel={() => setDeactivateOpen(false)}
+      />
     </Screen>
   );
 }

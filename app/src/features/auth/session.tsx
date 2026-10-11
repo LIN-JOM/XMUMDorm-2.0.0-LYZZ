@@ -23,6 +23,7 @@
 import * as React from 'react';
 
 import { clearNamespace } from '@/shared/storage';
+import { getQueryClient } from '@/shared/queryClient';
 import { login as loginApi, register as registerApi } from '../../../../shared/api/auth';
 import { setTokenGetter } from '@/shared/api';
 import {
@@ -131,6 +132,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
   const markExpired = React.useCallback(async () => {
     await clearToken();
     await clearNamespace();
+    getQueryClient().clear();
     dispatch({ type: 'session:expired' });
   }, []);
 
@@ -138,6 +140,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
     await clearToken();
     // ⛔ 不清落盘的话，下一个账号会看到上一个账号的草稿与缓存
     await clearNamespace();
+    getQueryClient().clear();
     dispatch({ type: 'logout' });
   }, []);
 
