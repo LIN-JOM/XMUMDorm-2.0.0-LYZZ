@@ -453,6 +453,7 @@ export const en: Record<MessageKey, string> = {
   'square.guides.linkRetry': 'Retry opening link',
   'square.guides.end': 'End',
   'screen.campus.search.title': 'Search Treehole',
+  'screen.campus.mediaPosition': 'Image {index} of {total}',
   'screen.campus.search.placeholder': 'Search Treehole',
   'screen.campus.search.clear': 'Clear keyword',
   'screen.campus.search.submit': 'Search',

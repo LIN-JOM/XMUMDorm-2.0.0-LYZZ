@@ -461,6 +461,7 @@ export const zh = {
   'square.guides.linkRetry': '重试打开链接',
   'square.guides.end': '已读完',
   'screen.campus.search.title': '搜索树洞',
+  'screen.campus.mediaPosition': '第 {index} 张，共 {total} 张',
   'screen.campus.search.placeholder': '搜索树洞',
   'screen.campus.search.clear': '清除关键词',
   'screen.campus.search.submit': '搜索',
