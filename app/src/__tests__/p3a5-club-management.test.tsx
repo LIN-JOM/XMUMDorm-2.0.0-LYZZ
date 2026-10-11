@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { waitFor } from '@testing-library/react-native';
+import { waitFor, within } from '@testing-library/react-native';
 
 import { renderApp } from './helpers/renderApp';
 
@@ -60,6 +60,7 @@ describe('P3A5-04 我的社团与管理入口', () => {
     await waitFor(() => expect(view.getByTestId('club-manage-remove-2')).toBeTruthy());
     const user = require('@testing-library/react-native').userEvent.setup();
     await user.press(view.getByTestId('club-manage-remove-2'));
+    await user.press(within(view.getByTestId('club-manage-remove-dialog')).getByText('移除成员'));
     await waitFor(() => expect(api.removeClubMember).toHaveBeenCalledWith(7, 2));
     expect(api.getClubProfile).toHaveBeenCalledTimes(2);
   });
