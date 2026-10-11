@@ -33,6 +33,7 @@ export type MoodleModule = {
 export type MoodleActionEvent = {
   id: number;
   courseId: number;
+  /** Calendar activity instance; despite this legacy name it is not necessarily course_modules.id. */
   moduleId: number | null;
   name: string;
   /** Unix seconds from timesort, not the device timezone or timestart. */
@@ -218,3 +219,4 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
   }
   return null;
 }
+
