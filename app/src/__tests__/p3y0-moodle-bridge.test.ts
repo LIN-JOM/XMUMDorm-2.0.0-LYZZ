@@ -25,10 +25,10 @@ async function runScript(data: unknown = courses, origin = 'https://l.xmu.edu.my
   return { calls, messages, script };
 }
 
-it('executes a read-only Moodle request and returns only projected course fields', async () => {
+it('requests all enrolments including dashboard-hidden preferences and returns only projected fields', async () => {
   const { calls, messages } = await runScript();
   expect(calls).toEqual([{ methodname: 'core_course_get_enrolled_courses_by_timeline_classification',
-    args: { classification: 'all', limit: 50, offset: 25 } }]);
+    args: { classification: 'allincludinghidden', limit: 50, offset: 25 } }]);
   expect(messages).toHaveLength(1);
   const result = parseMoodleBridgeMessage(messages[0]);
   expect(result).toMatchObject({ requestId: 'request-1', method: 'courses', status: 'success',
