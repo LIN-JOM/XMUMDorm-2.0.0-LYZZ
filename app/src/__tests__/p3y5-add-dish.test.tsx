@@ -13,7 +13,7 @@ const labels: AddDishLabels = { titleKey: 'canteen.menuTitle', categoryKey: 'can
 jest.mock('expo-router', () => ({ useNavigation: () => ({ dispatch: jest.fn() }), useRouter: () => ({ push: jest.fn(), replace: jest.fn(), canGoBack: () => false, back: jest.fn() }) }));
 jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn() }));
 jest.mock('@/features/auth/tokenStore', () => ({ readTokenSync: () => mockTokenState.value }));
-jest.mock('@/features/auth/session', () => ({ useSession: () => ({ status: 'signedIn', handleAuthFailure: async () => 'other' }) }));
+jest.mock('@/features/auth/session', () => ({ useSession: () => ({ status: 'signedIn', handleAuthFailure: async () => ({ kind: 'unknown' }) }) }));
 jest.mock('@/features/mailbox/useUnread', () => ({ useMailboxBadge: () => ({}) }));
 jest.mock('../../../shared/api/canteen', () => ({ createProduct: jest.fn(), getShop: jest.fn() }));
 beforeEach(async () => { await clearNamespace(); mockTokenState.value = 'header.eyJpZCI6MX0.signature'; jest.clearAllMocks(); jest.mocked(getShop).mockResolvedValue({ id: 8, name: 'Kitchen', categories: [{ id: 2, name: 'Meals' }] }); jest.mocked(createProduct).mockResolvedValue({ id: 17, name: 'Rice' }); });
@@ -56,4 +56,15 @@ it('discards a successful creation receipt after the account identity changes', 
   mockTokenState.value = 'header.eyJpZCI6Mn0.signature';
   await act(async () => finish({ id: 17 }));
   expect(mockCreated).not.toHaveBeenCalled();
+});it('keeps the form open when the creation response lacks a valid product id', async () => {
+  jest.mocked(createProduct).mockResolvedValue({});
+  const cancelled = jest.fn();
+  const view = await renderApp(<AddDishScreen shopId={8} labels={labels} onCreated={mockCreated} onCancel={cancelled} />);
+  await waitFor(() => expect(view.getByLabelText(/标题/)).toBeTruthy());
+  await fireEvent.changeText(view.getByLabelText(/标题/), 'Rice');
+  await fireEvent.press(view.getByTestId('add-dish-form-submit'));
+  await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(view.getByText('出错了')).toBeTruthy());
+  expect(mockCreated).not.toHaveBeenCalled();
+  expect(cancelled).not.toHaveBeenCalled();
 });
