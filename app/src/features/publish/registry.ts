@@ -92,7 +92,7 @@ export const PUBLISH_REGISTRY: readonly PublishEntry[] = [
   {
     id: 'clubPost',
     titleKey: 'publish.entry.clubPost',
-    icon: 'notebook-pen',
+    icon: 'notebook',
     permission: (viewer) => viewer.canManageClub === true,
     status: 'ready',
   },
