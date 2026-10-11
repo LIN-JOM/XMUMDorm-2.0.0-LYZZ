@@ -8,12 +8,15 @@ import {EntityCard} from '@/components/ui/EntityCard';
 import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
 import {Button} from '@/components/ui/Button';
 import {Text} from '@/components/ui/Text';
+import {ReportSheet} from '@/components/ui/ReportSheet';
+import {useToast} from '@/components/ui/Toast';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
 import {getQueryClient} from '@/shared/queryClient';
 import {useSession} from '@/features/auth/session';
 import {classifyAuthFailure,isSessionInvalid} from '@/features/auth/authFailure';
+import {useReport,type ReportReason} from '@/features/reports/useReport';
 import {listErrands,getErrandDetail,takeErrand,doneErrand,deleteErrand} from '../../../../shared/api/errands';
 import {getMe} from '../../../../shared/api/users';
 import {AlertDialog} from '@/components/ui/AlertDialog';
@@ -82,10 +85,12 @@ function ErrandFeed({filters}:{filters:Filters}):React.ReactElement {
 type Detail=ReturnType<typeof readErrandDetail>;
 type Viewer={id:number;role:string};
 export function ErrandDetailScreen({published=false,errandId}:{published?:boolean;errandId:string}):React.ReactElement {
- const {t}=useI18n();const router=useRouter();const session=useSession();
+ const {t}=useI18n();const router=useRouter();const session=useSession();const toast=useToast();
  const [item,setItem]=React.useState<Detail|null>(null),[viewer,setViewer]=React.useState<Viewer|null>(null),[identityError,setIdentityError]=React.useState(false);
  const [loading,setLoading]=React.useState(true),[error,setError]=React.useState<AppError|null>(null),[busy,setBusy]=React.useState(false),[confirm,setConfirm]=React.useState<'take'|'done'|'delete'|null>(null),[notice,setNotice]=React.useState<'failed'|'login'|'denied'|'conflict'|null>(null);
+ const [reportOpen,setReportOpen]=React.useState(false),[reportReason,setReportReason]=React.useState<string|null>(null),[reportDetail,setReportDetail]=React.useState('');
  const epoch=React.useRef(0),lock=React.useRef(false),uncertain=React.useRef(false);
+ const report=useReport(item?{id:item.id,type:'errand'}:null,session.isSignedIn,session.handleAuthFailure);
  const load=React.useCallback(async()=>{
   const request=++epoch.current;lock.current=false;uncertain.current=false;setBusy(false);setItem(null);setViewer(null);setConfirm(null);setNotice(null);setIdentityError(false);setError(null);setLoading(true);
   try{
@@ -97,6 +102,8 @@ export function ErrandDetailScreen({published=false,errandId}:{published?:boolea
   }catch(failure){if(request===epoch.current)setError(errorFor(failure));}finally{if(request===epoch.current)setLoading(false);}
  },[errandId,session.isSignedIn,session.handleAuthFailure]);
  React.useEffect(()=>{void load();return()=>{epoch.current++;};},[load]);
+ React.useEffect(()=>{setReportOpen(false);setReportReason(null);setReportDetail('');},[errandId]);
+ React.useEffect(()=>{if(report.state==='success'){setReportOpen(false);toast.show({message:t('screen.campus.report.success'),tone:'success'});}},[report.state,t,toast]);
  const canTake=!!(item&&viewer&&(viewer.id===item.ownerId||viewer.role==='admin')&&item.status!=='done');
  const canDelete=!!(item&&viewer&&(viewer.id===item.ownerId||viewer.role==='admin'));
  const phone=item?.contactInfo.trim();
@@ -123,7 +130,14 @@ export function ErrandDetailScreen({published=false,errandId}:{published?:boolea
   }finally{if(request===epoch.current){lock.current=false;setBusy(false);}}
  };
  const back=()=>published?router.replace('/errand' as never):router.canGoBack()?router.back():router.replace('/errand' as never);
- return <DetailScreen testID="errand-detail" title={item?.title??t('screen.errand.detail')} author={{kind:'named',name:item?.ownerName??t('screen.errand.owner')}} interactions={{}} onBack={back} onRetry={()=>void load()} state={loading?'loading':error?.kind==='content'?'empty':error?'error':item?'content':'empty'} error={error}
+ const reportReasons=['spam','fraud','abuse','nsfw','trolling','privacy','illegal_trade','other'] as const;
+ const reportReasonKeys={spam:'screen.campus.report.spam',fraud:'screen.campus.report.fraud',abuse:'screen.campus.report.abuse',nsfw:'screen.campus.report.nsfw',trolling:'screen.campus.report.trolling',privacy:'screen.campus.report.privacy',illegal_trade:'screen.campus.report.illegal_trade',other:'screen.campus.report.other'} as const;
+ const reportPanel=<ReportSheet maxDetailLength={1000} visible={reportOpen} reasons={reportReasons.map(value=>({value,label:t(reportReasonKeys[value])}))} reason={reportReason} detail={reportDetail} onReason={setReportReason} onDetail={setReportDetail}
+  busy={report.state==='sending'} onSubmit={()=>{if(reportReason)void report.submit(reportReason as ReportReason,reportDetail);}} onCancel={()=>setReportOpen(false)}
+  message={['failed','denied','invalid','login'].includes(report.state)?t(report.state==='login'?'screen.errand.login':report.state==='denied'?'screen.errand.denied':'screen.campus.report.failed'):undefined}
+  action={report.state==='login'?{label:t('screen.errand.login'),onPress:()=>{setReportOpen(false);router.push('/login');}}:undefined}
+  labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
+ return <DetailScreen testID="errand-detail" title={item?.title??t('screen.errand.detail')} author={{kind:'named',name:item?.ownerName??t('screen.errand.owner')}} onReport={item&&report.state!=='success'?()=>setReportOpen(true):undefined} interactions={{}} onBack={back} onRetry={()=>void load()} state={loading?'loading':error?.kind==='content'?'empty':error?'error':item?'content':'empty'} error={error}
   empty={{kind:'noResult',title:t('screen.errand.unavailable'),actionLabel:t('screen.errand.back'),onAction:back}}
   body={item?<><Text role="body">{item.description}</Text><Text role="body">{`RM ${item.reward.toFixed(2)} · ${t(statusKeys[item.status as 'open'|'taken'|'done'])}`}</Text>
    <Text role="body">{item.location}</Text>{item.deadline?<Text role="body">{item.deadline}</Text>:null}
@@ -135,7 +149,7 @@ export function ErrandDetailScreen({published=false,errandId}:{published?:boolea
    {canTake?<Button testID="errand-take" disabled={busy||uncertain.current} label={t(item.status==='taken'?'screen.errand.untake':'screen.errand.take')} onPress={()=>setConfirm('take')}/>:null}
    {canDone?<Button testID="errand-done" disabled={busy||uncertain.current} label={t(item.status==='done'?'screen.errand.undo':'screen.errand.complete')} onPress={()=>setConfirm('done')}/>:null}
    {notice?<><Text role="body">{t(noticeKeys[notice])}</Text><Button label={t('screen.errand.refresh')} onPress={()=>void load()}/></>:null}
-   <AlertDialog testID="errand-confirm" visible={confirm!==null} title={t('screen.errand.detail')} body={t(confirm==='delete'?'screen.errand.deleteConfirm':'screen.errand.confirmBody')} confirmLabel={t('screen.errand.confirm')} cancelLabel={t('action.cancel')} onCancel={()=>setConfirm(null)} onConfirm={()=>{if(confirm)void action(confirm);}}/>
+   <AlertDialog testID="errand-confirm" visible={confirm!==null} title={t('screen.errand.detail')} body={t(confirm==='delete'?'screen.errand.deleteConfirm':'screen.errand.confirmBody')} confirmLabel={t('screen.errand.confirm')} cancelLabel={t('action.cancel')} onCancel={()=>setConfirm(null)} onConfirm={()=>{if(confirm)void action(confirm);}}/>{reportPanel}
   </>:null}
   labels={{back:t('action.back'),like:t('screen.campus.read.like'),favorite:t('action.save'),comment:t('screen.campus.read.comments'),report:t('screen.campus.read.report'),countPlaceholder:'—',anonymous:t('screen.campus.read.anonymous'),comments:{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')},commentsEnd:t('screen.campus.read.end'),commentsRetry:t('action.retry')}}/>;
 }
