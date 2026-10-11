@@ -1,20 +1,4 @@
-/**
- * `S-07` 食堂首页 / Canteen（父 `S-01`，原型 `P7`）
- *
- * 页面清单给的接口是 `/regions`、`/banners`、`/pick-random`、`/rankings/*`，
- * 组件是 `BannerSlot` `QuickActionGrid` `SectionHeader` `RankingRow` `Fab`（今天吃什么）。
- *
- * ⚠️ **本轮交付范围**（如实登记，见 P1-17 §3）：
- *   ✅ 区域网格（`QuickActionGrid` → `S-08`）
- *   ✅ 「今天吃什么」（`/pick-random` → 随机跳一个菜品详情）
- *   ⛔ **`/banners` 与 `/rankings/*` 未做**：广告位要先把 6 种 `link_type` 的目标解析
- *      （含 https-only 规则）做出来，而那是**广告模块**的既有逻辑（`S-02`/`S-03`）——
- *      在这里再实现一遍就是"同语义两层"（9.14-①）。榜单同理（4 个 `/rankings/*` 接口）。
- *
- * ⛔ 页面清单里 `S-07` 的 `Fab`（今天吃什么）**不是发布入口**：宪法第三轮裁决只禁
- *    "第二个**发布**入口"，而"今天吃什么"是内容动作 → 用普通按钮实现，
- *    ⛔ 不新建 `Fab` 组件（组件定义 §2.6 里没有它）。
- */
+/** S-07 Canteen, P7 discovery: search, one ranking, areas, random meal and food articles. */
 
 import * as React from 'react';
 import { View } from 'react-native';

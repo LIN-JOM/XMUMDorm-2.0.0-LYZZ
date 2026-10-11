@@ -11,11 +11,10 @@ export function CanteenMedia({ uri, name, style, testID }: {
   uri: string | null; name: string; style?: StyleProp<ViewStyle>; testID?: string;
 }): React.ReactElement {
   const theme = useTheme();
-  const [failed, setFailed] = React.useState(false);
-  React.useEffect(() => setFailed(false), [uri]);
+  const [failedUri, setFailedUri] = React.useState<string | null>(null);
   return <View testID={testID} style={[{ width: theme.touchTarget, height: theme.touchTarget, overflow: 'hidden', borderRadius: theme.radius('radius_small'), backgroundColor: theme.color['bg-sunken'].value }, style]}>
-    {uri && !failed ? <Image testID={testID ? `${testID}-image` : undefined} source={{ uri: getUploadUrl(uri) }} style={{ width: '100%', height: '100%' }}
-      contentFit="cover" accessibilityLabel={name} accessible onError={() => setFailed(true)} /> :
+    {uri && failedUri !== uri ? <Image testID={testID ? `${testID}-image` : undefined} source={{ uri: getUploadUrl(uri) }} style={{ width: '100%', height: '100%' }}
+      contentFit="cover" accessibilityLabel={name} accessible onError={() => setFailedUri(uri)} /> :
       <View testID={testID ? `${testID}-placeholder` : undefined} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Icon source={UtensilsCrossed} tint="secondary" label={name} />
       </View>}

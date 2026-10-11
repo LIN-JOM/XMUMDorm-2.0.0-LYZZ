@@ -10,7 +10,7 @@ import { useMailboxBadge } from '@/features/mailbox/useUnread';
 import { useI18n } from '@/i18n';
 import { getRegionTopProducts } from '../../../../shared/api/canteen';
 import { useCanteenResource } from './useCanteenResource';
-import { normalizeRanked } from './RegionShops';
+import { normalizeRanked } from './canteenRankedProducts';
 import { canteenCacheKey, CANTEEN_CACHE_TTL_MS } from './canteen';
 import { CanteenMedia } from './CanteenMedia';
 

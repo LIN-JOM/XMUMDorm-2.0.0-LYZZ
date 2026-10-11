@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ListScreen, useListPagination } from '@/components/ui/ListScreen';
 import { EntityCard } from '@/components/ui/EntityCard';
@@ -44,14 +44,15 @@ export function FoodArticleFeed({ header }: { header?: React.ReactNode }): React
     const unsubscribe = subscribeCanteen(() => { generation.current += 1; busy.current = false; void load('refresh'); });
     return () => { generation.current += 1; unsubscribe(); };
   }, [load]);
-  return <View style={{ flex: 1 }}>
-    <ListScreen<FoodArticle> testID="food-articles" data={rows} keyExtractor={(row) => String(row.id)} pagination={pagination}
+  const list = <ListScreen<FoodArticle> testID="food-articles" data={rows} keyExtractor={(row) => String(row.id)} pagination={pagination}
       listHeader={header} onRefresh={() => void load('refresh')} onEndReached={() => void load('append')}
       onRetryRefresh={() => void load('refresh')} onRetryAppend={() => void load('append')}
-      labels={{ empty: { kind: 'noResult', title: t('canteen.search.noResults'), actionLabel: t('action.refresh'), onAction: () => void load('refresh') }, retryLabel: t('action.retry'), endLabel: t('canteen.search.end') }}
+      labels={{ empty: { kind: 'noResult', title: t('screen.campus.read.empty'), actionLabel: t('action.refresh'), onAction: () => void load('refresh') }, retryLabel: t('action.retry'), endLabel: t('mailbox.conversations.end') }}
       renderItem={(row) => <EntityCard testID={`food-article-${row.id}`} domain="post" title={row.title} authorLabel={row.author ?? t('canteen.anonymous')}
         mediaUri={row.cover ? getUploadUrl(row.cover) : null} onPress={() => router.push({ pathname: '/campus/[id]', params: { id: String(row.id) } })} />}
-    />
+    />;
+  return <View style={{ flex: 1 }}>
+    {rows.length ? list : <ScrollView contentContainerStyle={{ flexGrow: 1 }}>{list}</ScrollView>}
     {pagination.hasMore ? <Button testID="food-articles-more" label={t('canteen.loadMore')} variant="secondary" loading={pagination.append === 'loading'} onPress={() => void load('append')} /> : null}
   </View>;
 }

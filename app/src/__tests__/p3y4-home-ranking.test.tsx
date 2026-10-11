@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as rankingApi from '../../../shared/api/rankings';
 import * as canteenApi from '../../../shared/api/canteen';
-const mockTargets: unknown[] = [];
+
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { CanteenHome } from '@/features/square/CanteenHome';
