@@ -26,7 +26,8 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
     case 'courses':
       if (!nonnegative(request.offset ?? 0)) return null;
       methodname = 'core_course_get_enrolled_courses_by_timeline_classification';
-      args = { classification: 'all', limit: 50, offset: request.offset ?? 0 };
+      // Dashboard hiding is a user preference, not the course visibility permission.
+      args = { classification: 'allincludinghidden', limit: 50, offset: request.offset ?? 0 };
       break;
     case 'state':
       if (!nonnegative(request.courseId) || request.courseId === 0) return null;

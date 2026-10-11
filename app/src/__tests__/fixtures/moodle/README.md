@@ -14,6 +14,7 @@
 sourceURLs：
 
 - [课程列表接口](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/course/externallib.php#L3635)定义 courses 与 nextoffset。
+- [完整已选课列表](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/course/externallib.php#L3741)用 allincludinghidden 包含 dashboard 隐藏偏好；对象权限仍按 visible 过滤。
 - [课程导出器](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/course/classes/external/course_summary_exporter.php#L63)定义课程摘要字段。
 - [state 接口](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/course/format/classes/external/get_state.php#L35)返回 JSON 字符串。
 - [course state](https://github.com/moodle/moodle/blob/MOODLE_405_STABLE/course/format/classes/output/local/state/course.php#L58)定义课程 ID 与章节索引。
