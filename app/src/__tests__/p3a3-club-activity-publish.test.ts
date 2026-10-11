@@ -6,6 +6,7 @@ import { createClubActivityPublishDescriptor } from '@/features/clubs/publishFie
 
 const api = require('../../../shared/api/clubs') as { createClubActivity: jest.Mock };
 const CLUBS = [{ value: '7', label: 'Music Club' }];
+const OPTIONS = { clubs: CLUBS, renderMedia: () => null };
 
 describe('P3A3-06 社团活动发布描述符', () => {
   beforeEach(() => {
@@ -14,7 +15,7 @@ describe('P3A3-06 社团活动发布描述符', () => {
 
   it('只接受服务端返回的可管理社团，并提交后进入新活动详情', async () => {
     api.createClubActivity.mockResolvedValue({ id: 31 });
-    const descriptor = createClubActivityPublishDescriptor((key) => zh[key], CLUBS);
+    const descriptor = createClubActivityPublishDescriptor((key) => zh[key], OPTIONS);
 
     expect(descriptor.id).toBe('clubActivity');
     expect(descriptor.sections[0].fields.find((field) => field.name === 'clubId')?.source).toEqual({
@@ -41,11 +42,11 @@ describe('P3A3-06 社团活动发布描述符', () => {
       time: '2026-11-01T10:00:00.000Z',
       endTime: '2026-11-01T12:00:00.000Z',
     }, []);
-    expect(descriptor.routeAfterSubmit(result)).toBe('/clubs/activity/31?published=1');
+    expect(descriptor.routeAfterSubmit?.(result)).toBe('/clubs/activity/31?published=1');
   });
 
   it('拒绝不在服务端可管理列表中的社团，不发创建请求', async () => {
-    const descriptor = createClubActivityPublishDescriptor((key) => zh[key], CLUBS);
+    const descriptor = createClubActivityPublishDescriptor((key) => zh[key], OPTIONS);
 
     await expect(descriptor.submit({
       clubId: '99', title: 'Unowned club', summary: '', location: '', signupLink: '', time: '', endTime: '', images: [],
@@ -54,7 +55,7 @@ describe('P3A3-06 社团活动发布描述符', () => {
   });
 
   it('不完整或无效的日期时间不能越过客户端表单校验', async () => {
-    const descriptor = createClubActivityPublishDescriptor((key) => zh[key], CLUBS);
+    const descriptor = createClubActivityPublishDescriptor((key) => zh[key], OPTIONS);
 
     await expect(descriptor.submit({
       clubId: '7', title: 'Broken time', summary: '', location: '', signupLink: '', time: 'local:2026-11-01|', endTime: '', images: [],

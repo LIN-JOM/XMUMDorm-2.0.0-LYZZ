@@ -6,6 +6,7 @@ import { createClubPostPublishDescriptor } from '@/features/clubs/publishFields'
 
 const api = require('../../../shared/api/clubs') as { createClubPost: jest.Mock };
 const CLUBS = [{ value: '8', label: 'Tech Club' }];
+const OPTIONS = { clubs: CLUBS, renderMedia: () => null };
 
 describe('P3A3-07 社团帖子发布描述符', () => {
   beforeEach(() => {
@@ -14,7 +15,7 @@ describe('P3A3-07 社团帖子发布描述符', () => {
 
   it('只发布到服务端确认的管理社团，并使用成功回执进入帖子详情', async () => {
     api.createClubPost.mockResolvedValue({ id: 41 });
-    const descriptor = createClubPostPublishDescriptor((key) => zh[key], CLUBS);
+    const descriptor = createClubPostPublishDescriptor((key) => zh[key], OPTIONS);
 
     expect(descriptor.id).toBe('clubPost');
     const result = await descriptor.submit({
@@ -28,11 +29,11 @@ describe('P3A3-07 社团帖子发布描述符', () => {
       title: 'Weekly notes',
       content: 'Meet in Room 301.',
     }, []);
-    expect(descriptor.routeAfterSubmit(result)).toBe('/clubs/post/41?published=1');
+    expect(descriptor.routeAfterSubmit?.(result)).toBe('/clubs/post/41?published=1');
   });
 
   it('正文为空或社团不在管理列表时不请求服务端', async () => {
-    const descriptor = createClubPostPublishDescriptor((key) => zh[key], CLUBS);
+    const descriptor = createClubPostPublishDescriptor((key) => zh[key], OPTIONS);
 
     await expect(descriptor.submit({ clubId: '8', title: '', content: '', images: [] })).rejects.toEqual({ kind: 'validation' });
     await expect(descriptor.submit({ clubId: '99', title: 'No access', content: 'Cannot publish', images: [] })).rejects.toEqual({ kind: 'validation' });

@@ -25,6 +25,7 @@ export type PublishId =
   | 'wall'
   | 'confession'
   | 'clubActivity'
+  | 'clubPost'
   | 'marketplace'
   | 'errand'
   | 'carpool'
@@ -85,6 +86,13 @@ export const PUBLISH_REGISTRY: readonly PublishEntry[] = [
     titleKey: 'publish.entry.clubActivity',
     icon: 'users',
     // 后端字段驱动（⛔ 不猜）
+    permission: (viewer) => viewer.canManageClub === true,
+    status: 'ready',
+  },
+  {
+    id: 'clubPost',
+    titleKey: 'publish.entry.clubPost',
+    icon: 'notebook-pen',
     permission: (viewer) => viewer.canManageClub === true,
     status: 'ready',
   },
