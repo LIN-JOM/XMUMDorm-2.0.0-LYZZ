@@ -82,6 +82,34 @@ it('explicitly reconciles both complete domain plans in global date order', asyn
   expect(h.requests().map((item) => item.identifier)).toContain('reserved');
 });
 
+it.each(['clear', 'replace'] as const)('keeps class notifications when concurrent Moodle %s supersedes only that domain', async (operation) => {
+  const h = setup([tagged('old-class', 'user:7', 'class'), tagged('old-moodle', 'user:7', 'moodle')]);
+  const cancel = jest.mocked(h.port.cancelScheduledNotificationAsync), normal = cancel.getMockImplementation();
+  if (!normal) throw new Error('missing native test port');
+  let resume!: () => void, entered!: () => void;
+  const started = new Promise<void>((resolve) => { entered = resolve; });
+  cancel.mockImplementationOnce(async (identifier) => {
+    await normal(identifier);
+    entered();
+    await new Promise<void>((resolve) => { resume = resolve; });
+  });
+  const reconcile = h.scheduler.reconcileOwner('user:7', {
+    class: { plan: [plan('new-class')], labels }, moodle: { plan: [plan('obsolete-moodle')], labels },
+  });
+  await started; // Old class is really absent on the native port before Moodle supersedes its plan.
+  const moodle = operation === 'clear' ? h.scheduler.clearDomain('user:7', 'moodle')
+    : h.scheduler.replaceDomain('user:7', 'moodle', [plan('new-moodle')], labels);
+  resume();
+  const result = await reconcile;
+  await moodle;
+  expect(result.status).toBe('stale');
+  expect(result.scheduled.map((item) => `${item.domain}:${item.id}`)).toEqual(['class:new-class']);
+  const requests = h.requests();
+  expect(requests.filter((item) => item.content.data?.domain === 'class')).toHaveLength(1);
+  expect(requests.filter((item) => item.content.data?.domain === 'moodle')).toHaveLength(operation === 'clear' ? 0 : 1);
+  expect(requests.map((item) => item.identifier)).not.toContain('old-class');
+});
+
 it('deduplicates one domain id, drops past/invalid firing times and keeps simultaneous different ids', async () => {
   const h = setup();
   const result = await h.scheduler.replaceDomain('user:7', 'class', [plan('one'), plan('one'), plan('two'),
@@ -94,7 +122,7 @@ it('cancels a native schedule that resolves after a concurrent clear', async () 
   const h = setup();
   let finish!: (id: string) => void, entered!: () => void;
   const started = new Promise<void>((resolve) => { entered = resolve; });
-  jest.mocked(h.port.scheduleNotificationAsync).mockImplementationOnce(async (input) => {
+  jest.mocked(h.port.scheduleNotificationAsync).mockImplementationOnce(async () => {
     entered();
     const identifier = await new Promise<string>((resolve) => { finish = resolve; });
     return identifier;
@@ -135,8 +163,13 @@ it('cleans an old owner on logout without clearing other owners or untagged noti
 
 it('does not leave a partially scheduled replacement on native failure and recovers its queue', async () => {
   const h = setup();
-  jest.mocked(h.port.scheduleNotificationAsync).mockRejectedValueOnce(new Error('native failed'));
-  await expect(h.scheduler.replaceDomain('user:7', 'class', [plan('one')], labels)).rejects.toThrow('native failed');
+  const schedule = jest.mocked(h.port.scheduleNotificationAsync);
+  const normal = schedule.getMockImplementation();
+  if (!normal) throw new Error('missing native test port');
+  schedule.mockImplementationOnce(normal).mockRejectedValueOnce(new Error('native failed'));
+  await expect(h.scheduler.replaceDomain('user:7', 'class', [plan('one'), plan('two')], labels)).rejects.toThrow('native failed');
+  expect(h.requests()).toEqual([]);
+  expect(h.port.cancelScheduledNotificationAsync).toHaveBeenCalledWith('native-1');
   expect((await h.scheduler.replaceDomain('user:7', 'class', [plan('two')], labels)).status).toBe('scheduled');
 });
 
@@ -146,7 +179,7 @@ it('loads all 14 explicitly numbered weeks before planning the full semester', a
     5: [{ course_code: 'MA101', day_of_week: 5, start_time: '15:00' }],
   } }));
   const result = await loadSemesterClassReminderPlan({ semester: { id: '2026-09', startDate: '2026-09-28', weeks: 14 },
-    loadWeek, now });
+    loadWeek, now, isCurrent: () => true });
   expect(loadWeek.mock.calls.map(([week]) => week)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
   expect(result).toHaveLength(28);
   expect(result[0].fireAt).toBe('2026-09-28T00:30:00.000Z');
@@ -155,8 +188,11 @@ it('loads all 14 explicitly numbered weeks before planning the full semester', a
 
 it('refuses an incomplete semester response and an obsolete loading session', async () => {
   const semester = { id: '2026-09', startDate: '2026-09-28', weeks: 14 };
-  await expect(loadSemesterClassReminderPlan({ semester, now, loadWeek: async () => ({ week: 1, days: {} }) }))
+  await expect(loadSemesterClassReminderPlan({ semester, now, isCurrent: () => true,
+    loadWeek: async () => ({ week: 1, days: {} }) }))
     .rejects.toThrow(/week/);
+  await expect(loadSemesterClassReminderPlan({ semester, now, isCurrent: () => true,
+    loadWeek: async (week) => ({ week }) })).rejects.toThrow(/week/);
   let current = true;
   await expect(loadSemesterClassReminderPlan({ semester, now, isCurrent: () => current,
     loadWeek: async (week) => { current = false; return { week, days: {} }; } }))
