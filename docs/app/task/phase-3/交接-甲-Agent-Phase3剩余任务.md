@@ -161,6 +161,8 @@
   4. 将 `frontend/**` 与对应 workflow 文件加入触发路径。
 - **验收**：干净 GitHub runner 上 Web lint/build/no-undef 均通过；故意引入未定义变量时 job 失败。
 
+**2026-10-11 收口证据**：`P3A5-06-Web质量门CI` 已增加 `web-quality` job；它以两个锁文件缓存，执行 `frontend` 的 `npm ci`、lint 和构建，再执行根目录 `frontendSourceLint`。本地对应命令与 53 个根目录套件均通过；GitHub runner 结果仍待 PR 触发。
+
 ## 最终验收命令
 
 ```bash
