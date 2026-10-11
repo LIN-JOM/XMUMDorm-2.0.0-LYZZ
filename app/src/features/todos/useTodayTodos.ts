@@ -34,14 +34,15 @@ export function normalizeToolsTodayTodos(payload: unknown): ToolsTodayTodos {
 export function useTodayTodos(onError?: (error: unknown) => Promise<AppError>, dayKey?: string) {
   const [state, setState] = React.useState<{ data: ToolsTodayTodos | null; loading: boolean; error: AppError | null }>({ data: null, loading: true, error: null });
   const [nonce, setNonce] = React.useState(0);
-  const errorRef = React.useRef(onError); errorRef.current = onError;
+  const errorRef = React.useRef(onError);
+  React.useEffect(() => { errorRef.current = onError; }, [onError]);
   const epoch = timetableIdentity().epoch;
   const [stateEpoch, setStateEpoch] = React.useState(epoch);
   React.useEffect(() => subscribeTodos(() => setNonce((n) => n + 1)), []);
   React.useEffect(() => {
     let cancelled = false;
-    setStateEpoch(epoch); setState({ data: null, loading: true, error: null });
     void (async () => {
+      setStateEpoch(epoch); setState({ data: null, loading: true, error: null });
       try {
         const raw = await getTodayTodos();
         if (!raw || typeof raw !== 'object' || !Array.isArray((raw as { topItems?: unknown }).topItems)) throw { kind: 'unknown' };
