@@ -42,7 +42,7 @@ const readSrc = (rel: string): string => fs.readFileSync(path.join(SRC_ROOT, rel
 const ANONYMOUS: Viewer = { signedIn: false };
 const STUDENT: Viewer = { signedIn: true, canManageClub: false };
 const CLUB_ADMIN: Viewer = { signedIn: true, canManageClub: true };
-const ALL_READY_IDS: PublishId[] = ['wall', 'confession', 'clubActivity', 'marketplace', 'errand'];
+const ALL_READY_IDS: PublishId[] = ['wall', 'confession', 'clubActivity', 'clubPost', 'marketplace', 'errand'];
 
 describe('P0-07 注册表驱动的发布中心', () => {
   describe('TC-P0-07-1A / 2A · 注册表契约', () => {
@@ -50,10 +50,10 @@ describe('P0-07 注册表驱动的发布中心', () => {
       expect(() => assertRegistryInvariants(DICT_KEYS)).not.toThrow();
     });
 
-    it('注册表覆盖七类发布（5 ready + 2 planned）', () => {
+    it('注册表覆盖八类发布（6 ready + 2 planned）', () => {
       const ready = PUBLISH_REGISTRY.filter((e) => e.status === 'ready');
       const planned = PUBLISH_REGISTRY.filter((e) => e.status === 'planned');
-      expect(ready).toHaveLength(5);
+      expect(ready).toHaveLength(6);
       expect(planned.map((e) => e.id).sort()).toEqual(['carpool', 'qa']);
     });
 
@@ -90,9 +90,10 @@ describe('P0-07 注册表驱动的发布中心', () => {
       ]);
     });
 
-    it('社团管理员 → 5 条（多出 clubActivity）', () => {
-      expect(visibleEntries(CLUB_ADMIN)).toHaveLength(5);
+    it('社团管理员 → 6 条（多出两项社团发布）', () => {
+      expect(visibleEntries(CLUB_ADMIN)).toHaveLength(6);
       expect(visibleEntries(CLUB_ADMIN).map((e) => e.id)).toContain('clubActivity');
+      expect(visibleEntries(CLUB_ADMIN).map((e) => e.id)).toContain('clubPost');
     });
 
     it('carpool / qa 在任何 viewer 下都不出现（后端 0 表 0 端点，TODO TD-01/TD-02）', () => {
