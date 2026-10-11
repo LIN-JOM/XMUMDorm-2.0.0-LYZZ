@@ -344,6 +344,7 @@ describe('Confession Wall Routes (M09)', () => {
 
     it('有效令牌可正常投稿（真实 auth 中间件）', async () => {
       query
+        .mockResolvedValueOnce([{ status: 'active' }])
         .mockResolvedValueOnce({ insertId: 101 })
         .mockResolvedValueOnce([RAW_CONFESSION])
         .mockResolvedValueOnce([])
@@ -355,7 +356,7 @@ describe('Confession Wall Routes (M09)', () => {
         .send({ content: 'hello', template_key: 'letter' });
 
       expect(res.status).toBe(200);
-      expect(query.mock.calls[0][1][0]).toBe(9);
+      expect(query.mock.calls[1][1][0]).toBe(9);
     });
 
     it('正文为空返回 400', async () => {
