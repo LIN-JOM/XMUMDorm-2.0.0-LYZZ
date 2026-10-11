@@ -474,6 +474,8 @@ export const en: Record<MessageKey, string> = {
   'clubs.register': 'Register',
   'clubs.cancelRegistration': 'Cancel registration',
   'clubs.registrationCount': '{n} registered',
+  'clubs.exportRegistrations': 'Export registrations',
+  'clubs.exportFailed': 'Roster export did not finish. Retry.',
   'clubs.my': 'My clubs',
   'clubs.myEmpty': 'No clubs joined',
   'clubs.manageDenied': 'Management access denied',

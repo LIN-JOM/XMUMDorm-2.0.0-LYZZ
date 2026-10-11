@@ -482,6 +482,8 @@ export const zh = {
   'clubs.register': '报名',
   'clubs.cancelRegistration': '取消报名',
   'clubs.registrationCount': '{n} 人报名',
+  'clubs.exportRegistrations': '导出报名名单',
+  'clubs.exportFailed': '名单导出未完成，请重试',
   'clubs.my': '我的社团',
   'clubs.myEmpty': '还没有加入社团',
   'clubs.manageDenied': '没有管理权限',

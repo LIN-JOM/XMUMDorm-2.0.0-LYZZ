@@ -18,8 +18,11 @@ import { deleteClubActivity, deleteClubPost, getActivityDetail, getClubPostDetai
 import { readClubActivityDetail, readClubPage, readClubPostDetail, readClubProfile, type ClubActivityDetail, type ClubPostDetail, type ClubProfile, type ClubSummary } from './model';
 import { useClubActivityRegistration } from './useClubActivityRegistration';
 import { useClubComments } from './useClubComments';
+import { exportClubActivityRegistrationsToDevice } from './exportRegistrations';
 import { useClubFollow } from './useClubFollow';
 import { useClubLike } from './useClubLike';
+import { useSession } from '@/features/auth/session';
+import { classifyAuthFailure, isSessionInvalid } from '@/features/auth/authFailure';
 
 function asPositiveId(value: string): number | null {
   return /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
@@ -342,6 +345,7 @@ function ClubDetailState({
 export function ClubActivityDetailScreen({ activityId }: { activityId: string }): React.ReactElement {
   const router = useRouter();
   const { t } = useI18n();
+  const session = useSession();
   const id = asPositiveId(activityId);
   const [detail, setDetail] = React.useState<ClubActivityDetail | null>(null);
   const [loading, setLoading] = React.useState(id !== null);
@@ -349,6 +353,9 @@ export function ClubActivityDetailScreen({ activityId }: { activityId: string })
   const registration = useClubActivityRegistration(id);
   const like = useClubLike({ targetType: 'activity', targetId: id ?? 0, liked: detail?.viewer.liked ?? false, count: detail?.stats.likes ?? 0 });
   const comments = useClubComments('activity', id ?? 0);
+  const [exporting, setExporting] = React.useState(false);
+  const [exportFailed, setExportFailed] = React.useState(false);
+  React.useEffect(() => { setExporting(false); setExportFailed(false); }, [id]);
   const load = React.useCallback(async () => {
     if (id === null) return;
     setLoading(true); setError(null);
@@ -363,6 +370,16 @@ export function ClubActivityDetailScreen({ activityId }: { activityId: string })
   };
   if (detail === null) return <ClubDetailState detail={detail} loading={loading} error={error} onRetry={() => void load()} onBack={back} testID="club-activity-detail" />;
   const current = registration.snapshot ?? detail.registration;
+  const exportRegistrations = async (): Promise<void> => {
+    if (id === null || !detail.viewer.canManage || exporting) return;
+    setExporting(true); setExportFailed(false);
+    try { await exportClubActivityRegistrationsToDevice(id); }
+    catch (error) {
+      if (isSessionInvalid(classifyAuthFailure(error))) await session.handleAuthFailure(error);
+      setExportFailed(true);
+    }
+    finally { setExporting(false); }
+  };
   return (
     <DetailScreen
       testID="club-activity-detail"
@@ -373,7 +390,7 @@ export function ClubActivityDetailScreen({ activityId }: { activityId: string })
       onToggleLike={() => void like.toggle()}
       interactions={{ liked: like.liked, likeCount: like.count, commentCount: detail.stats.comments }}
       hero={detail.images.length > 0 ? <MediaGrid testID="club-activity-media" variant="hero" uris={detail.images} /> : undefined}
-      body={<><Text role="body">{detail.summary}</Text><Button testID="club-activity-registration" label={`${t(current.registered ? 'clubs.cancelRegistration' : 'clubs.register')} · ${t('clubs.registrationCount', { n: current.count })}`} loading={registration.state === 'working'} onPress={() => void (current.registered ? registration.cancel() : registration.register())} />{comments.body}</>}
+      body={<><Text role="body">{detail.summary}</Text><Button testID="club-activity-registration" label={`${t(current.registered ? 'clubs.cancelRegistration' : 'clubs.register')} · ${t('clubs.registrationCount', { n: current.count })}`} loading={registration.state === 'working'} onPress={() => void (current.registered ? registration.cancel() : registration.register())} />{detail.viewer.canManage ? <><Button testID="club-activity-export-registrations" label={t('clubs.exportRegistrations')} loading={exporting} onPress={() => void exportRegistrations()} />{exportFailed ? <Text role="body" colorToken="text-danger">{t('clubs.exportFailed')}</Text> : null}</> : null}{comments.body}</>}
       comments={comments.comments}
       labels={detailLabels(t)}
     />

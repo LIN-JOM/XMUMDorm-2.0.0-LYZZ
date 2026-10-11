@@ -174,7 +174,7 @@ export function del(path, options = {}) {
 /** 下载二进制响应，沿用与普通 API 请求相同的鉴权逻辑。 */
 export async function download(path, options = {}) {
   const { method = 'GET', headers: extraHeaders = {}, token = getToken(), skipAuth = false } = options;
-  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+  const url = path.startsWith('http') ? path : `${resolveBaseUrl()}${path}`;
   const headers = { ...extraHeaders };
   if (!skipAuth && token) headers.Authorization = `Bearer ${token}`;
 
