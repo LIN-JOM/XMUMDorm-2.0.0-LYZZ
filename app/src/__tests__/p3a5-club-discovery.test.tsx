@@ -70,7 +70,8 @@ describe('P3A5-02 社团发现与主页', () => {
     const view = await renderApp(<ClubProfileScreen clubId="7" />);
 
     await waitFor(() => expect(view.getByTestId('club-profile-followers')).toBeTruthy());
-    expect(view.queryByTestId('club-profile-manage')).toBe(visible ? expect.anything() : null);
+    if (visible) expect(view.getByTestId('club-profile-manage')).toBeTruthy();
+    else expect(view.queryByTestId('club-profile-manage')).toBeNull();
   });
 
   it('非法主页参数不请求服务端，并返回发现页', async () => {
