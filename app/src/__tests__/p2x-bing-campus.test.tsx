@@ -141,10 +141,12 @@ it('万能墙详情只投影匿名作者',async()=>{
  const v=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>);
  await waitFor(()=>expect(v.getByText('匿名正文')).toBeTruthy());expect(v.queryByText('泄漏作者')).toBeNull();expect(v.queryByText('身份标题')).toBeNull();expect(v.getByText('匿名')).toBeTruthy();expect(detail).not.toHaveBeenCalled();
 });
-it('万能墙列表和详情按服务端模板键标明模板',async()=>{
+it('万能墙列表按服务端模板键标明模板',async()=>{
  wall.mockResolvedValue({items:[{id:40,content:'停水通知',template_key:'announcement'}],has_older:false,oldest_cursor:40});
  const listView=await renderApp(<CampusListScreen initialTab="wall"/>,{locale:'en'});
  await waitFor(()=>expect(listView.getByText('Announcement')).toBeTruthy());
+});
+it('万能墙详情按服务端模板键标明模板',async()=>{
  wallDetail.mockResolvedValue({id:40,content:'停水通知',template_key:'announcement'});
  const detailView=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>,{locale:'en'});
  await waitFor(()=>expect(detailView.getByText('Announcement')).toBeTruthy());
