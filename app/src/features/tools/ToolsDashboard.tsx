@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import BookOpen from 'lucide-react-native/icons/book-open';
 import ListChecks from 'lucide-react-native/icons/list-checks';
@@ -26,7 +26,7 @@ import type { AppError } from '@/i18n/errors';
 import { SCHOOL_SYSTEMS } from './schoolSystems';
 import { todayWeekday, useTimetableWeek } from './timetable';
 import { toToolsError } from './requestError';
-import { nextHoliday, schoolClockMinutes, selectCoursesNow } from './todaySummary';
+import { nextHoliday, remainingTodayCourses, schoolClockMinutes, selectCoursesNow } from './todaySummary';
 import { HolidaysContent } from './HolidaysScreen';
 
 const SYSTEM_ICONS = { ac: ListChecks, moodle: BookOpen, checkin: ShieldCheck } as const;
@@ -39,7 +39,11 @@ export function ToolsDashboardContent({ onRequestError }: { onRequestError?: (er
   const [holidaysOpen, setHolidaysOpen] = React.useState(false);
   const closeHolidays = React.useCallback(() => setHolidaysOpen(false), []);
   const [now, setNow] = React.useState(() => new Date());
-  React.useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(timer); }, []);
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') setNow(new Date()); });
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, []);
   const day = kualaLumpurCalendarParts(now).ymd;
   const week = clampWeek(currentTeachingWeek(now) ?? 1);
   const timetable = useTimetableWeek(week, async (target) => {
@@ -51,8 +55,9 @@ export function ToolsDashboardContent({ onRequestError }: { onRequestError?: (er
     }
   });
   const todos = useTodayTodos(handleError, day);
-  const courses = meetingsOf(timetable.week, timetable.week?.currentWeek == null ? null : todayWeekday(now));
-  const { current, next } = selectCoursesNow(courses, schoolClockMinutes(now));
+  const minutes = schoolClockMinutes(now);
+  const courses = remainingTodayCourses(meetingsOf(timetable.week, timetable.week?.currentWeek == null ? null : todayWeekday(now)), minutes);
+  const { current, next } = selectCoursesNow(courses, minutes);
   const holiday = nextHoliday(day);
   if (holidaysOpen) return <HolidaysContent now={now} onBack={closeHolidays} />;
   return <View testID="tools-dashboard-content" style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
