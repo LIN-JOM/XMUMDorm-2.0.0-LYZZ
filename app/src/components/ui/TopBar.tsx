@@ -25,6 +25,8 @@ export type TopBarProps = {
   /** 未读角标数（单一未读真源，客户端不本地递减） */
   unreadCount?: number;
   onMailboxPress?: () => void;
+  /** 页面已登记的少量顶栏动作；不用于承载二级导航。 */
+  rightActions?: React.ReactNode;
 };
 
 export function TopBar({
@@ -33,6 +35,7 @@ export function TopBar({
   showMailbox = false,
   unreadCount = 0,
   onMailboxPress,
+  rightActions,
 }: TopBarProps): React.ReactElement {
   const theme = useTheme();
   const { t } = useI18n();
@@ -61,15 +64,18 @@ export function TopBar({
         <Text role="headline" emphasis="strong" colorToken="text-primary">
           {t(titleKey)}
         </Text>
-        {showMailbox ? (
-          <IconButton
-            testID="topbar-mailbox"
-            Icon={Mail}
-            accessibilityLabel={mailboxLabel}
-            badgeCount={unreadCount}
-            onPress={onMailboxPress}
-          />
-        ) : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {rightActions}
+          {showMailbox ? (
+            <IconButton
+              testID="topbar-mailbox"
+              Icon={Mail}
+              accessibilityLabel={mailboxLabel}
+              badgeCount={unreadCount}
+              onPress={onMailboxPress}
+            />
+          ) : null}
+        </View>
       </View>
     </View>
   );

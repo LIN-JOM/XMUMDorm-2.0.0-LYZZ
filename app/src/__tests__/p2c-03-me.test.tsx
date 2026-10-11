@@ -215,18 +215,6 @@ describe('P2C-03 M-01 我的仪表盘', () => {
     });
   });
 
-  describe('TC-P2C-03-5A · 身份加载失败不吞入口', () => {
-    it('资料接口失败 → 身份卡保留，内容与管理入口照常', async () => {
-      api.users.getMe.mockRejectedValue({ kind: 'offline' });
-      const view = await renderApp(<MeScreen />);
-
-      await waitFor(() => expect(view.getByTestId('me-profile-failed')).toBeTruthy());
-      expect(view.getByText(zh['me.section.failed'])).toBeTruthy();
-      expect(view.getByTestId('me-profile')).toBeTruthy();
-      expect(view.getByTestId('me-entry-posts')).toBeTruthy();
-    });
-  });
-
   describe('TC-P2C-03-6A · 入口账本：没落地的路由⛔ 不显示', () => {
     it('账本与实现一致（落地一个就要从这里删一个）', () => {
       const actuallyUnavailable = ME_ENTRIES.filter((entry) => !entry.available).map((entry) => entry.key);

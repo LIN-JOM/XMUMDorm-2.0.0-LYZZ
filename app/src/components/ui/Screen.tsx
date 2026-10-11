@@ -72,6 +72,8 @@ export type ScreenProps = {
   showMailbox?: boolean;
   unreadCount?: number;
   onMailboxPress?: () => void;
+  /** 已登记的顶栏动作；页面不得用它堆放导航入口。 */
+  topBarActions?: React.ReactNode;
   /** 原生 Tab 栏高度（不含 insets）—— 只有 `bottomMode='tabbar'` 时生效（S5） */
   tabBarHeight?: number;
   /** 内容是否可滚动（详情/列表骨架用）；默认 false，骨架由具体页面决定 */
@@ -93,6 +95,7 @@ export function Screen({
   showMailbox = false,
   unreadCount = 0,
   onMailboxPress,
+  topBarActions,
   tabBarHeight,
   scroll = false,
   headerOverlay,
@@ -146,6 +149,7 @@ export function Screen({
           showMailbox={showMailbox}
           unreadCount={unreadCount}
           onMailboxPress={onMailboxPress}
+          rightActions={topBarActions}
         />
       ) : null}
       {topMode === 'overlay' && headerOverlay ? (

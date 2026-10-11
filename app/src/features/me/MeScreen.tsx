@@ -18,38 +18,23 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
-import CalendarDays from 'lucide-react-native/icons/calendar-days';
-import ListChecks from 'lucide-react-native/icons/list-checks';
+import Pencil from 'lucide-react-native/icons/pencil';
+import Settings from 'lucide-react-native/icons/settings';
 
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ExpBar } from '@/components/ui/ExpBar';
 import { InlineNotice } from '@/components/ui/InlineNotice';
+import { IconButton } from '@/components/ui/IconButton';
 import { LevelBadge } from '@/components/ui/LevelBadge';
 import { ListItem } from '@/components/ui/ListItem';
-import { MetricRow } from '@/components/ui/MetricRow';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { StatTile } from '@/components/ui/StatTile';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import { TAB_BAR_CLEARANCE } from '@/app/(tabs)/_layout';
 import { getMe } from '../../../../shared/api/users';
-import { getTodayTodos } from '../../../../shared/api/todos';
-import { getScheduleWeek } from '../../../../shared/api/schedule';
-import { clampWeek, currentTeachingWeek } from '../../../../shared/config/semesters';
-import { useTimetableWeek } from '@/features/tools/timetable';
-import { useUnread } from '@/features/mailbox/useUnread';
-import {
-  courseLineParams,
-  meetingsOf,
-  normalizeTodayTodos,
-  summarizeTodayCourses,
-  todayDayOfWeek,
-  type TodayTodos,
-} from './dashboard';
 import { ME_ENTRIES, levelNameKey, normalizeProfile, visibleEntries, type MeProfile } from './profile';
 
 type Loadable<T> = { data: T; loading: boolean; failed: boolean };
@@ -66,32 +51,17 @@ const EMPTY_PROFILE: MeProfile = {
   major: null,
 };
 
-const EMPTY_TODOS: TodayTodos = { total: 0, active: 0, completed: 0, top: [] };
-
 export function MeScreen(): React.ReactElement {
   const { t } = useI18n();
   const theme = useTheme();
   const router = useRouter();
-  const { total: unreadTotal } = useUnread();
 
   const [profile, setProfile] = React.useState<Loadable<MeProfile>>({
     data: EMPTY_PROFILE,
     loading: true,
     failed: false,
   });
-  const [todos, setTodos] = React.useState<Loadable<TodayTodos>>({
-    data: EMPTY_TODOS,
-    loading: true,
-    failed: false,
-  });
   const [nonce, setNonce] = React.useState(0);
-
-  /* 周次用共享真源（⛔ 不自己算日期/时区）；课表用**乙的**那一份缓存外壳 */
-  // 假期里 `currentTeachingWeek()` 是 null → 夹到第 1 周（今天没课由 `todayWeekday()` 返回 null 表达）
-  const week = React.useMemo(() => clampWeek(currentTeachingWeek() ?? 1), []);
-  const timetable = useTimetableWeek(week, getScheduleWeek);
-  const today = todayDayOfWeek();
-  const todayCourses = summarizeTodayCourses(meetingsOf(timetable.week, today));
 
   React.useEffect(() => {
     let cancelled = false;
@@ -109,29 +79,11 @@ export function MeScreen(): React.ReactElement {
     };
   }, [nonce]);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    setTodos((prev) => ({ ...prev, loading: true, failed: false }));
-    void (async () => {
-      try {
-        const payload = await getTodayTodos();
-        if (!cancelled) setTodos({ data: normalizeTodayTodos(payload), loading: false, failed: false });
-      } catch {
-        if (!cancelled) setTodos((prev) => ({ ...prev, loading: false, failed: true }));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [nonce]);
-
   const reload = React.useCallback(() => {
     setNonce((n) => n + 1);
-    timetable.reload();
-  }, [timetable]);
+  }, []);
 
   const entries = visibleEntries(ME_ENTRIES);
-  const firstCourse = todayCourses.first;
 
   return (
     <Screen
@@ -139,6 +91,10 @@ export function MeScreen(): React.ReactElement {
       titleKey="screen.me"
       bottomMode="tabbar"
       tabBarHeight={TAB_BAR_CLEARANCE}
+      topBarActions={<>
+        <IconButton testID="me-edit-entry" Icon={Pencil} accessibilityLabel={t('me.edit.entry')} onPress={() => router.push('/me/edit')} />
+        <IconButton testID="me-settings-entry" Icon={Settings} accessibilityLabel={t('me.entry.settings')} onPress={() => router.push('/me/settings')} />
+      </>}
     >
       <View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
         {/* ── 资料卡：头像 + 昵称 + 等级 + 经验 ─────────────────────── */}
@@ -174,87 +130,9 @@ export function MeScreen(): React.ReactElement {
               onAction={reload}
             />
           ) : null}
-          {/* `M-02` 资料编辑的入口就在资料卡上（页面清单：M-02 的入口 = M-01 / M-03） */}
-          <View style={{ marginTop: theme.space('space_3') }}>
-            <Button
-              testID="me-edit-entry"
-              label={t('me.edit.entry')}
-              variant="secondary"
-              size="small"
-              onPress={() => router.push('/me/edit')}
-            />
-          </View>
         </Card>
 
-        {/* ── 指标行：未读 / 今日待办 / 今日课程 ───────────────────── */}
-        <MetricRow testID="me-metrics">
-          <StatTile testID="me-stat-unread" value={unreadTotal ?? 0} label={t('me.stat.unread')} />
-          <StatTile
-            testID="me-stat-todos"
-            value={todos.loading ? null : todos.data.active}
-            placeholder={t('me.valueUnknown')}
-            label={t('me.stat.todos')}
-          />
-          <StatTile
-            testID="me-stat-courses"
-            value={timetable.loading ? null : todayCourses.count}
-            placeholder={t('me.valueUnknown')}
-            label={t('me.stat.courses')}
-          />
-        </MetricRow>
-
-        {/* ── 今日课程：只给第一节 + 还剩几节 ─────────────────────── */}
-        <View style={{ gap: theme.space('space_2') }}>
-          <SectionHeader title={t('me.stat.courses')} />
-          {firstCourse ? (
-            <ListItem
-              testID="me-course-first"
-              title={t('me.courses.line', courseLineParams(firstCourse))}
-              subtitle={firstCourse.venue ?? undefined}
-              leading={<CalendarDays size={theme.space('space_6')} color={theme.color['icon-secondary'].value} />}
-              variant="nav"
-              onPress={() => router.push('/tools/timetable')}
-            />
-          ) : (
-            <Text role="body" colorToken="text-secondary" testID="me-courses-none">
-              {t('me.courses.none')}
-            </Text>
-          )}
-          {todayCourses.restCount > 0 ? (
-            <Text role="caption" colorToken="text-secondary" testID="me-courses-rest">
-              {t('me.courses.more', { n: todayCourses.restCount })}
-            </Text>
-          ) : null}
-        </View>
-
-        {/* ── 今日待办：最多 3 条 + 出错只降级这一块 ─────────────── */}
-        <View style={{ gap: theme.space('space_2') }}>
-          <SectionHeader title={t('me.stat.todos')} />
-          {todos.failed ? (
-            <InlineNotice
-              testID="me-todos-failed"
-              tone="warning"
-              message={t('me.section.failed')}
-              actionLabel={t('action.retry')}
-              onAction={reload}
-            />
-          ) : todos.data.top.length === 0 ? (
-            <Text role="body" colorToken="text-secondary" testID="me-todos-none">
-              {t('me.todos.none')}
-            </Text>
-          ) : (
-            todos.data.top.map((item) => (
-              <ListItem
-                key={item.id}
-                testID={`me-todo-${item.id}`}
-                title={item.title}
-                leading={<ListChecks size={theme.space('space_6')} color={theme.color['icon-secondary'].value} />}
-              />
-            ))
-          )}
-        </View>
-
-        {/* ── 入口列表：**数据驱动**（加一项就多一行）；未上线的⛔ 不显示 ── */}
+        {/* 只保留内容与管理入口；课表、待办和未读摘要属于工具、消息一级格。 */}
         {entries.length > 0 ? (
           <View style={{ gap: theme.space('space_2') }}>
             <SectionHeader title={t('me.entries.title')} />
