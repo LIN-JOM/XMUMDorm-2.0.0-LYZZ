@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Button as NativeButton } from 'react-native';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { HolidaysContent, upcomingSchoolHolidays } from '@/features/tools/HolidaysScreen';
@@ -20,10 +20,16 @@ jest.mock('../../../shared/api/schedule', () => ({ getScheduleWeek: jest.fn(asyn
 jest.mock('../../../shared/api/todos', () => ({ getTodayTodos: jest.fn(async () => ({ total: 0, active: 0, completed: 0, topItems: [] })) }));
 
 beforeEach(async () => {
+  jest.useFakeTimers({ doNotFake: [
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+    'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate',
+    'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+  ] });
+  jest.setSystemTime(new Date('2026-10-11T00:00:00Z'));
   await clearNamespace();
   jest.requireMock('expo-router').__state.focused = true;
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => { jest.restoreAllMocks(); jest.useRealTimers(); });
 
 it('keeps a holiday through its final school date and drops it on the next date', () => {
   expect(upcomingSchoolHolidays(new Date('2026-11-09T15:59:59Z'))[0]?.id).toBe('deepavali-2026');
@@ -45,13 +51,13 @@ it('puts holidays directly under courses and opens all upcoming dates from the s
 });
 
 it('closes local holiday content on Android back and removes its handler', async () => {
-  let back: (() => boolean | null | undefined) | undefined;
+  let back: Parameters<typeof BackHandler.addEventListener>[1] | undefined;
   const remove = jest.fn();
   jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, callback) => { back = callback; return { remove }; });
   const view = await renderApp(<ToolsDashboardContent />);
   await fireEvent.press(view.getByTestId('tools-holiday-open'));
   expect(back).toBeDefined();
-  await act(async () => { expect(back?.()).toBe(true); });
+  await act(async () => { expect(back?.({ type: 'hardwareBackPress', timeStamp: 1 })).toBe(true); });
   expect(view.getByTestId('tools-today-todos')).toBeTruthy();
   expect(remove).toHaveBeenCalledTimes(1);
 });
@@ -61,9 +67,15 @@ it('removes the back handler while the containing route is unfocused', async () 
   jest.spyOn(BackHandler, 'addEventListener').mockReturnValue({ remove });
   const onBack = jest.fn();
   const now = new Date('2026-10-11T00:00:00Z');
-  const view = await renderApp(<HolidaysContent now={now} onBack={onBack} />);
-  jest.requireMock('expo-router').__state.focused = false;
-  await view.rerender(<HolidaysContent now={now} onBack={onBack} />);
+  function FocusProbe() {
+    const [, refresh] = React.useState(0);
+    return <><NativeButton testID="blur-route" title="Blur" onPress={() => {
+      jest.requireMock('expo-router').__state.focused = false;
+      refresh((value) => value + 1);
+    }} /><HolidaysContent now={now} onBack={onBack} /></>;
+  }
+  const view = await renderApp(<FocusProbe />);
+  await fireEvent.press(view.getByTestId('blur-route'));
   expect(remove).toHaveBeenCalledTimes(1);
 });
 
