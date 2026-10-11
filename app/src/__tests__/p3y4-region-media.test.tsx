@@ -42,7 +42,7 @@ it('retains an accessible placeholder when no image exists', async () => {
 });
 it('replaces a failed image with the same placeholder', async () => {
   const view = await renderApp(<CanteenMedia uri="https://example.invalid/shop.png" name="Kitchen" testID="media" />);
-  await fireEvent(view.getByTestId('media-image'), 'error', { error: 'unavailable' });
+  await fireEvent(view.getByTestId('media-image'), 'error', { nativeEvent: { error: 'unavailable' } });
   expect(view.getByTestId('media-placeholder')).toBeTruthy();
   expect(view.queryByTestId('media-image')).toBeNull();
 });

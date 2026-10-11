@@ -1,4 +1,4 @@
-﻿/**
+/**
  * `S-08` 区域店铺 / Shops in Area（父 `S-07`，原型 `P2`）
  *
  * 页面清单给的接口：`GET /canteen/regions/:id/shops`、`/regions/:id/ranking`
@@ -15,6 +15,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
+import { Button } from '@/components/ui/Button';
+import { CanteenMedia } from './CanteenMedia';
+import { RegionRankingScreen } from './RegionRankingScreen';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListItem } from '@/components/ui/ListItem';
 import { ListScreen } from '@/components/ui/ListScreen';
@@ -33,18 +36,15 @@ import { OfflineBanner } from '@/components/ui/OfflineBanner';
 type RankedProduct = CanteenProduct & { rank: number; shopName: string | null };
 
 function normalizeRanked(data: unknown): readonly RankedProduct[] {
-  return normalizeProducts(data)
-    .map((product, index) => {
-      const raw = (Array.isArray(data) ? data[index] : null) as Record<string, unknown> | null;
-      return {
-        ...product,
-        rank: typeof raw?.rank === 'number' ? raw.rank : index + 1,
-        shopName: typeof raw?.shop_name === 'string' ? raw.shop_name : null,
-      };
-    })
-    .sort((a, b) => a.rank - b.rank);
+  if (!Array.isArray(data)) return [];
+  return data.flatMap((value, index): RankedProduct[] => {
+    const product = normalizeProducts([value])[0];
+    if (!product) return [];
+    const raw = value as Record<string, unknown>;
+    return [{ ...product, rank: typeof raw.rank === 'number' && Number.isSafeInteger(raw.rank) && raw.rank > 0 ? raw.rank : index + 1,
+      shopName: typeof raw.shop_name === 'string' ? raw.shop_name : null }];
+  }).sort((a, b) => a.rank - b.rank);
 }
-
 export function RegionShops(): React.ReactElement {
   const badge = useMailboxBadge();
   const params = useLocalSearchParams<{ id?: string; name?: string }>();
@@ -52,7 +52,9 @@ export function RegionShops(): React.ReactElement {
   const { t } = useI18n();
   const theme = useTheme();
 
+  const [showAll, setShowAll] = React.useState(false);
   const regionId = Number(params.id);
+  React.useEffect(() => setShowAll(false), [regionId]);
   const validId = Number.isInteger(regionId) && regionId > 0;
 
   // ⛔ 不因为在渲染期就调用：非法 id 直接给空态（`load` 里守卫）
@@ -69,6 +71,7 @@ export function RegionShops(): React.ReactElement {
     { key: canteenCacheKey('region-top', regionId), ttlMs: CANTEEN_CACHE_TTL_MS.rankings }
   );
 
+  if (showAll) return <RegionRankingScreen regionId={regionId} onClose={() => setShowAll(false)} />;
   return (
     <Screen
       {...badge}
@@ -91,6 +94,7 @@ export function RegionShops(): React.ReactElement {
               <ListItem
                 testID={`region-shop-${shop.id}`}
                 title={shop.name}
+                leading={<CanteenMedia uri={shop.logo} name={shop.name} testID={`region-shop-media-${shop.id}`} />}
                 // ⚠️ `opening_hours` 可能整个没有（服务端会回落到不含它的查询）→ 有才显示
                 subtitle={shop.openingHours ?? shop.regionName ?? undefined}
                 variant="nav"
@@ -122,6 +126,7 @@ export function RegionShops(): React.ReactElement {
               ranking.data !== null && ranking.data.length > 0 ? (
                 <View style={{ gap: theme.space('space_2'), paddingBottom: theme.space('space_3') }}>
                   <SectionHeader title={t('canteen.regionTop')} />
+                  <Button testID="region-ranking-all" label={t('canteen.allCategories')} variant="secondary" onPress={() => setShowAll(true)} />
                   {ranking.data.map((product) => (
                     <RankingRow
                       key={product.id}

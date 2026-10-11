@@ -7,6 +7,7 @@ import { renderApp } from './helpers/renderApp';
 import { CanteenHome } from '@/features/square/CanteenHome';
 import { CanteenRankings } from '@/features/square/CanteenRankings';
 import { normalizeRanking } from '@/features/square/canteenRankingModel';
+const mockTargets: unknown[] = [];
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: (target: unknown) => mockTargets.push(target) }), targets: [] }));
 jest.mock('@/features/mailbox/useUnread', () => ({ useMailboxBadge: () => ({}) }));
 jest.mock('../../../shared/api/rankings', () => ({ getRankingsHotProducts: jest.fn(), getRankingsBusyShops: jest.fn(), getRankingsTopShops: jest.fn(), getRankingsNewHitProducts: jest.fn(), getRankingsActiveUsers: jest.fn() }));
