@@ -7,6 +7,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import Utensils from 'lucide-react-native/icons/utensils';
+import ShoppingBag from 'lucide-react-native/icons/shopping-bag';
+import Bike from 'lucide-react-native/icons/bike';
+import BookOpen from 'lucide-react-native/icons/book-open';
 import { TAB_BAR_CLEARANCE } from './_layout';
 
 /** 广场（一级 Tab 1）承接已批准的树洞与万能墙；其他广场区块留待 Phase 1 接线。 */
@@ -16,7 +19,12 @@ export default function SquareScreen(): React.ReactElement {
   const router = useRouter();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const actions = React.useMemo<readonly QuickAction[]>(
-    () => [{ key: 'canteen', label: t('canteen.title'), icon: Utensils, onPress: () => router.push('/canteen') }],
+    () => [
+      { key: 'canteen', label: t('canteen.title'), icon: Utensils, onPress: () => router.push('/canteen') },
+      { key: 'market', label: t('screen.market.title'), icon: ShoppingBag, onPress: () => router.push('/market') },
+      { key: 'errand', label: t('screen.errand.title'), icon: Bike, onPress: () => router.push('/errand') },
+      { key: 'guides', label: t('square.guides.title'), icon: BookOpen, onPress: () => router.push('/guides') },
+    ],
     [router, t]
   );
   return (
