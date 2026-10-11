@@ -10,11 +10,17 @@ jest.mock('expo-router', () => {
     useRouter: () => ({ replace: (target: unknown) => state.replaced.push(target), back: () => undefined, canGoBack: () => false }),
   };
 });
-jest.mock('../../../shared/api/clubs', () => ({ getActivityDetail: jest.fn(), getClubPostDetail: jest.fn() }));
+jest.mock('@/features/auth/session', () => ({ useSession: () => ({ isSignedIn: true, handleAuthFailure: jest.fn() }) }));
+jest.mock('../../../shared/api/clubs', () => ({
+  getActivityDetail: jest.fn(), getClubPostDetail: jest.fn(), getClubActivityComments: jest.fn(), getClubPostComments: jest.fn(),
+  createClubActivityComment: jest.fn(), createClubPostComment: jest.fn(),
+}));
 jest.mock('@/features/clubs/useClubLike', () => ({ useClubLike: jest.fn() }));
 jest.mock('@/features/clubs/useClubActivityRegistration', () => ({ useClubActivityRegistration: jest.fn() }));
 
-const api = require('../../../shared/api/clubs') as { getActivityDetail: jest.Mock; getClubPostDetail: jest.Mock };
+const api = require('../../../shared/api/clubs') as {
+  getActivityDetail: jest.Mock; getClubPostDetail: jest.Mock; getClubActivityComments: jest.Mock; getClubPostComments: jest.Mock;
+};
 const like = require('@/features/clubs/useClubLike').useClubLike as jest.Mock;
 const registration = require('@/features/clubs/useClubActivityRegistration').useClubActivityRegistration as jest.Mock;
 const routerState = require('expo-router').__state as { replaced: unknown[] };
@@ -33,6 +39,8 @@ const POST = {
 beforeEach(() => {
   api.getActivityDetail.mockReset();
   api.getClubPostDetail.mockReset();
+  api.getClubActivityComments.mockReset().mockResolvedValue([]);
+  api.getClubPostComments.mockReset().mockResolvedValue([]);
   like.mockReset().mockReturnValue({ liked: true, count: 3, state: 'success', toggle: jest.fn() });
   registration.mockReset().mockReturnValue({ snapshot: { activityId: 9, registered: true, count: 8, deadline: null }, state: 'registered', register: jest.fn(), cancel: jest.fn() });
   routerState.replaced.length = 0;

@@ -17,6 +17,7 @@ import { DetailScreen } from '@/proto/P3';
 import { deleteClubActivity, deleteClubPost, getActivityDetail, getClubPostDetail, getClubProfile, listClubs, listMyClubs, removeClubMember } from '../../../../shared/api/clubs';
 import { readClubActivityDetail, readClubPage, readClubPostDetail, readClubProfile, type ClubActivityDetail, type ClubPostDetail, type ClubProfile, type ClubSummary } from './model';
 import { useClubActivityRegistration } from './useClubActivityRegistration';
+import { useClubComments } from './useClubComments';
 import { useClubFollow } from './useClubFollow';
 import { useClubLike } from './useClubLike';
 
@@ -347,6 +348,7 @@ export function ClubActivityDetailScreen({ activityId }: { activityId: string })
   const [error, setError] = React.useState<ReturnType<typeof appError> | null>(id === null ? { kind: 'content' } : null);
   const registration = useClubActivityRegistration(id);
   const like = useClubLike({ targetType: 'activity', targetId: id ?? 0, liked: detail?.viewer.liked ?? false, count: detail?.stats.likes ?? 0 });
+  const comments = useClubComments('activity', id ?? 0);
   const load = React.useCallback(async () => {
     if (id === null) return;
     setLoading(true); setError(null);
@@ -371,7 +373,8 @@ export function ClubActivityDetailScreen({ activityId }: { activityId: string })
       onToggleLike={() => void like.toggle()}
       interactions={{ liked: like.liked, likeCount: like.count, commentCount: detail.stats.comments }}
       hero={detail.images.length > 0 ? <MediaGrid testID="club-activity-media" variant="hero" uris={detail.images} /> : undefined}
-      body={<><Text role="body">{detail.summary}</Text><Button testID="club-activity-registration" label={`${t(current.registered ? 'clubs.cancelRegistration' : 'clubs.register')} · ${t('clubs.registrationCount', { n: current.count })}`} loading={registration.state === 'working'} onPress={() => void (current.registered ? registration.cancel() : registration.register())} /></>}
+      body={<><Text role="body">{detail.summary}</Text><Button testID="club-activity-registration" label={`${t(current.registered ? 'clubs.cancelRegistration' : 'clubs.register')} · ${t('clubs.registrationCount', { n: current.count })}`} loading={registration.state === 'working'} onPress={() => void (current.registered ? registration.cancel() : registration.register())} />{comments.body}</>}
+      comments={comments.comments}
       labels={detailLabels(t)}
     />
   );
@@ -385,6 +388,7 @@ export function ClubPostDetailScreen({ postId }: { postId: string }): React.Reac
   const [loading, setLoading] = React.useState(id !== null);
   const [error, setError] = React.useState<ReturnType<typeof appError> | null>(id === null ? { kind: 'content' } : null);
   const like = useClubLike({ targetType: 'post', targetId: id ?? 0, liked: detail?.viewer.liked ?? false, count: detail?.stats.likes ?? 0 });
+  const comments = useClubComments('post', id ?? 0);
   const load = React.useCallback(async () => {
     if (id === null) return;
     setLoading(true); setError(null);
@@ -408,7 +412,8 @@ export function ClubPostDetailScreen({ postId }: { postId: string }): React.Reac
       onToggleLike={() => void like.toggle()}
       interactions={{ liked: like.liked, likeCount: like.count, commentCount: detail.stats.comments }}
       hero={detail.images.length > 0 ? <MediaGrid testID="club-post-media" variant="hero" uris={detail.images} /> : undefined}
-      body={<Text role="body">{detail.content}</Text>}
+      body={<><Text role="body">{detail.content}</Text>{comments.body}</>}
+      comments={comments.comments}
       labels={detailLabels(t)}
     />
   );

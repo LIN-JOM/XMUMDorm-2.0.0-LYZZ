@@ -80,6 +80,7 @@ describe('P3A5-07 社团评论复用接线', () => {
 
     await waitFor(() => expect(view.getByTestId('club-activity-detail-comments-101')).toBeTruthy());
     fireEvent.changeText(view.getByPlaceholderText('写评论'), '  New comment  ');
+    await waitFor(() => expect(view.getByPlaceholderText('写评论').props.value).toBe('  New comment  '));
     fireEvent.press(view.getByTestId('club-composer-send'));
 
     await waitFor(() => expect(api.createClubActivityComment).toHaveBeenCalledWith(9, { content: 'New comment' }));
@@ -95,7 +96,9 @@ describe('P3A5-07 社团评论复用接线', () => {
 
     await waitFor(() => expect(view.getByTestId('club-activity-detail-comments-101')).toBeTruthy());
     fireEvent.press(view.getByLabelText('回复'));
+    await waitFor(() => expect(view.getByText('正在回复 @Alice')).toBeTruthy());
     fireEvent.changeText(view.getByPlaceholderText('写评论'), 'A reply');
+    await waitFor(() => expect(view.getByPlaceholderText('写评论').props.value).toBe('A reply'));
     fireEvent.press(view.getByTestId('club-composer-send'));
 
     await waitFor(() => expect(api.createClubActivityComment).toHaveBeenCalledWith(9, { content: 'A reply', parent_id: 101 }));
@@ -107,6 +110,7 @@ describe('P3A5-07 社团评论复用接线', () => {
 
     await waitFor(() => expect(view.getByTestId('club-activity-detail-comments-101')).toBeTruthy());
     fireEvent.changeText(view.getByPlaceholderText('写评论'), 'Keep this draft');
+    await waitFor(() => expect(view.getByPlaceholderText('写评论').props.value).toBe('Keep this draft'));
     fireEvent.press(view.getByTestId('club-composer-send'));
 
     await waitFor(() => expect(view.getByText('评论未发送，请重试')).toBeTruthy());
@@ -121,6 +125,7 @@ describe('P3A5-07 社团评论复用接线', () => {
 
     await waitFor(() => expect(api.getClubPostComments).toHaveBeenCalledWith(10));
     fireEvent.changeText(view.getByPlaceholderText('写评论'), 'Post comment');
+    await waitFor(() => expect(view.getByPlaceholderText('写评论').props.value).toBe('Post comment'));
     fireEvent.press(view.getByTestId('club-composer-send'));
 
     await waitFor(() => expect(api.createClubPostComment).toHaveBeenCalledWith(10, { content: 'Post comment' }));
