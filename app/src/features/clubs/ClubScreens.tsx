@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@/components/ui/Button';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListScreen, useListPagination } from '@/components/ui/ListScreen';
@@ -13,7 +14,7 @@ import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import { DetailScreen } from '@/proto/P3';
-import { listClubs, getClubProfile, getActivityDetail, getClubPostDetail } from '../../../../shared/api/clubs';
+import { deleteClubActivity, deleteClubPost, getActivityDetail, getClubPostDetail, getClubProfile, listClubs, listMyClubs, removeClubMember } from '../../../../shared/api/clubs';
 import { readClubActivityDetail, readClubPage, readClubPostDetail, readClubProfile, type ClubActivityDetail, type ClubPostDetail, type ClubProfile, type ClubSummary } from './model';
 import { useClubActivityRegistration } from './useClubActivityRegistration';
 import { useClubFollow } from './useClubFollow';
@@ -48,6 +49,19 @@ function profilePosts(value: readonly unknown[]): readonly ClubPostPreview[] {
     return data && Number.isSafeInteger(data.id) && Number(data.id) > 0 && typeof data.content === 'string'
       ? [{ id: Number(data.id), content: data.content }]
       : [];
+  });
+}
+
+type MyClub = { id: number; name: string; description: string; followers: number; role: 'admin' | 'member' };
+
+function readMyClubs(value: unknown): readonly MyClub[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !Array.isArray((value as { list?: unknown }).list)) {
+    throw new Error('Invalid my clubs');
+  }
+  return (value as { list: unknown[] }).list.map((row) => {
+    const item = row && typeof row === 'object' && !Array.isArray(row) ? row as Record<string, unknown> : null;
+    if (!item || !Number.isSafeInteger(item.id) || Number(item.id) <= 0 || typeof item.name !== 'string' || typeof item.description !== 'string' || !Number.isSafeInteger(item.followers) || Number(item.followers) < 0 || (item.role !== 'admin' && item.role !== 'member')) throw new Error('Invalid my clubs');
+    return { id: Number(item.id), name: item.name, description: item.description, followers: Number(item.followers), role: item.role };
   });
 }
 
@@ -192,6 +206,85 @@ export function ClubProfileScreen({ clubId }: { clubId: string }): React.ReactEl
           <Button testID="club-profile-manage" label={t('clubs.manage')} variant="secondary" onPress={() => router.push(`/clubs/${profile.id}/manage` as never)} />
         ) : null}
       </View>
+    </Screen>
+  );
+}
+
+export function MyClubsScreen(): React.ReactElement {
+  const router = useRouter();
+  const { t } = useI18n();
+  const theme = useTheme();
+  const [rows, setRows] = React.useState<readonly MyClub[] | null>(null);
+  const [error, setError] = React.useState<ReturnType<typeof appError> | null>(null);
+  const load = React.useCallback(async () => {
+    setRows(null); setError(null);
+    try { setRows(readMyClubs(await listMyClubs())); }
+    catch (cause) { setError(appError(cause)); }
+  }, []);
+  React.useEffect(() => { void load(); }, [load]);
+  const displayRows = rows ?? [];
+  return (
+    <Screen titleKey="clubs.my" showMailbox={false} testID="my-clubs-screen">
+      {rows === null && error === null ? <LoadingState /> : error ? <ErrorState error={error} onAction={() => void load()} /> : displayRows.length === 0 ? <EmptyState kind="noResult" title={t('clubs.myEmpty')} actionLabel={t('action.refresh')} onAction={() => void load()} /> : (
+        <View style={{ gap: theme.space('space_2') }}>
+          {displayRows.map((club) => <Button key={club.id} testID={`my-club-row-${club.id}`} label={`${club.name} · ${t('clubs.followers', { n: club.followers })}`} variant="secondary" fullWidth onPress={() => router.push(`/clubs/${club.id}` as never)} />)}
+        </View>
+      )}
+    </Screen>
+  );
+}
+
+export function ClubManageScreen({ clubId }: { clubId: string }): React.ReactElement {
+  const router = useRouter();
+  const { t } = useI18n();
+  const theme = useTheme();
+  const id = asPositiveId(clubId);
+  const [profile, setProfile] = React.useState<ClubProfile | null>(null);
+  const [loading, setLoading] = React.useState(id !== null);
+  const [error, setError] = React.useState<ReturnType<typeof appError> | null>(id === null ? { kind: 'content' } : null);
+  const [removing, setRemoving] = React.useState<ClubProfile['members'][number] | null>(null);
+  const [actionError, setActionError] = React.useState(false);
+  const load = React.useCallback(async () => {
+    if (id === null) return;
+    setLoading(true); setError(null);
+    try { setProfile(readClubProfile(await getClubProfile(id))); }
+    catch (cause) { setProfile(null); setError(appError(cause)); }
+    finally { setLoading(false); }
+  }, [id]);
+  React.useEffect(() => { void load(); }, [load]);
+  const back = (): void => router.replace(id === null ? '/clubs' as never : `/clubs/${id}` as never);
+  const mutate = async (operation: () => Promise<unknown>): Promise<void> => {
+    setActionError(false);
+    try {
+      const acknowledgement = await operation();
+      if (!acknowledgement || typeof acknowledgement !== 'object' || (acknowledgement as { status?: unknown }).status !== 0) throw new Error('Invalid management acknowledgement');
+      await load();
+    } catch { setActionError(true); }
+  };
+  if (id === null) {
+    return <Screen titleKey="clubs.manage" showMailbox={false} testID="club-manage-unavailable"><EmptyState kind="noResult" title={t('clubs.unavailable')} actionLabel={t('clubs.back')} onAction={back} /></Screen>;
+  }
+  if (loading) return <Screen titleKey="clubs.manage" showMailbox={false}><LoadingState /></Screen>;
+  if (error || profile === null) {
+    return <Screen titleKey="clubs.manage" showMailbox={false} testID="club-manage-unavailable"><ErrorState error={error ?? { kind: 'unknown' }} onAction={() => void load()} /></Screen>;
+  }
+  const managedProfile = profile;
+  if (!managedProfile.basicInfo.viewer.canManage) {
+    return <Screen titleKey="clubs.manage" showMailbox={false} testID="club-manage-denied"><EmptyState kind="broken" title={t('clubs.manageDenied')} actionLabel={t('clubs.back')} onAction={back} /><Button testID="club-manage-back" label={t('clubs.back')} variant="link" onPress={back} /></Screen>;
+  }
+  const activities = profileActivities(managedProfile.activities);
+  const posts = profilePosts(managedProfile.posts);
+  return (
+    <Screen titleKey="clubs.manage" showMailbox={false} testID="club-manage">
+      <View style={{ gap: theme.space('space_3') }}>
+        <Text role="title" emphasis="strong">{managedProfile.basicInfo.name}</Text>
+        {actionError ? <Text role="body" colorToken="text-danger">{t('clubs.actionFailed')}</Text> : null}
+        <Text role="headline">{t('clubs.members', { n: managedProfile.members.length })}</Text>
+        {managedProfile.members.map((member) => <View key={member.id} style={{ gap: theme.space('space_1') }}><Text role="body">{member.nickname}</Text>{member.role === 'member' ? <Button testID={`club-manage-remove-${member.id}`} label={t('clubs.removeMember')} variant="danger" onPress={() => setRemoving(member)} /> : null}</View>)}
+        {activities.map((activity) => <Button key={activity.id} label={`${t('clubs.deleteActivity')} · ${activity.title}`} variant="danger" onPress={() => void mutate(() => deleteClubActivity(activity.id))} />)}
+        {posts.map((post) => <Button key={post.id} label={`${t('clubs.deletePost')} · ${post.content}`} variant="danger" onPress={() => void mutate(() => deleteClubPost(post.id))} />)}
+      </View>
+      <AlertDialog testID="club-manage-remove-dialog" visible={removing !== null} variant="danger" title={t('clubs.removeMember')} body={t('clubs.removeMemberBody')} confirmLabel={t('clubs.removeMember')} cancelLabel={t('action.cancel')} onCancel={() => setRemoving(null)} onConfirm={() => { const member = removing; setRemoving(null); if (member) void mutate(() => removeClubMember(managedProfile.id, member.id)); }} />
     </Screen>
   );
 }
