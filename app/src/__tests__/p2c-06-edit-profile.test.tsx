@@ -102,7 +102,11 @@ describe('P2C-06 M-02 资料编辑 / C20 MediaPicker', () => {
         type: 'image/jpeg',
       });
       expect(avatarUploadFile({ uri: 'https://example.com/avatar.jpg', mimeType: 'image/jpeg', sizeBytes: 1 })).toBeNull();
-      expect(avatarUploadFile({ uri: 'file:///avatar.jpg', mimeType: 'image/gif', sizeBytes: 1 })).toBeNull();
+      expect(avatarUploadFile({ uri: 'file:///avatar.gif', mimeType: 'image/gif', sizeBytes: 1 })).toEqual({
+        uri: 'file:///avatar.gif',
+        name: 'avatar.gif',
+        type: 'image/gif',
+      });
     });
   });
 
