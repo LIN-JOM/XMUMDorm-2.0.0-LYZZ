@@ -41,6 +41,17 @@ export function toggleMarketplaceWant(id) {
   return post(`/api/marketplace/items/${id}/want`, {});
 }
 
+/** Marketplace reports use the shared moderation contract, not a domain-only route. */
+export function reportMarketplaceItem(id, { reason, detail, screenshots } = {}) {
+  return post('/api/reports', {
+    target_type: 'marketplace',
+    target_id: id,
+    reason,
+    detail,
+    screenshots,
+  });
+}
+
 export function updateMarketplaceItemStatus(id, status) {
   return post(`/api/marketplace/items/${id}/status`, { status });
 }

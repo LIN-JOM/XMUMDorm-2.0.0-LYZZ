@@ -27,7 +27,14 @@ export function doneErrand(id) {
 }
 
 export function reportErrand(id, body = {}) {
-  return post(`/api/errands/${id}/report`, body);
+  const { reason, detail, screenshots } = body;
+  return post('/api/reports', {
+    target_type: 'errand',
+    target_id: id,
+    reason,
+    detail,
+    screenshots,
+  });
 }
 
 export function deleteErrand(id) {
