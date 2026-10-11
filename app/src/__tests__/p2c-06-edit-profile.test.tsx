@@ -18,7 +18,7 @@ import { renderApp } from './helpers/renderApp';
 import { stripComments } from './helpers/sourceScan';
 import { zh } from '@/i18n';
 import { IMAGE_MAX_BYTES, MediaPicker, validatePickedImage } from '@/components/ui/MediaPicker';
-import { EditProfileScreen, PROFILE_MAX_LENGTH, formValuesToProfileBody, profileToFormValues } from '@/features/me/EditProfileScreen';
+import { avatarUploadFile, EditProfileScreen, PROFILE_MAX_LENGTH, formValuesToProfileBody, profileToFormValues } from '@/features/me/EditProfileScreen';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
@@ -91,6 +91,18 @@ describe('P2C-06 M-02 资料编辑 / C20 MediaPicker', () => {
       ).toEqual({ ok: true });
       // mime 缺失不猜：放行让服务端判定，但大小仍是硬门
       expect(validatePickedImage({ mimeType: null, allowGif: false, maxBytes: 10 })).toEqual({ ok: true });
+    });
+  });
+
+  describe('TC-P2C-06-2B · 头像上传载荷', () => {
+    it('只把已验证的本地图片转换为原生 FormData 文件项', () => {
+      expect(avatarUploadFile({ uri: 'file:///avatar.jpg', mimeType: 'image/jpeg', sizeBytes: 1 })).toEqual({
+        uri: 'file:///avatar.jpg',
+        name: 'avatar.jpg',
+        type: 'image/jpeg',
+      });
+      expect(avatarUploadFile({ uri: 'https://example.com/avatar.jpg', mimeType: 'image/jpeg', sizeBytes: 1 })).toBeNull();
+      expect(avatarUploadFile({ uri: 'file:///avatar.jpg', mimeType: 'image/gif', sizeBytes: 1 })).toBeNull();
     });
   });
 
