@@ -28,6 +28,7 @@ describe('P3A5-01 广场接入既有丙域列表', () => {
     ['market', '/market'],
     ['errand', '/errand'],
     ['guides', '/guides'],
+    ['clubs', '/clubs'],
   ])('点击 %s 服务入口会进入 %s', async (service, route) => {
     const view = await renderApp(<SquareScreen />);
 
