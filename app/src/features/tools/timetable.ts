@@ -15,7 +15,8 @@
  *    `kualaLumpurCalendarParts` 取**吉隆坡时区**的今天（⛔ 不用设备本地时区 ——
  *    学生在别处或漫游时会高亮错行）；
  * 2. **本地优先**：先给缓存再打远端，失败**不清空已有内容**（与 `P1-12` 同一条纪律，宪法 10.6）；
- * 3. **分段切换**用 `C14 SegmentedControl`（页面清单指定），它**上限 5 项** → 周次只能给"窗口"。
+ * 3. 新业务屏幕按数字横滑切换全学期周次；数量验证取自学期配置与既有兜底值。
+ *    旧路由暂保留 `C14` 窗口入口，甲消费 `TimetableScreen` 后再统一公共接线。
  */
 
 import * as React from 'react';
@@ -23,7 +24,7 @@ import * as React from 'react';
 import { getItem, setItem, removeItem, getAllNamespacedKeys, STORAGE_NAMESPACE } from '@/shared/storage';
 import { timetableIdentity } from './cacheIdentity';
 import { refreshRemindersAfterTimetableImport } from './reminders/importRefresh';
-import { FALLBACK_TOTAL_WEEKS, clampWeek, kualaLumpurCalendarParts } from '../../../../shared/config/semesters';
+import { FALLBACK_TOTAL_WEEKS, SEMESTERS, clampWeek, kualaLumpurCalendarParts } from '../../../../shared/config/semesters';
 import type { AppError } from '@/i18n/errors';
 
 /* ────────────────────────── 类型与规范化 ────────────────────────── */
@@ -60,6 +61,15 @@ function asNumber(value: unknown): number | null {
 
 const EMPTY_DAYS = (): TimetableDays => ({ 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] });
 
+/** Calendar configuration is trusted; network counts cannot create arbitrarily large week filters. */
+export function safeTimetableWeekCount(value: unknown): number {
+  const configured = SEMESTERS.map((semester) => semester.weeks)
+    .filter((weeks) => Number.isSafeInteger(weeks) && weeks > 0);
+  const maximum = Math.max(FALLBACK_TOTAL_WEEKS, ...configured);
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 && value <= maximum
+    ? value : FALLBACK_TOTAL_WEEKS;
+}
+
 /**
  * 规范化响应（纯函数）：字段改名、缺字段给空、**非法返回 `null`**（⛔ 不在渲染路径上抛）。
  * ⚠️ 为什么要做：`shared/api/request.js` 返回的是未类型化 JSON，
@@ -95,12 +105,11 @@ export function normalizeTimetableWeek(data: unknown): TimetableWeek | null {
     }
   }
 
-  const totalWeeks = asNumber(raw.totalWeeks) ?? FALLBACK_TOTAL_WEEKS;
   return {
     week,
     days,
     currentWeek: asNumber(raw.currentWeek),
-    totalWeeks: totalWeeks > 0 ? Math.floor(totalWeeks) : FALLBACK_TOTAL_WEEKS,
+    totalWeeks: safeTimetableWeekCount(raw.totalWeeks),
   };
 }
 

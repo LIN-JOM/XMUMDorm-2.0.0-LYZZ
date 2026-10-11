@@ -1,6 +1,6 @@
 import { buildClassReminderPlan } from './plan';
 import type { ClassReminder, ReminderSemester } from './plan';
-import { normalizeTimetableWeek } from '../timetable';
+import { normalizeTimetableWeek, safeTimetableWeekCount } from '../timetable';
 import { parseYmd } from '../../../../../shared/config/semesters';
 
 export { configureTimetableReminderRefresh } from './importRefresh';
@@ -15,7 +15,7 @@ export async function loadSemesterClassReminderPlan(input: {
   const { semester, now, loadWeek } = input;
   const start = parseYmd(semester.startDate);
   if (!start || new Date(start.ms).getUTCDay() !== 1 || !semester.id.trim()
-    || !Number.isSafeInteger(semester.weeks) || semester.weeks < 1 || !Number.isFinite(now.getTime())) {
+    || safeTimetableWeekCount(semester.weeks) !== semester.weeks || !Number.isFinite(now.getTime())) {
     throw new TypeError('invalid reminder semester');
   }
   const weeks = [];
