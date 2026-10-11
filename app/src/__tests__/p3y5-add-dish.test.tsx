@@ -64,7 +64,7 @@ it('discards a successful creation receipt after the account identity changes', 
   await fireEvent.changeText(view.getByLabelText(/标题/), 'Rice');
   await fireEvent.press(view.getByTestId('add-dish-form-submit'));
   await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
-  await waitFor(() => expect(view.getByText('出错了')).toBeTruthy());
+  await waitFor(() => expect(view.getByText('发生了一个我们没预料到的错误，已经记下')).toBeTruthy());
   expect(mockCreated).not.toHaveBeenCalled();
   expect(cancelled).not.toHaveBeenCalled();
 });

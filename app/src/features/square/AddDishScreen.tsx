@@ -53,7 +53,8 @@ function AddDishForm({ categories, ...props }: AddDishProps & { categories: read
         const product = await createProduct({ ...body, images: body.images.map((image, index) => ({ uri: image.uri, type: image.mimeType ?? 'image/jpeg',
           name: `dish-${index}.${image.mimeType === 'image/png' ? 'png' : image.mimeType === 'image/webp' ? 'webp' : 'jpg'}` })) });
         if (owner !== timetableIdentity().epoch) throw { kind: 'unknown' };
-        committed.current = typeof product?.id === 'number' && Number.isSafeInteger(product.id) && product.id > 0 ? product.id : null;
+        if (typeof product?.id !== 'number' || !Number.isSafeInteger(product.id) || product.id <= 0) throw { kind: 'unknown' };
+        committed.current = product.id;
         await invalidateCanteen().catch(() => undefined);
       } catch (error) {
         if (owner !== timetableIdentity().epoch) throw { kind: 'unknown' };
@@ -62,12 +63,12 @@ function AddDishForm({ categories, ...props }: AddDishProps & { categories: read
       }
     } });
   return <Form testID="add-dish-form" titleKey={labels.titleKey} {...badge} semantic="create" guardNavigation form={form} sections={[{ title: labels.titleKey, fields }]}
-    onSettled={() => { if (committed.current !== null) onCreated(committed.current); else onCancel?.(); }}
+    onSettled={() => { if (committed.current !== null) onCreated(committed.current); }}
     onCancel={onCancel ?? (() => router.canGoBack() ? router.back() : router.replace({ pathname: '/canteen/shop/[id]', params: { id: String(shopId) } }))}
     onRetrySubmit={() => void form.submit()}
     labels={{ submit: t(labels.submitKey), cancel: t('action.cancel'), errorSummaryTitle: t(labels.failedKey), leaveTitle: t('form.leave.title'), leaveBody: t('form.leave.body'), leaveConfirm: t('form.leave.confirm'), leaveCancel: t('form.leave.cancel') }} />;
 }
-/** P3 contribution form; labels are registered by the shared i18n owner. */
+/** P4 contribution form; labels are registered by the shared i18n owner. */
 export function AddDishScreen(props: AddDishProps): React.ReactElement {
   const session = useSession();
   const { t } = useI18n();
