@@ -52,11 +52,22 @@ type StringHref = Extract<Href, string>;
 
 /**
  * 通知目标 → App 内路由。
- * ⛔ **本轮故意几乎全空**：`target.path` 是 Web 路径，硬套会跳到不存在的页面。
- * 等 **S03 DeepLinkRouter** 落地后，这里改成用它（页面清单 §5 的深链表）。
+ * 社团路由已注册后，只映射拥有稳定 App 路由的三种服务端目标。
+ * 其余 `target.path` 仍是 Web 路径，不能直接推给 Expo Router。
  */
-export function resolveNotificationRoute(_row: NotificationRow): StringHref | null {
-  return null;
+export function resolveNotificationRoute(row: NotificationRow): StringHref | null {
+  const { target } = row;
+  if (!target.available || !Number.isSafeInteger(target.id) || target.id <= 0) return null;
+  switch (target.type) {
+    case 'club':
+      return `/clubs/${target.id}` as StringHref;
+    case 'club_activity':
+      return `/clubs/activity/${target.id}` as StringHref;
+    case 'club_post':
+      return `/clubs/post/${target.id}` as StringHref;
+    default:
+      return null;
+  }
 }
 
 export function MailboxScreen(): React.ReactElement {
