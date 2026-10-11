@@ -66,6 +66,16 @@ describe('P0-11 四把尺子接入 CI', () => {
     expect(workflowText).not.toMatch(/npm install\b/);
   });
 
+  it('Web 改动在干净锁文件环境运行 lint、构建和源码守卫', () => {
+    expect(workflowText).toContain("'frontend/**'");
+    expect(workflowText).toContain('web-quality:');
+    expect(workflowText).toContain('cache-dependency-path: frontend/package-lock.json');
+    expect(workflowText).toContain('working-directory: frontend');
+    expect(workflowText).toContain('npm run lint');
+    expect(workflowText).toContain('npm run build');
+    expect(workflowText).toContain('npm test -- --runInBand __tests__/frontend/frontendSourceLint.test.js --silent');
+  });
+
   it('本地与 CI 跑同一套参数：app/package.json 的 rulers 脚本逐条对齐', () => {
     expect(APP_PKG.scripts['rulers:debt']).toContain(
       'design-debt-report.js --path ./src --fail-on-zero'
