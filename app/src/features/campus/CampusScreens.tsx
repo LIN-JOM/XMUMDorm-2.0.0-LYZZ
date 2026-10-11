@@ -15,6 +15,7 @@ import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
 import {ListItem} from '@/components/ui/ListItem';
 import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
+import {View} from 'react-native';
 import {SearchHighlight} from './SearchHighlight';
 import {MediaGrid} from '@/components/ui/MediaGrid';
 import {MediaCarousel} from '@/components/ui/MediaCarousel';
@@ -24,6 +25,9 @@ import type {AppError} from '@/i18n/errors';
 import {getPostList, getPostDetail} from '../../../../shared/api/posts';
 
 type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
+ return Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
+}
 function asPost(value:unknown):Post {
  if(!value || typeof value!=='object') throw {kind:'content'};
  const row=value as Post & {hidden?:boolean;deleted_at?:unknown;hidden_by_admin?:boolean};
@@ -132,8 +136,11 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
     onPress={()=>router.push(`/campus/${row.id}` as never)}>
     <SearchHighlight value={row.title||t('screen.campus.read.post')} query={query}/>
     <SearchHighlight value={row.content} query={query}/>
-   </Pressable>:<ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?t('screen.campus.read.anonymous'):row.title||t('screen.campus.read.post')} subtitle={row.content}
-    onPress={()=>router.push((kind==='wall'?`/campus/wall/${row.id}`:`/campus/${row.id}`) as never)}/>}/>
+   </Pressable>:(()=>{const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;return <View>
+    <ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?t('screen.campus.read.anonymous'):row.title||t('screen.campus.read.post')} subtitle={row.content}
+     onPress={()=>router.push((kind==='wall'?`/campus/wall/${row.id}`:`/campus/${row.id}`) as never)}/>
+    {images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null}
+   </View>})()}/>
  </>;
 }
 
@@ -165,7 +172,7 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
   action={actions.report.state==='login'?{label:t('screen.campus.write.login'),onPress:()=>{setReportOpen(false);router.push('/login');}}:undefined}
   labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
  const back=()=>published?router.replace('/' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/?tab=wall':'/') as never);
- const images=Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
+ const images=postImageUrls(post);
  return <DetailScreen testID="campus-detail" title={kind==='wall'?t('screen.campus.read.wallTitle'):post?.title||t('screen.campus.read.title')}
   author={post?.author ? {kind:'named',name:post.author.nickname||post.author.username||t('screen.campus.read.author')} : {kind:'anonymous'}}
   onReport={post&&actions.report.state!=='success'?()=>setReportOpen(true):undefined} interactions={actions.interactions} onToggleLike={post?actions.onToggleLike:undefined} comments={post?actions.comments:undefined} state={loading?'loading':error?.kind==='content'?'empty':error?'error':post?'content':'empty'} error={error}
