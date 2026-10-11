@@ -9,7 +9,7 @@ jest.mock('expo-router', () => ({
   __state: { targets: [] as unknown[] },
   useNavigation: () => ({ dispatch: jest.fn() }),
   useRouter: () => ({
-    push: (target: unknown) => require('expo-router').__state.targets.push(target),
+    push: (target: unknown) => jest.requireMock('expo-router').__state.targets.push(target),
     replace: jest.fn(), back: jest.fn(), canGoBack: () => false,
   }),
 }));
@@ -21,21 +21,21 @@ jest.mock('../../../shared/api/schedule', () => ({ getScheduleWeek: jest.fn(asyn
 jest.mock('../../../shared/api/todos', () => ({ getTodayTodos: jest.fn(), createTodo: jest.fn() }));
 jest.mock('@react-native-community/datetimepicker', () => ({ __esModule: true, default: () => null }));
 
-const api = require('../../../shared/api/todos') as { getTodayTodos: jest.Mock; createTodo: jest.Mock };
+const api = jest.requireMock('../../../shared/api/todos') as { getTodayTodos: jest.Mock; createTodo: jest.Mock };
 beforeEach(async () => {
   await clearNamespace();
   api.getTodayTodos.mockReset().mockResolvedValue({ total: 1, active: 1, completed: 0, topItems: [{ id: 7, title: 'Read paper' }] });
   api.createTodo.mockReset().mockResolvedValue({ id: 8 });
-  require('expo-router').__state.targets.length = 0;
+  jest.requireMock('expo-router').__state.targets.length = 0;
 });
 
 it('creates from the dashboard through the existing form route', async () => {
   const view = await renderApp(<ToolsDashboardContent />);
   await waitFor(() => expect(view.getByText('Read paper')).toBeTruthy());
   await fireEvent.press(view.getByText('新增待办'));
-  expect(require('expo-router').__state.targets).toContain('/tools/todos/new');
+  expect(jest.requireMock('expo-router').__state.targets).toContain('/tools/todos/new');
   await fireEvent.press(view.getByTestId('tools-todos'));
-  expect(require('expo-router').__state.targets).toContain('/tools/todos');
+  expect(jest.requireMock('expo-router').__state.targets).toContain('/tools/todos');
 });
 
 it('keeps one count sentence and removes the active and completed stat tiles', async () => {

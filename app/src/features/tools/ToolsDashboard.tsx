@@ -10,12 +10,10 @@ import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListItem } from '@/components/ui/ListItem';
 import { LoadingState } from '@/components/ui/LoadingState';
-import { MetricRow } from '@/components/ui/MetricRow';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { QuickActionGrid } from '@/components/ui/QuickActionGrid';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { StatTile } from '@/components/ui/StatTile';
 import { Text } from '@/components/ui/Text';
 import { useSession } from '@/features/auth/session';
 import { useMailboxBadge } from '@/features/mailbox/useUnread';
@@ -64,10 +62,9 @@ export function ToolsDashboardContent({ onRequestError }: { onRequestError?: (er
       <ListItem testID="tools-timetable" title={t('tools.timetable')} onPress={() => router.push('/tools/timetable')} />
     </View>
     <View testID="tools-today-todos" style={{ gap: theme.space('space_2') }}>
-      <SectionHeader title={t('tools.dashboard.todos')} />
+      <SectionHeader title={t('tools.dashboard.todos')} variant="withAction" actionLabel={t('tools.todos.create')} onActionPress={() => router.push('/tools/todos/new')} />
       {todos.loading ? <LoadingState testID="tools-todos-loading" /> : todos.error ? <ErrorState testID="tools-todos-error" error={todos.error} onAction={todos.reload} /> : todos.data ? <>
         <Text role="caption">{t('tools.dashboard.todoCount', { total: todos.data.total, completed: todos.data.completed })}</Text>
-        <MetricRow><StatTile value={todos.data.active} label={t('tools.dashboard.active')} /><StatTile value={todos.data.completed} label={t('tools.dashboard.completed')} /></MetricRow>
         {todos.data.top.length ? todos.data.top.map((todo) => <ListItem key={todo.id} title={todo.title} onPress={() => router.push({ pathname: '/tools/todos/[id]', params: { id: String(todo.id) } })} />) : <Text role="body" colorToken="text-secondary">{t('tools.dashboard.noTodos')}</Text>}
       </> : null}
       <ListItem testID="tools-todos" title={t('tools.todos.title')} onPress={() => router.push('/tools/todos')} />
