@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { EntityCard } from '@/components/ui/EntityCard';
 import { ListScreen, useListPagination } from '@/components/ui/ListScreen';
@@ -22,7 +22,8 @@ export function CanteenSearchScreen(): React.ReactElement {
   const { t } = useI18n();
   const theme = useTheme();
   const router = useRouter();
-  const [input, setInput] = React.useState('');
+  const params = useLocalSearchParams<{ query?: string }>();
+  const [input, setInput] = React.useState(typeof params.query === 'string' ? params.query : '');
   const [type, setType] = React.useState<SearchType>('all');
   const [rows, setRows] = React.useState<readonly SearchRow[]>([]);
   const [problem, setProblem] = React.useState<'empty' | 'tooLong' | null>('empty');
