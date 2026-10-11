@@ -1,0 +1,66 @@
+import * as React from 'react';
+import { waitFor } from '@testing-library/react-native';
+
+import { renderApp } from './helpers/renderApp';
+
+jest.mock('expo-router', () => {
+  const state = { pushed: [] as unknown[], replaced: [] as unknown[] };
+  return { __state: state, useRouter: () => ({ push: (target: unknown) => state.pushed.push(target), replace: (target: unknown) => state.replaced.push(target) }) };
+});
+jest.mock('../../../shared/api/clubs', () => ({ listMyClubs: jest.fn(), getClubProfile: jest.fn(), removeClubMember: jest.fn(), deleteClubActivity: jest.fn(), deleteClubPost: jest.fn() }));
+
+const api = require('../../../shared/api/clubs') as Record<string, jest.Mock>;
+const routerState = require('expo-router').__state as { pushed: unknown[]; replaced: unknown[] };
+const { MyClubsScreen, ClubManageScreen } = require('@/features/clubs/ClubScreens') as typeof import('@/features/clubs/ClubScreens');
+
+const PROFILE = {
+  id: 7,
+  basicInfo: { id: 7, name: 'Music Club', category: 'music', description: 'Play together', avatar: null, followers: 3, viewer: { following: false, canManage: true, isMember: true } },
+  joinInfo: { contactText: '', signupLink: '', ig: '', xhs: '' },
+  members: [
+    { id: 1, role: 'admin', email: 'a@example.com', username: 'admin', nickname: 'Admin', avatar: null },
+    { id: 2, role: 'member', email: 'm@example.com', username: 'member', nickname: 'Member', avatar: null },
+  ],
+  activities: [], posts: [],
+};
+
+beforeEach(() => {
+  for (const mock of Object.values(api)) mock.mockReset();
+  routerState.pushed.length = 0;
+  routerState.replaced.length = 0;
+});
+
+describe('P3A5-04 我的社团与管理入口', () => {
+  it('我的社团显示服务端成员列表并进入社团主页', async () => {
+    api.listMyClubs.mockResolvedValue({ list: [{ id: 7, name: 'Music Club', avatar: null, description: 'Play together', followers: 3, role: 'member' }] });
+    const view = await renderApp(<MyClubsScreen />);
+
+    await waitFor(() => expect(view.getByTestId('my-club-row-7')).toBeTruthy());
+    const user = require('@testing-library/react-native').userEvent.setup();
+    await user.press(view.getByTestId('my-club-row-7'));
+    expect(routerState.pushed).toEqual(['/clubs/7']);
+  });
+
+  it('无权限深链不显示管理动作，并可回到社团主页', async () => {
+    api.getClubProfile.mockResolvedValue({ ...PROFILE, basicInfo: { ...PROFILE.basicInfo, viewer: { following: false, canManage: false, isMember: true } } });
+    const view = await renderApp(<ClubManageScreen clubId="7" />);
+
+    await waitFor(() => expect(view.getByTestId('club-manage-denied')).toBeTruthy());
+    expect(view.queryByTestId('club-manage-remove-2')).toBeNull();
+    const user = require('@testing-library/react-native').userEvent.setup();
+    await user.press(view.getByTestId('club-manage-back'));
+    expect(routerState.replaced).toEqual(['/clubs/7']);
+  });
+
+  it('管理员删除成员后只以服务端成功回执刷新资料', async () => {
+    api.getClubProfile.mockResolvedValue(PROFILE);
+    api.removeClubMember.mockResolvedValue({ status: 0 });
+    const view = await renderApp(<ClubManageScreen clubId="7" />);
+
+    await waitFor(() => expect(view.getByTestId('club-manage-remove-2')).toBeTruthy());
+    const user = require('@testing-library/react-native').userEvent.setup();
+    await user.press(view.getByTestId('club-manage-remove-2'));
+    await waitFor(() => expect(api.removeClubMember).toHaveBeenCalledWith(7, 2));
+    expect(api.getClubProfile).toHaveBeenCalledTimes(2);
+  });
+});
