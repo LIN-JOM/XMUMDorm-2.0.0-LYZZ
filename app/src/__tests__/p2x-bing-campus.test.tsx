@@ -53,6 +53,13 @@ it('树洞显示服务器标签，选择和清除都保留真实筛选状态',as
  expect(v.getByTestId('campus-row-7')).toBeTruthy();
  expect(secondaryTabStore.get('square','confession').filters).toEqual({});
 });
+it('标签目录失败不阻断全部树洞阅读',async()=>{
+ tags.mockRejectedValue(new TypeError('tags unavailable'));
+ list.mockResolvedValue({list:[{id:7,content:'仍可阅读'}],hasMore:false});
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByText('仍可阅读')).toBeTruthy());
+ expect(v.queryByTestId('campus-tag-filters')).toBeNull();
+});
 it('标签各自保留分页内容和位置，追加请求不串标签',async()=>{
  tags.mockResolvedValue([
   {id:7,name_zh:'组队自习',name_en:'Study group'},
