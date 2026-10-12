@@ -16,16 +16,21 @@ export function getPostList(options = {}) {
   return get(path, token ? { token } : {});
 }
 
-/** 帖子标签列表（按创建时间升序） */
-export function getPostTagsList() {
-  return get('/api/posts/tags');
+/** 帖子标签列表（按创建时间升序；提供 q 时由服务端搜索） */
+export function getPostTagsList(options = {}) {
+  const { q, limit } = options;
+  const params = new URLSearchParams();
+  if (q != null && String(q).trim()) params.set('q', String(q).trim());
+  if (limit != null) params.set('limit', String(limit));
+  const suffix = params.toString();
+  return get(`/api/posts/tags${suffix ? `?${suffix}` : ''}`);
 }
 
 export function getHotPostTags(limit = 8) {
   return get(`/api/posts/hot-tags?limit=${Math.min(12, Math.max(1, Number(limit) || 8))}`);
 }
 
-/** 创建标签（管理员） */
+/** 创建标签（登录用户；成功回执是唯一可选的新话题） */
 export function createPostTag(body) {
   const { name_zh, name_en, slug } = body || {};
   return post('/api/posts/tags', { name_zh, name_en, slug });
