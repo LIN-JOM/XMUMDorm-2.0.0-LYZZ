@@ -29,6 +29,14 @@ it('树洞从第一页读取，点击进入帖子',async()=>{
  await fireEvent.press(v.getByTestId('campus-row-7'));
  expect(mockPush).toHaveBeenCalledWith('/campus/7');
 });
+it('树洞列表保留作者、时间和服务端互动计数',async()=>{
+ list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动',author:{nickname:'小林'},created_at:new Date().toISOString(),like_count:12,comment_count:3}],hasMore:false});
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByText('小林')).toBeTruthy());
+ expect(v.getByText('刚刚')).toBeTruthy();
+ expect(v.getByText('12 赞')).toBeTruthy();
+ expect(v.getByText('3 评论')).toBeTruthy();
+});
 it('树洞列表复用媒体层：单图保持静态，多图提供横滑页码',async()=>{
  list.mockResolvedValue({list:[
   {id:7,title:'单图',content:'一张',images:[{url:'https://example.com/one.jpg'}]},
