@@ -13,7 +13,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { QuickActionGrid, type QuickAction } from '@/components/ui/QuickActionGrid';
-import { Screen } from '@/components/ui/Screen';
+import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import { useMailboxBadge } from '@/features/mailbox/useUnread';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useToast } from '@/components/ui/Toast';
@@ -25,7 +25,7 @@ import { FoodArticleFeed } from './FoodArticleFeed';
 import { CanteenRankings } from './CanteenRankings';
 import type { RankingTab } from './canteenRankingModel';
 
-export function CanteenHome({ rankingTabs = [{ key: 'hotProducts', labelKey: 'canteen.dishes' }] }: { rankingTabs?: readonly RankingTab[] } = {}): React.ReactElement {
+export function CanteenHome({ embedded = false, rankingTabs = [{ key: 'hotProducts', labelKey: 'canteen.dishes' }] }: { embedded?: boolean; rankingTabs?: readonly RankingTab[] } = {}): React.ReactElement {
   const badge = useMailboxBadge();
   const theme = useTheme();
   const { t } = useI18n();
@@ -68,7 +68,7 @@ export function CanteenHome({ rankingTabs = [{ key: 'hotProducts', labelKey: 'ca
   };
 
   return (
-    <Screen testID="screen-canteen" titleKey="canteen.title" bottomMode="own" {...badge}>
+    <FeatureScreen embedded={embedded} testID="screen-canteen" titleKey="canteen.title" bottomMode="own" {...badge}>
       <FoodArticleFeed header={<View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
         <SearchField testID="canteen-home-search" appearance="full" value={query} onChangeText={setQuery} placeholder={t('canteen.search.placeholder')} clearLabel={t('action.clear')} onSubmit={() => router.push({ pathname: '/canteen/search', params: { query: query.trim() } })} />
         <CanteenRankings tabs={rankingTabs} />
@@ -103,6 +103,6 @@ export function CanteenHome({ rankingTabs = [{ key: 'hotProducts', labelKey: 'ca
           }}
         />
       </View>} />
-    </Screen>
+    </FeatureScreen>
   );
 }

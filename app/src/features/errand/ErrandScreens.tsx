@@ -1,8 +1,8 @@
+import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import * as React from 'react';
 import {ContactCopy} from './ContactCopy';
 import * as Linking from 'expo-linking';
 import {useRouter} from 'expo-router';
-import {Screen} from '@/components/ui/Screen';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
 import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
@@ -33,15 +33,15 @@ function errorFor(error:unknown):AppError {
 const typeKeys={all:'screen.errand.all',delivery:'screen.errand.delivery',purchase:'screen.errand.purchase',urgent:'screen.errand.urgent'} as const;
 const statusKeys={all:'screen.errand.all',open:'screen.errand.open',taken:'screen.errand.taken',done:'screen.errand.done'} as const;
 const noticeKeys={failed:'screen.errand.failed',login:'screen.errand.login',denied:'screen.errand.denied',conflict:'screen.errand.conflict'} as const;
-export function ErrandListScreen():React.ReactElement {
+export function ErrandListScreen({ embedded = false }: { embedded?: boolean } = {}):React.ReactElement {
  const {t}=useI18n();const client=getQueryClient();
  const [filters,setFilters]=React.useState<Filters>(()=>client.getQueryData<Filters>(['bing-errand','selected'])??{});
  const select=(next:Filters)=>{client.setQueryData(['bing-errand','selected'],next);setFilters(next);};
- return <Screen titleKey="screen.errand.title" showMailbox={false} testID="errand-screen">
+ return <FeatureScreen embedded={embedded} titleKey="screen.errand.title" showMailbox={false} testID="errand-screen">
   <UnderlineFilter testID="errand-type" options={(['all','delivery','purchase','urgent'] as const).map(key=>({key,labelKey:typeKeys[key]}))} selectedKey={filters.type??'all'} onSelect={type=>select({...filters,type:type==='all'?undefined:type})}/>
   <UnderlineFilter testID="errand-status" options={(['all','open','taken','done'] as const).map(key=>({key,labelKey:statusKeys[key]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
   <ErrandFeed key={JSON.stringify(filters)} filters={filters}/>
- </Screen>;
+ </FeatureScreen>;
 }
 function ErrandFeed({filters}:{filters:Filters}):React.ReactElement {
  const {t}=useI18n();const router=useRouter();const client=getQueryClient();
