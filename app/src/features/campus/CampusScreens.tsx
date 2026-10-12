@@ -23,8 +23,9 @@ import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
 import {getPostList, getPostDetail} from '../../../../shared/api/posts';
+import { wallTemplateLabel, WallTemplateContent } from './wallTemplates';
 
-type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;template_key?:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
 function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
  return Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
 }
@@ -52,7 +53,7 @@ type Snapshot={rows:readonly Post[];page:number;cursor:number|null;hasMore:boole
 function asWall(value:unknown):Post {
  const row=asPost(value);
  // Never retain raw identity, title or images from an anonymous response.
- return {id:row.id,content:row.content,liked:row.liked,like_count:row.like_count,comment_count:row.comment_count};
+ return {id:row.id,content:row.content,template_key:row.template_key,liked:row.liked,like_count:row.like_count,comment_count:row.comment_count};
 }
 function snapshotKey(kind:CampusKind){
  return [...(kind==='wall'?QK.confessionWindow('_guest'):QK.postsInfinite('_guest',10)), 'campusReadSnapshot'];
@@ -137,7 +138,7 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
     <SearchHighlight value={row.title||t('screen.campus.read.post')} query={query}/>
     <SearchHighlight value={row.content} query={query}/>
    </Pressable>:(()=>{const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;return <View>
-    <ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?t('screen.campus.read.anonymous'):row.title||t('screen.campus.read.post')} subtitle={row.content}
+    <ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?wallTemplateLabel(t,row.template_key):row.title||t('screen.campus.read.post')} subtitle={row.content} meta={kind==='wall'?t('screen.campus.read.anonymous'):undefined}
      onPress={()=>router.push((kind==='wall'?`/campus/wall/${row.id}`:`/campus/${row.id}`) as never)}/>
     {images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null}
    </View>})()}/>
@@ -173,12 +174,12 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
   labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
  const back=()=>published?router.replace('/' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/?tab=wall':'/') as never);
  const images=postImageUrls(post);
- return <DetailScreen testID="campus-detail" title={kind==='wall'?t('screen.campus.read.wallTitle'):post?.title||t('screen.campus.read.title')}
+ return <DetailScreen testID="campus-detail" title={kind==='wall'?wallTemplateLabel(t,post?.template_key):post?.title||t('screen.campus.read.title')}
   author={post?.author ? {kind:'named',name:post.author.nickname||post.author.username||t('screen.campus.read.author')} : {kind:'anonymous'}}
   onReport={post&&actions.report.state!=='success'?()=>setReportOpen(true):undefined} interactions={actions.interactions} onToggleLike={post?actions.onToggleLike:undefined} comments={post?actions.comments:undefined} state={loading?'loading':error?.kind==='content'?'empty':error?'error':post?'content':'empty'} error={error}
   empty={{kind:'noResult',title:t('screen.campus.read.unavailable'),actionLabel:t('screen.campus.read.backToList'),onAction:back}}
   onBack={back} onRetry={()=>error?.kind==='content'?back():void load()}
-  body={<><Text role="body">{post?.content}</Text>{images.length>1?<MediaCarousel testID="campus-media" uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID="campus-media" uris={images} variant="hero"/>:null}{post?actions.body:null}{reportPanel}</>}
+  body={<>{kind==='wall'&&post?<WallTemplateContent templateKey={post.template_key} content={post.content}/>:<Text role="body">{post?.content}</Text>}{images.length>1?<MediaCarousel testID="campus-media" uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID="campus-media" uris={images} variant="hero"/>:null}{post?actions.body:null}{reportPanel}</>}
   labels={{back:t('action.back'),like:t('screen.campus.read.like'),favorite:t('action.save'),comment:t('screen.campus.read.comments'),report:t('screen.campus.read.report'),countPlaceholder:'—',anonymous:t('screen.campus.read.anonymous'),
    comments:{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')},commentsEnd:t('screen.campus.read.end'),commentsRetry:t('action.retry')}}/>;
 }

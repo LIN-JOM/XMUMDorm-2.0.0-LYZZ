@@ -37,10 +37,13 @@ export const en: Record<MessageKey, string> = {
   // 丙：万能墙投稿
   'publish.wall.template': 'Template',
   'publish.wall.content': 'Content',
-  'publish.wall.bigtype': 'Big Type',
-  'publish.wall.letter': 'Letter',
+  'publish.wall.bigtype': 'Poster',
+  'publish.wall.letter': 'Archive',
   'publish.wall.note': 'Sticky Note',
-  'publish.wall.invalidTemplate': 'This template is unavailable. Choose Big Type, Letter, or Sticky Note.',
+  'publish.wall.announcement': 'Announcement',
+  'publish.wall.dialogue': 'Dialogue',
+  'publish.wall.checklist': 'Checklist',
+  'publish.wall.invalidTemplate': 'This template is unavailable. Choose an available template.',
   'publish.wall.tooLong': 'Content exceeds this template’s limit. Shorten it or choose another template.',
 
   // ── Primary navigation (five slots) ──────────────────────────

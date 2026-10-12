@@ -276,7 +276,7 @@
 }
 
 /* ============================================
-   卡片外壳（三款版式共用）
+   卡片外壳（六款版式共用）
    ============================================ */
 .cf-card {
   position: relative;
@@ -369,7 +369,7 @@
 }
 
 /* ============================================
-   三款版式正文
+   六款版式正文
    ============================================ */
 .cf-body {
   flex: 1;
@@ -505,6 +505,32 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ---- 公告卡 / 对话卡 / 清单卡 ---- */
+.cf-body--announcement {
+  padding: var(--space-10);
+  border: 1px solid var(--cf-accent);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.cf-announcement-text {
+  margin: 0;
+  font-size: var(--font-size-body-lg);
+  font-weight: 700;
+  line-height: var(--line-height-reading);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cf-body--dialogue { gap: var(--space-4); padding: var(--space-8); }
+.cf-dialogue-line { margin: 0; padding: var(--space-4) var(--space-6); border-radius: var(--radius-md); background: var(--color-bg-surface-soft); line-height: var(--line-height-reading); word-break: break-word; }
+.cf-dialogue-line:nth-child(even) { align-self: flex-end; background: var(--cf-accent-soft); }
+
+.cf-body--checklist { padding: var(--space-8); }
+.cf-checklist { display: flex; flex-direction: column; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.cf-checklist li { position: relative; padding-left: var(--space-8); line-height: var(--line-height-reading); word-break: break-word; }
+.cf-checklist li::before { content: '□'; position: absolute; left: 0; color: var(--cf-accent-text); }
 
 /* ============================================
    评论区弹窗（悬浮居中 · portal 到 body）
@@ -989,6 +1015,9 @@
 .cf-tpl-demo--note i:nth-child(2) {
   width: 62%;
 }
+
+.cf-tpl-demo--announcement, .cf-tpl-demo--dialogue, .cf-tpl-demo--checklist { color: var(--cf-accent-text); font-family: var(--font-family-display); font-weight: 700; }
+.cf-tpl-demo--announcement { border: 1px solid var(--cf-accent); border-radius: var(--radius-xs); padding: var(--space-2) var(--space-6); }
 
 .cf-template-option__name {
   color: var(--color-text-primary);

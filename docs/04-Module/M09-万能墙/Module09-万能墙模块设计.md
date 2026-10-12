@@ -27,7 +27,7 @@
 | 身份 | 实名（昵称 + 头像） | **对所有人匿名**（后台留 `user_id` 可追溯） |
 | 内容形态 | 多图瀑布流、标签、热搜 | **纯文字**，无图片、无标签 |
 | 浏览方式 | 无限滚动列表 | **一次只展示一篇** + 键盘翻页 |
-| 版式 | 有图卡 / 无图卡 | 用户选 3 款**文字版式**（`template_key`） |
+| 版式 | 有图卡 / 无图卡 | 用户选 6 款**文字版式**（`template_key`） |
 | 互动 | 点赞 + 二级评论 + 经验值 | 点赞 + 评论/回复，**不做**经验值与等级联动 |
 | 搜索 | 有 | 无（首版） |
 
@@ -41,7 +41,7 @@
 |---|--------|------|
 | 1 | 「模板渲染」语义 | 模板 = **帖子展示版式**（类似小红书图文笔记的样式差异），**不是**填空表单，**不是**服务端模板引擎 |
 | 2 | 投稿输入 | 用户只填 **正文** + **选版式**，没有独立「致谁」字段、没有自定义笔名 |
-| 3 | 版式集合 | 首版 **3 款**：大字卡 / 信笺卡 / 便签卡 |
+| 3 | 版式集合 | D-5 **6 款**：便签 / 公告 / 档案 / 对话 / 清单 / 海报 |
 | 4 | 版式归属 | 投稿时由用户选择，存 `template_key`；首版发布后不可更换 |
 | 5 | 匿名规则 | 对所有人匿名；数据库保留 `user_id`，仅管理员后台可追溯 |
 | 6 | 数据模型 | **新建** `confessions` / `confession_comments` / `confession_likes`，**不复用** `posts` / `comments` |
@@ -177,28 +177,28 @@ API **永远不会**在响应里返回 `confessions.user_id`、`username`、`nic
 
 ### 5.1 单一事实来源：`shared/constants/confessionTemplates.js`
 
-前后端**共用同一份**定义：前端用于渲染与选择器，后端用于白名单校验。这样新增版式只改一处，且不会出现「前端能选、后端拒绝」的错配。
+前端与后端维护两份刻意的双胞胎定义：`shared/` 供 Web/App 使用，`constants/` 供 CommonJS 后端校验。`confessionTemplatesParity.test.js` 守住 key、上限和双语文案，避免出现「前端能选、后端拒绝」的错配。
 
 ```js
 /**
- * 万能墙版式定义（Web 与后端共用）
+ * 万能墙版式定义（Web/App ESM 版本）
  * label/description 双语；key 即 confessions.template_key
  */
 export const CONFESSION_TEMPLATES = [
   {
     key: 'bigtype',
-    labelZh: '大字卡',
-    labelEn: 'Big Type',
-    descZh: '短句心意，居中大字',
-    descEn: 'Short lines, centered and large',
+    labelZh: '海报卡',
+    labelEn: 'Poster',
+    descZh: '短句主张，居中突出',
+    descEn: 'A short statement with a bold centre',
     maxLength: 60,
   },
   {
     key: 'letter',
-    labelZh: '信笺卡',
-    labelEn: 'Letter',
-    descZh: '长文倾诉，纸感信笺',
-    descEn: 'Longer text on letter paper',
+    labelZh: '档案卡',
+    labelEn: 'Archive',
+    descZh: '完整记录，适合长文',
+    descEn: 'A complete record for longer writing',
     maxLength: 1000,
   },
   {
@@ -209,6 +209,9 @@ export const CONFESSION_TEMPLATES = [
     descEn: 'Lines as items, for finding people or things',
     maxLength: 300,
   },
+  { key: 'announcement', labelZh: '公告卡', labelEn: 'Announcement', descZh: '简短通知，信息明确', descEn: 'A concise notice with clear information', maxLength: 200 },
+  { key: 'dialogue', labelZh: '对话卡', labelEn: 'Dialogue', descZh: '逐行对话，保留语气', descEn: 'Line-by-line dialogue that keeps the voice', maxLength: 500 },
+  { key: 'checklist', labelZh: '清单卡', labelEn: 'Checklist', descZh: '逐行列项，便于核对', descEn: 'One item per line for quick checking', maxLength: 500 },
 ];
 
 export const DEFAULT_CONFESSION_TEMPLATE = 'bigtype';
@@ -223,19 +226,22 @@ export function getTemplate(key) {
 }
 ```
 
-**注意存放位置**：该文件必须放在 `shared/` 下（后端 `routes/confessions.js` 用 `require('../shared/constants/confessionTemplates')`，前端用 `@shared/constants/confessionTemplates`）。
+**注意存放位置**：ESM 真源在 `shared/`，CommonJS 双胞胎在 `constants/`；后端使用后者，前端用 `@shared/constants/confessionTemplates`。
 
 ✅ **已知可行**：`frontend/vite.config.js:8` 定义 `sharedRoot = path.resolve(__dirname, '../shared')`，`:33` 将其别名为 `@shared`，指向整个 `shared/` 根——因此 `shared/constants/` 在引用范围内。且 `shared/constants/canteen.js`、`shared/constants/levelConfig.js` 已存在，说明该路径此前已被消费。
 
-### 5.2 三款版式的视觉分工
+### 5.2 六款版式的视觉分工
 
 | key | 名称 | 适用用途 | 视觉要点 | 正文长度上限 |
 |-----|------|----------|----------|--------------|
-| `bigtype` | 大字卡 | 表白短句 | 正文居中、超大字号（clamp 24–44px）、行高 1.4、卡片底色为柔和渐变；超过 3 行时字号自动降级一档 | 60 |
-| `letter` | 信笺卡 | 提问 / 长倾诉 | 纸质底色 + 横向细纹、衬线或类衬线字、首行缩进、右下角「—— 匿名」落款 | 1000 |
+| `bigtype` | 海报卡 | 短句主张 | 正文居中、超大字号；超过 3 行时字号自动降级一档 | 60 |
+| `letter` | 档案卡 | 长记录 | 纸质底色 + 横向细纹、首行缩进、右下角匿名落款 | 1000 |
 | `note` | 便签卡 | 寻人 / 寻物 | 便签色块 + 顶部胶带装饰、正文按换行渲染为**要点行**（每行前加小圆点）、略微旋转 -0.6deg | 300 |
+| `announcement` | 公告卡 | 简短通知 | 边框强调、居中信息 | 200 |
+| `dialogue` | 对话卡 | 多人说法 | 按换行分段、交替气泡 | 500 |
+| `checklist` | 清单卡 | 待办与核对 | 按换行列项、方框标记 | 500 |
 
-三款版式**共用**同一个卡片外壳（圆角、边框、阴影、宽度），差异只在正文排布与底色，保证翻页时视觉重心不漂移。
+六款版式**共用**同一个卡片外壳（圆角、边框、阴影、宽度），差异只在正文排布与底色，保证翻页时视觉重心不漂移。
 
 ### 5.3 长度校验
 
@@ -355,9 +361,7 @@ export function getTemplate(key) {
 | `frontend/src/pages/ConfessionWall.css` | 页面与动效样式 |
 | `frontend/src/pages/ConfessionCompose.jsx` | 投稿页（正文 + 版式选择 + 预览） |
 | `frontend/src/components/confession/ConfessionCard.jsx` | 卡片外壳 + 按 `template_key` 分派正文渲染 |
-| `frontend/src/components/confession/templates/BigTypeBody.jsx` | 大字卡正文 |
-| `frontend/src/components/confession/templates/LetterBody.jsx` | 信笺卡正文 |
-| `frontend/src/components/confession/templates/NoteBody.jsx` | 便签卡正文 |
+| `frontend/src/components/confession/ConfessionBody.jsx` | 六模板正文分派 |
 | `frontend/src/components/confession/ConfessionPager.jsx` | 纵向滑动轨道（翻页动效） |
 | `frontend/src/components/confession/ConfessionCommentPanel.jsx` | 评论弹窗（`createPortal` 到 `body`，悬浮居中） |
 | `shared/utils/focusTrap.js` | 焦点陷阱纯逻辑（可聚焦选择器 + Tab 环绕决策） |
@@ -602,7 +606,7 @@ confession: {
 - 游标分页：`older` / `newer` 双向、`limit` 钳制、锚点已删除
 - 匿名性断言（**最重要**）：断言 `/window`、`/:id`、`/comments` 的响应 JSON **不含** `user_id`、`username`、`nickname`、`avatar` 任何字段。建议写成一个可复用的断言辅助函数，对三个接口都跑一遍
 - 版式白名单：非法 `template_key` → 400
-- 逐版式长度上限：三款版式各测边界值（上限 / 上限+1）
+- 逐版式长度上限：六款版式各测边界值（上限 / 上限+1）
 - 评论二级限制：回复回复 → 400；`parent_id` 跨帖 → 400
 - 点赞幂等：连续两次 → 第一次 `liked: true`、第二次 `liked: false`（切换语义）
 - XSS：正文含 `<script>` / `<img onerror>` → 入库后为纯文本
@@ -636,7 +640,7 @@ confession: {
 4. `routes/confessions.js` + `server.js` 挂载
 5. `__tests__/routes/confessions.test.js`（**先测后接前端**，接口契约稳定后再动 UI）
 6. `shared/api/confessions.js` + `queryKeys` 增补
-7. 前端：卡片与三款版式 → 翻页轨道 → 键盘逻辑（纯函数先测）→ 评论区面板 → 投稿页
+7. 前端：卡片与六款版式 → 翻页轨道 → 键盘逻辑（纯函数先测）→ 评论区面板 → 投稿页
 8. 集成改动：`siteShellNav.js`、`layoutRoutes.jsx`、`pageTitles.js`、`reports.js`、`admin.js`
 9. 前端键盘/滑窗纯函数单测
 10. 文档：本文档转「已评审」+ `docs/04-Module/README.md` 模块索引补 M09 + `docs/01-Requirement/product/产品需求文档_PRD.md` 功能全景补一行 + 测试报告
@@ -683,7 +687,7 @@ confession: {
 | `shared/utils/confessionWindow.js` | 滑窗状态机纯逻辑 |
 | `frontend/src/pages/ConfessionWall.jsx` / `.css` | 页面与样式 |
 | `frontend/src/pages/ConfessionCompose.jsx` | 投稿页 |
-| `frontend/src/components/confession/ConfessionBody.jsx` | 三款版式正文 |
+| `frontend/src/components/confession/ConfessionBody.jsx` | 六款版式正文 |
 | `frontend/src/components/confession/ConfessionCard.jsx` | 卡片 |
 | `frontend/src/components/confession/ConfessionPager.jsx` | 纵向翻页轨道 |
 | `frontend/src/components/confession/ConfessionCommentPanel.jsx` | 评论区面板 |

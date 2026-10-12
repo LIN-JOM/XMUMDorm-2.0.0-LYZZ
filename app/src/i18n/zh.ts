@@ -38,10 +38,13 @@ export const zh = {
   // 丙：万能墙投稿
   'publish.wall.template': '版式',
   'publish.wall.content': '正文',
-  'publish.wall.bigtype': '大字卡',
-  'publish.wall.letter': '信笺卡',
+  'publish.wall.bigtype': '海报卡',
+  'publish.wall.letter': '档案卡',
   'publish.wall.note': '便签卡',
-  'publish.wall.invalidTemplate': '所选版式不可用，请选择大字卡、信笺卡或便签卡。',
+  'publish.wall.announcement': '公告卡',
+  'publish.wall.dialogue': '对话卡',
+  'publish.wall.checklist': '清单卡',
+  'publish.wall.invalidTemplate': '所选版式不可用，请选择可用版式。',
   'publish.wall.tooLong': '正文超过当前版式上限，请缩短正文或切换版式。',
 
   // ── 一级导航（五格，宪法 4.1）────────────────────────────────
