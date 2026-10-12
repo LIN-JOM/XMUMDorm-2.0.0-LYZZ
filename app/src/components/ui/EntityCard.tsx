@@ -53,7 +53,11 @@ export const ENTITY_STATUS_LABEL: Record<string, string> = {
 export type EntityCardProps = {
   domain: EntityCardDomain;
   title: string;
+  /** Rich title content while retaining the plain title for accessibility. */
+  titleContent?: React.ReactNode;
   subtitle?: string;
+  /** Rich body content while retaining the plain subtitle for accessibility. */
+  subtitleContent?: React.ReactNode;
   /** 主图（菜品 / 二手 / 帖子）；无图则整块不渲染 */
   mediaUri?: string | null;
   /** 角标区（如 `A08 Badge`） */
@@ -105,7 +109,9 @@ export function entityMetrics(props: Pick<
 export function EntityCard({
   domain,
   title,
+  titleContent,
   subtitle,
+  subtitleContent,
   mediaUri,
   badges,
   price,
@@ -158,11 +164,11 @@ export function EntityCard({
             </View>
           ) : null}
           <Text role="body" emphasis="strong" colorToken="text-primary" numberOfLines={2}>
-            {title}
+            {titleContent ?? title}
           </Text>
-          {subtitle ? (
+          {subtitle || subtitleContent ? (
             <Text role={isPost ? 'body' : 'caption'} colorToken="text-secondary" numberOfLines={isPost ? 4 : 2}>
-              {subtitle}
+              {subtitleContent ?? subtitle}
             </Text>
           ) : null}
           {isPost ? (postMedia ?? media) : null}

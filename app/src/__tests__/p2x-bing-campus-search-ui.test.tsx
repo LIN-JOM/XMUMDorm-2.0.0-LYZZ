@@ -7,6 +7,10 @@ import {getQueryClient} from '@/shared/queryClient';
 const mockPush=jest.fn();
 jest.mock('expo-router',()=>({useRouter:()=>({push:mockPush,back:jest.fn(),replace:jest.fn(),canGoBack:()=>true})}));
 jest.mock('../../../shared/api/posts',()=>({getPostList:jest.fn()}));
+jest.mock('@/features/campus/useCampusActions',()=>({
+ useCampusLike:()=>({liked:false,likeCount:null,commentCount:null,notice:null,onToggleLike:jest.fn()}),
+ useCampusActions:jest.fn(),
+}));
 import type {ListScreenProps} from '@/components/ui/ListScreen';
 let mockListProps:ListScreenProps<unknown>;
 jest.mock('@/components/ui/ListScreen',()=>{

@@ -113,7 +113,7 @@ export function CampusListScreen({initialTab='confession', beforeTabs, ...screen
  </Screen>;
 }
 
-function TreeholeFeedRow({row}:{row:Post}):React.ReactElement {
+function TreeholeFeedRow({row,query}:{row:Post;query?:string}):React.ReactElement {
  const {t,locale}=useI18n();const router=useRouter();const theme=useTheme();const like=useCampusLike(row,'confession');
  const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;
  const media=images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null;
@@ -121,8 +121,9 @@ function TreeholeFeedRow({row}:{row:Post}):React.ReactElement {
  const metaLabel=row.created_at?formatPostTime(row.created_at,{locale}):'';
  const likeLabel=`${like.likeCount??'—'} ${t('screen.campus.read.like')}`;
  const replyLabel=`${like.commentCount??'—'} ${t('screen.campus.read.comments')}`;
+ const title=row.title||t('screen.campus.read.post');
  return <>
-  <EntityCard domain="post" testID={`campus-row-${row.id}`} title={row.title||t('screen.campus.read.post')} subtitle={row.content} authorLabel={author} metaLabel={metaLabel} postMedia={media} metrics={[]}
+  <EntityCard domain="post" testID={`campus-row-${row.id}`} title={title} titleContent={query?<SearchHighlight value={title} query={query}/>:undefined} subtitle={row.content} subtitleContent={query?<SearchHighlight value={row.content} query={query}/>:undefined} authorLabel={author} metaLabel={metaLabel} postMedia={media} metrics={[]}
    onPress={()=>router.push(`/campus/${row.id}` as never)} postActions={<>
     <Pressable testID={`campus-row-${row.id}-like`} accessibilityRole="button" accessibilityLabel={likeLabel} selected={like.liked} onPress={like.onToggleLike} style={{flexDirection:'row',gap:theme.space('space_1')}}>
      <Icon source={Heart} size="inline" tint={like.liked?'brand':'secondary'}/><Text role="caption" colorToken="text-secondary">{likeLabel}</Text>
@@ -208,13 +209,8 @@ function CampusFeedData({kind,query,tagId,filterChips}:{kind:CampusKind;query?:s
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    filterChips={filterChips}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.campus.read.listEnd'),empty:{kind:'noResult',title:t(query?'screen.campus.search.empty':'screen.campus.read.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={row=>query?<Pressable testID={`campus-row-${row.id}`} accessibilityRole="button"
-    accessibilityLabel={`${row.title||t('screen.campus.read.post')}: ${row.content}`}
-    onPress={()=>router.push(`/campus/${row.id}` as never)}>
-    <SearchHighlight value={row.title||t('screen.campus.read.post')} query={query}/>
-    <SearchHighlight value={row.content} query={query}/>
-    </Pressable>:kind==='wall'?<ListItem testID={`campus-row-${row.id}`} title={wallTemplateLabel(t,row.template_key)} subtitle={row.content} meta={t('screen.campus.read.anonymous')}
-     onPress={()=>router.push(`/campus/wall/${row.id}` as never)}/>:<TreeholeFeedRow row={row}/>}/>
+   renderItem={row=>kind==='wall'?<ListItem testID={`campus-row-${row.id}`} title={wallTemplateLabel(t,row.template_key)} subtitle={row.content} meta={t('screen.campus.read.anonymous')}
+     onPress={()=>router.push(`/campus/wall/${row.id}` as never)}/>:<TreeholeFeedRow row={row} query={query}/>}/>
  </>;
 }
 
