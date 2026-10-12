@@ -47,7 +47,11 @@ export function NotificationSettingsSection(): React.ReactElement {
       <Text role="body" colorToken="text-secondary">
         {t('me.settings.notifications.description')}
       </Text>
-      {status === 'granted' ? (
+      {status === 'unavailable' ? (
+        <Text testID="settings-notifications-unavailable" role="body">
+          {t('me.settings.notifications.unavailable')}
+        </Text>
+      ) : status === 'granted' ? (
         <Text testID="settings-notifications-granted" role="body">
           {t('me.settings.notifications.enabled')}
         </Text>

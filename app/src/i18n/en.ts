@@ -301,6 +301,7 @@ export const en: Record<MessageKey, string> = {
   'me.settings.notifications.description': 'Course reminders and important campus messages are sent only after you enable them.',
   'me.settings.notifications.enabled': 'Notifications are enabled',
   'me.settings.notifications.disabled': 'Notifications are off',
+  'me.settings.notifications.unavailable': 'Notifications are unavailable in this preview.',
   'me.settings.notifications.request': 'Enable notifications',
   'me.settings.notifications.openSettings': 'Open system settings',
   'me.settings.more': 'More',

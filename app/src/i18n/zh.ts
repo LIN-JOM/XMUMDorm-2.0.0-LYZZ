@@ -308,6 +308,7 @@ export const zh = {
   'me.settings.notifications.description': '仅在你开启后发送课程提醒和重要校园消息',
   'me.settings.notifications.enabled': '通知已开启',
   'me.settings.notifications.disabled': '通知未开启',
+  'me.settings.notifications.unavailable': '当前预览暂不支持通知',
   'me.settings.notifications.request': '开启通知',
   'me.settings.notifications.openSettings': '前往系统设置',
   'me.settings.more': '更多',

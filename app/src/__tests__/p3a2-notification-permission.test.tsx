@@ -47,3 +47,12 @@ it('拒绝后保留系统设置修复入口', async () => {
   await fireEvent.press(view.getByTestId('settings-notifications-open-settings'));
   expect(mockPermission.openSettings).toHaveBeenCalledTimes(1);
 });
+
+it('预览不支持通知时明确显示限制，不引导无效授权或系统设置', async () => {
+  mockPermission.read.mockResolvedValue('unavailable');
+  const view = await renderApp(<SettingsScreen />);
+  await waitFor(() => expect(view.getByText('当前预览暂不支持通知')).toBeTruthy());
+  expect(view.queryByTestId('settings-notifications-request')).toBeNull();
+  expect(view.queryByTestId('settings-notifications-open-settings')).toBeNull();
+  expect(mockPermission.request).not.toHaveBeenCalled();
+});
