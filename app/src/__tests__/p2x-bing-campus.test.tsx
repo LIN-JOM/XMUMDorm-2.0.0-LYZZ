@@ -3,10 +3,10 @@ import {Button} from '@/components/ui/Button';
 import {act, fireEvent, waitFor} from '@testing-library/react-native';
 import {renderApp} from './helpers/renderApp';
 import {CampusListScreen, CampusDetailScreen} from '@/features/campus/CampusScreens';
-import {getPostList, getPostDetail} from '../../../shared/api/posts';
+import {getPostList, getPostDetail, getPostTagsList} from '../../../shared/api/posts';
 const mockPush=jest.fn(), mockBack=jest.fn(), mockReplace=jest.fn(), mockSetParams=jest.fn();
 jest.mock('expo-router',()=>({useRouter:()=>({setParams:mockSetParams,push:mockPush,back:mockBack,replace:mockReplace,canGoBack:()=>true})}));
-jest.mock('../../../shared/api/posts',()=>({getPostList:jest.fn(),getPostDetail:jest.fn(),toggleLike:jest.fn(),getPostComments:jest.fn(),createComment:jest.fn()}));
+jest.mock('../../../shared/api/posts',()=>({getPostList:jest.fn(),getPostDetail:jest.fn(),getPostTagsList:jest.fn(),toggleLike:jest.fn(),getPostComments:jest.fn(),createComment:jest.fn()}));
 import {getConfessionWindow, getConfession} from '../../../shared/api/confessions';
 import {getQueryClient} from '@/shared/queryClient';
 import {secondaryTabStore} from '@/features/navigation/secondaryTabs';
@@ -20,7 +20,8 @@ jest.mock('../../../shared/api/confessions',()=>({getConfessionWindow:jest.fn(),
 const wall=getConfessionWindow as jest.Mock, wallDetail=getConfession as jest.Mock;
 afterEach(()=>getQueryClient().clear());
 const list=getPostList as jest.Mock, detail=getPostDetail as jest.Mock;
-beforeEach(()=>{getQueryClient().clear();secondaryTabStore.clear();jest.clearAllMocks();list.mockReset();detail.mockReset();wall.mockReset();wallDetail.mockReset();});
+const tags=getPostTagsList as jest.Mock;
+beforeEach(()=>{getQueryClient().clear();secondaryTabStore.clear();jest.clearAllMocks();list.mockReset();detail.mockReset();tags.mockReset();tags.mockResolvedValue([]);wall.mockReset();wallDetail.mockReset();});
 it('树洞从第一页读取，点击进入帖子',async()=>{
  list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动'}],hasMore:false});
  const v=await renderApp(<CampusListScreen/>);
@@ -36,6 +37,20 @@ it('树洞列表保留作者、时间和服务端互动计数',async()=>{
  expect(v.getByText('刚刚')).toBeTruthy();
  expect(v.getByText('12 赞')).toBeTruthy();
  expect(v.getByText('3 评论')).toBeTruthy();
+});
+it('树洞显示服务器标签，选择和清除都保留真实筛选状态',async()=>{
+ tags.mockResolvedValue([{id:7,name_zh:'组队自习',name_en:'Study group'}]);
+ list.mockResolvedValue({list:[{id:7,content:'找自习搭子'}],hasMore:false});
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('filter-chip-7')).toBeTruthy());
+ expect(tags).toHaveBeenCalledWith({limit:20});
+ await fireEvent.press(v.getByTestId('filter-chip-7'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,tagId:7}));
+ expect(v.getByTestId('filter-chip-7').props.accessibilityState.selected).toBe(true);
+ expect(secondaryTabStore.get('square','confession').filters).toEqual({tag:'7'});
+ await fireEvent.press(v.getByTestId('filter-chips-clear'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10}));
+ expect(secondaryTabStore.get('square','confession').filters).toEqual({});
 });
 it('树洞列表复用媒体层：单图保持静态，多图提供横滑页码',async()=>{
  list.mockResolvedValue({list:[
