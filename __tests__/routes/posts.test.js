@@ -126,8 +126,9 @@ describe('Posts Routes', () => {
       expect(res.body.data).toEqual([{ id: 7, slug: 'study', name_zh: '自习', name_en: 'Study' }]);
       expect(query).toHaveBeenCalledWith(
         expect.stringContaining('WHERE name_zh LIKE ? OR name_en LIKE ? OR slug LIKE ?'),
-        ['%study%', '%study%', '%study%', 5]
+        ['%study%', '%study%', '%study%']
       );
+      expect(query.mock.calls[0][0]).toContain('LIMIT 5');
     });
 
     it('keeps anonymous requests and malformed bilingual names rejected', async () => {

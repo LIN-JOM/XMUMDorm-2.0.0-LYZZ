@@ -20,6 +20,7 @@ const { grantExp, revokeByRef, checkAndGrantPostPopularRewards, formatAuthorLeve
 const { attachExp } = require('../utils/expResponse');
 const { isPostContentEligible, isCommentEligible } = require('../utils/expEligibility');
 const { requireCurrentTerms } = require('../services/termsAcceptance');
+const { inlineLimit } = require('../utils/sqlLimit');
 
 // 统一的文本清洗，防止 XSS 注入（去掉所有 HTML 标签，只保留纯文本）
 function cleanText(input) {
@@ -506,8 +507,8 @@ router.get('/tags', async (req, res) => {
            FROM tags
           WHERE name_zh LIKE ? OR name_en LIKE ? OR slug LIKE ?
           ORDER BY created_at ASC, id ASC
-          LIMIT ?`,
-        [like, like, like, limit]
+          LIMIT ${inlineLimit(limit, { fallback: 20, max: 50 })}`,
+        [like, like, like]
       );
       return res.status(200).json({ status: 0, message: 'ok', data: rows || [] });
     }
