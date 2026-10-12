@@ -32,28 +32,13 @@ function picker(overrides: Partial<React.ComponentProps<typeof PostTopicPicker>>
 }
 
 describe('树洞远程话题选择', () => {
-  afterEach(() => jest.useRealTimers());
-
-  it('debounces remote search input', async () => {
-    jest.useFakeTimers();
-    const fixture = picker();
-    const view = await renderApp(fixture.element);
-
-    fireEvent.changeText(view.getByTestId('post-topics-search-input'), '自习');
-    expect(fixture.onSearch).not.toHaveBeenCalled();
-    act(() => jest.advanceTimersByTime(299));
-    expect(fixture.onSearch).not.toHaveBeenCalled();
-    act(() => jest.advanceTimersByTime(1));
-    expect(fixture.onSearch).toHaveBeenCalledWith('自习');
-  });
-
   it('selects the returned topic exactly once after creation', async () => {
     const fixture = picker();
     const view = await renderApp(fixture.element);
 
-    fireEvent.changeText(view.getByTestId('post-topics-name-zh'), '自习');
-    fireEvent.changeText(view.getByTestId('post-topics-name-en'), 'Study');
-    fireEvent.press(view.getByTestId('post-topics-create'));
+    await act(async () => { fireEvent.changeText(view.getByTestId('post-topics-name-zh'), '自习'); });
+    await act(async () => { fireEvent.changeText(view.getByTestId('post-topics-name-en'), 'Study'); });
+    await act(async () => { fireEvent.press(view.getByTestId('post-topics-create')); });
 
     await waitFor(() => expect(fixture.createTopic).toHaveBeenCalledWith({ name_zh: '自习', name_en: 'Study' }));
     expect(fixture.onChange).toHaveBeenCalledWith(['17']);
@@ -65,9 +50,9 @@ describe('树洞远程话题选择', () => {
     const fixture = picker({ createTopic: jest.fn().mockRejectedValue(new Error('offline')) });
     const view = await renderApp(fixture.element);
 
-    fireEvent.changeText(view.getByTestId('post-topics-name-zh'), '自习');
-    fireEvent.changeText(view.getByTestId('post-topics-name-en'), 'Study');
-    fireEvent.press(view.getByTestId('post-topics-create'));
+    await act(async () => { fireEvent.changeText(view.getByTestId('post-topics-name-zh'), '自习'); });
+    await act(async () => { fireEvent.changeText(view.getByTestId('post-topics-name-en'), 'Study'); });
+    await act(async () => { fireEvent.press(view.getByTestId('post-topics-create')); });
 
     await waitFor(() => expect(view.getByTestId('post-topics-create-error').props.children).toBe(copy.createFailed));
     expect(fixture.onChange).not.toHaveBeenCalled();
@@ -80,12 +65,26 @@ describe('树洞远程话题选择', () => {
     const fixture = picker({ createTopic });
     const view = await renderApp(fixture.element);
 
-    fireEvent.changeText(view.getByTestId('post-topics-name-zh'), '自习');
-    fireEvent.changeText(view.getByTestId('post-topics-name-en'), 'Study');
-    fireEvent.press(view.getByTestId('post-topics-create'));
-    fireEvent.press(view.getByTestId('post-topics-create'));
+    await act(async () => { fireEvent.changeText(view.getByTestId('post-topics-name-zh'), '自习'); });
+    await act(async () => { fireEvent.changeText(view.getByTestId('post-topics-name-en'), 'Study'); });
+    await act(async () => { fireEvent.press(view.getByTestId('post-topics-create')); });
+    await act(async () => { fireEvent.press(view.getByTestId('post-topics-create')); });
     expect(createTopic).toHaveBeenCalledTimes(1);
 
     await act(async () => { finish({ value: '17', label: '自习 / Study' }); });
+  });
+
+  it('debounces remote search input', async () => {
+    jest.useFakeTimers();
+    const fixture = picker();
+    const view = await renderApp(fixture.element);
+
+    await act(async () => { fireEvent.changeText(view.getByTestId('post-topics-search-input'), '自习'); });
+    expect(fixture.onSearch).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(299));
+    expect(fixture.onSearch).not.toHaveBeenCalled();
+    act(() => jest.advanceTimersByTime(1));
+    expect(fixture.onSearch).toHaveBeenCalledWith('自习');
+    jest.useRealTimers();
   });
 });
