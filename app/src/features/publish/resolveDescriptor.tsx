@@ -101,8 +101,14 @@ export function useResolvedDescriptor(descriptor: PublishFormDescriptor, registe
     setKnownPostTags(previous => mergePostTags(previous, [created]));
     return toFormOption(created, locale);
   }, [locale]);
-  const currentPostTags = isPostPublish ? (query.data ?? []) : [];
-  const allPostTags = isPostPublish ? mergePostTags(knownPostTags, currentPostTags) : [];
+  const currentPostTags = React.useMemo(
+    () => (isPostPublish ? (query.data ?? []) : []),
+    [isPostPublish, query.data]
+  );
+  const allPostTags = React.useMemo(
+    () => (isPostPublish ? mergePostTags(knownPostTags, currentPostTags) : []),
+    [currentPostTags, isPostPublish, knownPostTags]
+  );
   const renderTags = React.useCallback<NonNullable<FormFieldDescriptor['render']>>(({ value, onChange, disabled }) => (
     <PostTopicPicker
       label={t('publish.bing.tags')}
