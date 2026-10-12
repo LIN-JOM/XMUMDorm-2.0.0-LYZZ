@@ -19,8 +19,7 @@ import type { MessageKey } from '@/i18n';
 
 export type FilterChipOption = {
   key: string;
-  labelKey: MessageKey;
-};
+} & ({ labelKey: MessageKey; label?: never } | { label: string; labelKey?: never });
 
 export type FilterChipsProps = {
   options: readonly FilterChipOption[];
@@ -48,6 +47,7 @@ export function FilterChips({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: theme.space('space_4') }}>
         {options.map((option) => {
           const isSelected = selected.includes(option.key);
+          const label = option.label ?? t(option.labelKey!);
           return (
             <Pressable
               key={option.key}
@@ -56,7 +56,7 @@ export function FilterChips({
               // R4：角色是 button + selected；⛔ 不是 tab，也**没有指示器**
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={t(option.labelKey)}
+              accessibilityLabel={label}
               style={{
                 minHeight: theme.touchTarget,
                 justifyContent: 'center',
@@ -77,7 +77,7 @@ export function FilterChips({
                 emphasis={isSelected ? 'strong' : 'regular'}
                 colorToken={isSelected ? 'text-brand' : 'text-secondary'}
               >
-                {t(option.labelKey)}
+                {label}
               </Text>
             </Pressable>
           );
