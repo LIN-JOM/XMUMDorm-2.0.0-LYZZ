@@ -49,7 +49,8 @@ it('树洞显示服务器标签，选择和清除都保留真实筛选状态',as
  expect(v.getByTestId('filter-chip-7').props.accessibilityState.selected).toBe(true);
  expect(secondaryTabStore.get('square','confession').filters).toEqual({tag:'7'});
  await fireEvent.press(v.getByTestId('filter-chips-clear'));
- await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10}));
+ await waitFor(()=>expect(v.getByTestId('filter-chip-7').props.accessibilityState.selected).toBe(false));
+ expect(v.getByTestId('campus-row-7')).toBeTruthy();
  expect(secondaryTabStore.get('square','confession').filters).toEqual({});
 });
 it('树洞列表复用媒体层：单图保持静态，多图提供横滑页码',async()=>{
