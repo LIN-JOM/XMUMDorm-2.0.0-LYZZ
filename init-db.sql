@@ -284,3 +284,126 @@ CREATE TABLE IF NOT EXISTS material_downloads (
   KEY idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习资料下载流水';
 
+
+-- description: Campus shop; integer MYR cents, persistent carts, immutable order snapshots.
+-- depends: users
+-- reversible: drop shop_addresses, shop_cart_items, shop_orders, shop_slots,
+-- shop_products, shop_settings (only after exporting orders; destroys shop data).
+CREATE TABLE IF NOT EXISTS shop_products (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ category VARCHAR(40) NOT NULL,
+ name_zh VARCHAR(120) NOT NULL, name_en VARCHAR(120) NOT NULL,
+ spec_zh VARCHAR(120) NOT NULL, spec_en VARCHAR(120) NOT NULL,
+ description_zh TEXT NOT NULL, description_en TEXT NOT NULL,
+ image_url VARCHAR(500) NOT NULL,
+ price_cents INT UNSIGNED NOT NULL, stock INT UNSIGNED NOT NULL DEFAULT 0,
+ sold_out TINYINT(1) NOT NULL DEFAULT 0,
+ is_demo TINYINT(1) NOT NULL DEFAULT 0,
+ created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ deleted_at DATETIME NULL,
+ INDEX idx_shop_category (category, deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_slots (
+ id INT AUTO_INCREMENT PRIMARY KEY,
+ delivery_date DATE NOT NULL,
+ schedule_id INT NULL,
+ delivery_start TIME NULL,
+ delivery_end TIME NULL,
+ is_special TINYINT(1) NOT NULL DEFAULT 0,
+ label_zh VARCHAR(120) NOT NULL, label_en VARCHAR(120) NOT NULL,
+ cutoff_at DATETIME NOT NULL COMMENT 'Asia/Singapore wall clock',
+ capacity INT UNSIGNED NOT NULL DEFAULT 100,
+ enabled TINYINT(1) NOT NULL DEFAULT 1,
+ is_demo TINYINT(1) NOT NULL DEFAULT 0,
+ created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ deleted_at DATETIME NULL,
+ INDEX idx_shop_date (delivery_date, enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_settings (
+ id INT PRIMARY KEY,
+ delivery_notice_zh TEXT NOT NULL, delivery_notice_en TEXT NOT NULL,
+ payment_zh TEXT NOT NULL, payment_en TEXT NOT NULL,
+ created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_addresses (
+ id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL UNIQUE,
+ contact_name VARCHAR(100) NOT NULL, contact VARCHAR(120) NOT NULL,
+ building VARCHAR(40) NOT NULL, room VARCHAR(30) NOT NULL,
+ created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_cart_items (
+ id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, product_id INT NOT NULL,
+ quantity INT UNSIGNED NOT NULL,
+ created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ deleted_at DATETIME NULL,
+ UNIQUE KEY uk_shop_cart (user_id, product_id),
+ FOREIGN KEY (user_id) REFERENCES users(id),
+ FOREIGN KEY (product_id) REFERENCES shop_products(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_orders (
+ id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, slot_id INT NOT NULL,
+ idempotency_key VARCHAR(80) NOT NULL, request_hash CHAR(64) NOT NULL,
+ address_json JSON NOT NULL, items_json JSON NOT NULL, slot_json JSON NOT NULL,
+ payment_json JSON NOT NULL,
+ total_cents INT UNSIGNED NOT NULL,
+ status VARCHAR(30) NOT NULL DEFAULT 'pending_verification',
+ created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY uk_shop_request (user_id, idempotency_key),
+ INDEX idx_shop_orders_slot (slot_id, status),
+ INDEX idx_shop_orders_user (user_id, created_at),
+ FOREIGN KEY (user_id) REFERENCES users(id),
+ FOREIGN KEY (slot_id) REFERENCES shop_slots(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- description: Independent campus merchants and payment instructions.
+CREATE TABLE IF NOT EXISTS shop_merchants (
+ id INT AUTO_INCREMENT PRIMARY KEY, slug VARCHAR(60) NOT NULL UNIQUE,
+ name_zh VARCHAR(120) NOT NULL, name_en VARCHAR(120) NOT NULL,
+ enabled TINYINT NOT NULL DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_merchant_members (
+ merchant_id INT NOT NULL, user_id INT NOT NULL,
+ PRIMARY KEY (merchant_id,user_id), FOREIGN KEY (merchant_id) REFERENCES shop_merchants(id), FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_daily_schedules (
+ id INT AUTO_INCREMENT PRIMARY KEY, merchant_id INT NOT NULL UNIQUE,
+ label_zh VARCHAR(120) NOT NULL, label_en VARCHAR(120) NOT NULL,
+ delivery_start TIME NOT NULL, delivery_end TIME NOT NULL,
+ capacity INT UNSIGNED NOT NULL DEFAULT 100,
+ enabled TINYINT(1) NOT NULL DEFAULT 1,
+ created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY (merchant_id) REFERENCES shop_merchants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_slots ADD UNIQUE KEY uk_shop_schedule_date (schedule_id,delivery_date)', 'SELECT 1') FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_slots' AND INDEX_NAME='uk_shop_schedule_date');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_slots ADD CONSTRAINT fk_shop_slot_schedule FOREIGN KEY (schedule_id) REFERENCES shop_daily_schedules(id) ON DELETE SET NULL', 'SELECT 1') FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND CONSTRAINT_NAME='fk_shop_slot_schedule');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_products ADD COLUMN merchant_id INT NOT NULL DEFAULT 1', 'SELECT 1') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_products' AND COLUMN_NAME='merchant_id');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_products ADD INDEX idx_shop_products_merchant (merchant_id)', 'SELECT 1') FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_products' AND INDEX_NAME='idx_shop_products_merchant');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_slots ADD COLUMN merchant_id INT NOT NULL DEFAULT 1', 'SELECT 1') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_slots' AND COLUMN_NAME='merchant_id');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_slots ADD INDEX idx_shop_slots_merchant (merchant_id)', 'SELECT 1') FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_slots' AND INDEX_NAME='idx_shop_slots_merchant');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_orders ADD COLUMN merchant_id INT NOT NULL DEFAULT 1', 'SELECT 1') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='merchant_id');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_orders ADD INDEX idx_shop_orders_merchant (merchant_id)', 'SELECT 1') FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND INDEX_NAME='idx_shop_orders_merchant');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_settings ADD COLUMN payment_methods JSON NULL', 'SELECT 1') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_settings' AND COLUMN_NAME='payment_methods');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+SET @shop_ddl = (SELECT IF(COUNT(*)=0, 'ALTER TABLE shop_settings ADD COLUMN delivery_zones JSON NULL', 'SELECT 1') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_settings' AND COLUMN_NAME='delivery_zones');
+PREPARE shop_stmt FROM @shop_ddl; EXECUTE shop_stmt; DEALLOCATE PREPARE shop_stmt;
+CREATE TABLE IF NOT EXISTS shop_payment_proofs (
+ order_id INT PRIMARY KEY, content_type VARCHAR(30) NOT NULL, image LONGBLOB NOT NULL,
+ updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
