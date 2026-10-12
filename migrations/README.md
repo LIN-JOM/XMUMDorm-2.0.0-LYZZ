@@ -141,3 +141,7 @@ node scripts/createAdmin.js
 ```
 
 默认账号 `admin` / 密码见脚本注释；登录后从「我的 → 管理员后台」进入。
+
+- `071_campus_shop.sql`：校园商城六张表；运行 `node scripts/run-migration-071-shop.js`；参见 [商城实施说明](../docs/07-Implement/校园商城/本地商城说明.md)。
+`072_shop_merchants.sql`：独立商户、账号归属、按店铺隔离商品/时段/订单、付款方式与配送费用配置、私有付款截图；支持重复执行。
+`073_daily_delivery_schedule.sql`：历史迁移，曾用于每日重复配送时段。表结构为兼容既有数据库而保留；当前商城已改为商家指定日期开放下单，不再读取每日计划或接受非指定日期时段。

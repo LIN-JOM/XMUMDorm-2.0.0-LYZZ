@@ -38,11 +38,18 @@ export default function NeoDialog({
 }) {
   const dialogRef = useRef(null);
   const previousFocusRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const onOpenChangeRef = useRef(onOpenChange);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    onOpenChangeRef.current = onOpenChange;
+  }, [onClose, onOpenChange]);
 
   const handleClose = useCallback(() => {
-    onClose?.();
-    onOpenChange?.(false);
-  }, [onClose, onOpenChange]);
+    onCloseRef.current?.();
+    onOpenChangeRef.current?.(false);
+  }, []);
 
   useEffect(() => {
     if (open) {

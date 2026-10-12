@@ -49,6 +49,9 @@ export const SITE_PRIMARY_NAV_ITEMS = [
     exact: true,
   },
   {
+    key: 'shop', labelZh: '订水 / 超市', labelEn: 'Water & groceries', to: '/shop', icon: ShoppingBag, matchPrefixes: ['/shop'],
+  },
+  {
     key: 'canteen',
     labelZh: '食堂',
     labelEn: 'Canteen',
