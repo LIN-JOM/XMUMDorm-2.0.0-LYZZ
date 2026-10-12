@@ -27,6 +27,7 @@ import { configureConnectivity, configureFocusTracking, getQueryClient } from '@
 import { ToastHost, ToastProvider } from '@/components/ui/Toast';
 import { SessionProvider } from '@/features/auth/session';
 import { SessionGate } from '@/features/auth/SessionGate';
+import { ReminderRuntimeHost } from '@/features/tools/reminders/ReminderRuntimeHost';
 
 /**
  * P1-01：把后端地址与 token 来源交给 `shared/` 的请求层。
@@ -68,6 +69,7 @@ function GlobalOverlays(): React.ReactElement {
         ⛔ 门自己不许再调 `useSafeAreaInsets()`（否则就是第三个调用点）。
       */}
       <SessionGate topInset={insets.top} bottomInset={insets.bottom} />
+      <ReminderRuntimeHost />
     </>
   );
 }
