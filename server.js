@@ -177,6 +177,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/confessions', confessionRoutes);
 app.use('/api/materials', materialsRoutes);
+app.use('/api/shop', require('./routes/shop'));
 
 // ============================================
 // 错误处理中间件
@@ -198,7 +199,7 @@ app.use((err, req, res, next) => {
 // 13. 监听指定端口，启动服务器
 // 创建时间: 2025-01-26
 // 修改: 添加数据库连接测试、排行榜每周一东八区重置
-app.listen(PORT, async () => {
+app.listen(PORT, process.env.HOST || undefined, async () => {
   console.log(`========================================`);
   console.log(`🚀 服务器已启动！`);
   console.log(`📍 地址: http://127.0.0.1:${PORT}`);

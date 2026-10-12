@@ -1,3 +1,4 @@
+import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -69,7 +70,7 @@ function readMyClubs(value: unknown): readonly MyClub[] {
   });
 }
 
-export function ClubDiscoveryScreen(): React.ReactElement {
+export function ClubDiscoveryScreen({ embedded = false }: { embedded?: boolean } = {}): React.ReactElement {
   const router = useRouter();
   const { t } = useI18n();
   const { pagination, dispatch } = useListPagination({ initial: { hasMore: true } });
@@ -102,7 +103,7 @@ export function ClubDiscoveryScreen(): React.ReactElement {
   }, [load]);
 
   return (
-    <Screen titleKey="clubs.title" showMailbox={false} testID="clubs-screen">
+    <FeatureScreen embedded={embedded} titleKey="clubs.title" showMailbox={false} testID="clubs-screen">
       <ListScreen
         testID="club-list"
         data={rows}
@@ -127,7 +128,7 @@ export function ClubDiscoveryScreen(): React.ReactElement {
           />
         )}
       />
-    </Screen>
+    </FeatureScreen>
   );
 }
 

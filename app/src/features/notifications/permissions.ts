@@ -1,38 +1,43 @@
 import {Linking, Platform} from 'react-native';
-import * as Notifications from 'expo-notifications';
+import type * as Notifications from 'expo-notifications';
+import {loadNotificationClient, type NotificationClient} from './client';
 
-export type NotificationPermission = 'granted' | 'denied' | 'undetermined';
+export type NotificationPermission = 'granted' | 'denied' | 'undetermined' | 'unavailable';
 
 const CHANNEL_ID = 'class-reminders';
 
-function readStatus(status: Notifications.NotificationPermissionsStatus): NotificationPermission {
+function readStatus(status: Notifications.NotificationPermissionsStatus, client: NotificationClient): NotificationPermission {
   if (status.granted) return 'granted';
   if (Platform.OS === 'ios') {
     const value = status.ios?.status;
-    if (value === Notifications.IosAuthorizationStatus.AUTHORIZED ||
-      value === Notifications.IosAuthorizationStatus.PROVISIONAL ||
-      value === Notifications.IosAuthorizationStatus.EPHEMERAL) return 'granted';
+    if (value === client.IosAuthorizationStatus.AUTHORIZED ||
+      value === client.IosAuthorizationStatus.PROVISIONAL ||
+      value === client.IosAuthorizationStatus.EPHEMERAL) return 'granted';
   }
   return status.canAskAgain ? 'undetermined' : 'denied';
 }
 
-async function ensureAndroidChannel(): Promise<void> {
+async function ensureAndroidChannel(client: NotificationClient): Promise<void> {
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+  await client.setNotificationChannelAsync(CHANNEL_ID, {
     name: 'Class reminders',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: client.AndroidImportance.DEFAULT,
   });
 }
 
 /** The only App boundary for notification consent; scheduling remains the timetable domain's work. */
 export const notificationPermission = {
   async read(): Promise<NotificationPermission> {
-    await ensureAndroidChannel();
-    return readStatus(await Notifications.getPermissionsAsync());
+    const client = await loadNotificationClient();
+    if (!client) return 'unavailable';
+    await ensureAndroidChannel(client);
+    return readStatus(await client.getPermissionsAsync(), client);
   },
   async request(): Promise<NotificationPermission> {
-    await ensureAndroidChannel();
-    return readStatus(await Notifications.requestPermissionsAsync());
+    const client = await loadNotificationClient();
+    if (!client) return 'unavailable';
+    await ensureAndroidChannel(client);
+    return readStatus(await client.requestPermissionsAsync(), client);
   },
   async openSettings(): Promise<void> {
     await Linking.openSettings();

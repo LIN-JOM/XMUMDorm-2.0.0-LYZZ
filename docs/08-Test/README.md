@@ -7,3 +7,5 @@
 | [reports/](reports/) | 全项目与模块测试报告 |
 | [regression/](regression/) | 回归验收 |
 | [Web端/](Web端/) | Web 模块测试材料 |
+
+| [校园商城/](校园商城/商城验证记录.md) | 商城测试与验证记录 |
