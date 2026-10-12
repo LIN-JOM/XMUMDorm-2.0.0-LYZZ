@@ -55,7 +55,7 @@ it('树洞帖子按身份、正文、媒体和指标的顺序组合',async()=>{
  await waitFor(()=>expect(v.getByTestId('campus-row-7-media-0',{includeHiddenElements:true})).toBeTruthy());
  const sequence:string[]=[];
  const visit=(node:unknown):void=>{if(typeof node==='string'){sequence.push(node);return;}if(Array.isArray(node)){node.forEach(visit);return;}if(node&&typeof node==='object'){const value=node as {props?:{testID?:unknown};children?:unknown};if(typeof value.props?.testID==='string')sequence.push(value.props.testID);visit(value.children);}};
- visit(v.getByTestId('campus-row-7'));
+ visit(v.getByTestId('campus-row-7').parent);
  expect(sequence.indexOf('小林')).toBeLessThan(sequence.indexOf('晚间散步'));
  expect(sequence.indexOf('晚间散步')).toBeLessThan(sequence.indexOf('今晚有人想去湖边吗？'));
  expect(sequence.indexOf('今晚有人想去湖边吗？')).toBeLessThan(sequence.indexOf('campus-row-7-media'));
@@ -217,6 +217,28 @@ beforeEach(()=>{
  for(const fn of [toggleLike,createComment,toggleConfessionLike,createConfessionComment]) (fn as jest.Mock).mockReset();
  (getPostComments as jest.Mock).mockReset().mockResolvedValue([]);
  (getConfessionComments as jest.Mock).mockReset().mockResolvedValue([]);
+});
+it('树洞行点赞调用真实接口，回复进入同一帖详情',async()=>{
+ list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动',user_liked:false,like_count:4,comment_count:2}],hasMore:false});
+ (toggleLike as jest.Mock).mockResolvedValue({post_id:7,liked:true,like_count:5});
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('campus-row-7-like')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('campus-row-7-like'));
+ await waitFor(()=>expect(v.getByTestId('campus-row-7-like').props.accessibilityState.selected).toBe(true));
+ expect(toggleLike).toHaveBeenCalledWith(7);expect(v.getByText('5 赞')).toBeTruthy();
+ expect(getPostComments).not.toHaveBeenCalled();
+ await fireEvent.press(v.getByTestId('campus-row-7-reply'));
+ expect(mockPush).toHaveBeenCalledWith('/campus/7');
+});
+it('树洞行点赞失败保留既有登录反馈，不伪造成功',async()=>{
+ mockSession.isSignedIn=false;
+ list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动',user_liked:false,like_count:4}],hasMore:false});
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('campus-row-7-like')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('campus-row-7-like'));
+ expect(toggleLike).not.toHaveBeenCalled();
+ await waitFor(()=>expect(v.getByText('登录后参与')).toBeTruthy());
+ expect(v.getByTestId('campus-row-7-like').props.accessibilityState.selected).toBe(false);
 });
 it('点赞按响应状态更新，缺少计数不虚构新计数',async()=>{
  detail.mockResolvedValue({id:7,content:'正文',user_liked:false,like_count:4});

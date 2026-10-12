@@ -70,6 +70,8 @@ export type EntityCardProps = {
   metaLabel?: string;
   /** 帖子图集；只在 `post` 变体中排在正文之后 */
   postMedia?: React.ReactNode;
+  /** 帖子行内互动；只在 `post` 变体中作为独立可访问操作区渲染 */
+  postActions?: React.ReactNode;
   /** Localized metrics supplied by domain adapters (currency/status are business rules). */
   metrics?: readonly string[];
   onPress?: () => void;
@@ -114,6 +116,7 @@ export function EntityCard({
   authorLabel,
   metaLabel,
   postMedia,
+  postActions,
   metrics: injectedMetrics,
   onPress,
   style,
@@ -136,14 +139,13 @@ export function EntityCard({
   ) : null;
 
   return (
-    <Pressable
-      testID={testID}
-      onPress={onPress}
-      // §7.3：整卡可点时**卡片语义必须是一条**，不能把卡内每个元素都读出来
-      accessibilityLabel={[isPost ? authorLabel : '', isPost ? metaLabel : '', title, subtitle, ...metrics].filter(Boolean).join('，')}
-      style={style}
-    >
-      <Surface rounded="radius_medium" bordered="subtle">
+    <Surface rounded="radius_medium" bordered="subtle" style={style}>
+      <Pressable
+        testID={testID}
+        onPress={onPress}
+        // §7.3：整卡可点时**卡片语义必须是一条**，不能把卡内每个元素都读出来
+        accessibilityLabel={[isPost ? authorLabel : '', isPost ? metaLabel : '', title, subtitle, ...metrics].filter(Boolean).join('，')}
+      >
         {isPost ? null : media}
         <View style={{ padding: theme.space('space_3'), gap: theme.space('space_1') }}>
           {badges ? (
@@ -187,7 +189,8 @@ export function EntityCard({
             </View>
           ) : null}
         </View>
-      </Surface>
-    </Pressable>
+      </Pressable>
+      {isPost && postActions ? <View style={{ flexDirection: 'row', borderTopWidth: theme.borderWidth('border_width_hairline'), borderColor: theme.color['border-subtle'].value, paddingHorizontal: theme.space('space_3'), gap: theme.space('space_3') }}>{postActions}</View> : null}
+    </Surface>
   );
 }

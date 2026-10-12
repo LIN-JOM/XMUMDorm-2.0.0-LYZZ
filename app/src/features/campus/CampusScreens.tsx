@@ -1,7 +1,7 @@
 import {ReportSheet} from '@/components/ui/ReportSheet';
 import {useToast} from '@/components/ui/Toast';
 import type {CampusReportReason} from './useCampusReport';
-import {useCampusActions} from './useCampusActions';
+import {useCampusActions,useCampusLike} from './useCampusActions';
 import * as React from 'react';
 import {useRouter} from 'expo-router';
 import {Button} from '@/components/ui/Button';
@@ -14,6 +14,7 @@ import {Screen, type ScreenProps} from '@/components/ui/Screen';
 import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
 import {ListItem} from '@/components/ui/ListItem';
 import {EntityCard} from '@/components/ui/EntityCard';
+import {Icon} from '@/components/ui/Icon';
 import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
 import {View} from 'react-native';
@@ -23,9 +24,12 @@ import {MediaCarousel} from '@/components/ui/MediaCarousel';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
+import {useTheme} from '@/design-system/theme';
 import {getPostList, getPostDetail} from '../../../../shared/api/posts';
 import { wallTemplateLabel, WallTemplateContent } from './wallTemplates';
 import {formatPostTime} from '../../../../shared/utils/formatTime';
+import Heart from 'lucide-react-native/icons/heart';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 
 type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;created_at?:string;template_key?:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
 function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
@@ -76,9 +80,32 @@ export function CampusListScreen({initialTab='confession', beforeTabs, ...screen
  </Screen>;
 }
 
+function TreeholeFeedRow({row}:{row:Post}):React.ReactElement {
+ const {t,locale}=useI18n();const router=useRouter();const theme=useTheme();const like=useCampusLike(row,'confession');
+ const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;
+ const media=images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null;
+ const author=row.author?.nickname||row.author?.username;
+ const metaLabel=row.created_at?formatPostTime(row.created_at,{locale}):'';
+ const likeLabel=`${like.likeCount??'—'} ${t('screen.campus.read.like')}`;
+ const replyLabel=`${like.commentCount??'—'} ${t('screen.campus.read.comments')}`;
+ return <>
+  <EntityCard domain="post" testID={`campus-row-${row.id}`} title={row.title||t('screen.campus.read.post')} subtitle={row.content} authorLabel={author} metaLabel={metaLabel} postMedia={media} metrics={[]}
+   onPress={()=>router.push(`/campus/${row.id}` as never)} postActions={<>
+    <Pressable testID={`campus-row-${row.id}-like`} accessibilityRole="button" accessibilityLabel={likeLabel} selected={like.liked} onPress={like.onToggleLike} style={{flexDirection:'row',gap:theme.space('space_1')}}>
+     <Icon source={Heart} size="inline" tint={like.liked?'brand':'secondary'}/><Text role="caption" colorToken="text-secondary">{likeLabel}</Text>
+    </Pressable>
+    <Pressable testID={`campus-row-${row.id}-reply`} accessibilityRole="button" accessibilityLabel={replyLabel} onPress={()=>router.push(`/campus/${row.id}` as never)} style={{flexDirection:'row',gap:theme.space('space_1')}}>
+     <Icon source={MessageCircle} size="inline" tint="secondary"/><Text role="caption" colorToken="text-secondary">{replyLabel}</Text>
+    </Pressable>
+   </>}/>
+  {like.notice&&like.notice!=='login'?<Text testID={`campus-row-${row.id}-notice`} role="body">{t(like.notice==='denied'?'screen.campus.write.denied':'screen.campus.write.likeFailed')}</Text>:null}
+  {like.notice==='login'?<Button testID={`campus-row-${row.id}-login`} label={t('screen.campus.write.login')} onPress={()=>router.push('/login')}/>:null}
+ </>;
+}
+
 /** A keyed child owns one fixed scope; switching tabs unmounts its pending requests. */
 export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.ReactElement {
- const {t,locale}=useI18n();const router=useRouter();const client=getQueryClient();
+ const {t}=useI18n();const router=useRouter();const client=getQueryClient();
  const key=React.useMemo(()=>query?[...snapshotKey(kind),'search',query]:snapshotKey(kind),[kind,query]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,cursor:null,hasMore:true});
@@ -140,12 +167,8 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
     onPress={()=>router.push(`/campus/${row.id}` as never)}>
     <SearchHighlight value={row.title||t('screen.campus.read.post')} query={query}/>
     <SearchHighlight value={row.content} query={query}/>
-    </Pressable>:(()=>{const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;const media=images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null;const author=row.author?.nickname||row.author?.username;const metaLabel=row.created_at?formatPostTime(row.created_at,{locale}):'';const metrics=[typeof row.like_count==='number'&&Number.isSafeInteger(row.like_count)&&row.like_count>=0?`${row.like_count} ${t('screen.campus.read.like')}`:'',typeof row.comment_count==='number'&&Number.isSafeInteger(row.comment_count)&&row.comment_count>=0?`${row.comment_count} ${t('screen.campus.read.comments')}`:''].filter(Boolean);return <View>
-     {kind==='wall'?<ListItem testID={`campus-row-${row.id}`} title={wallTemplateLabel(t,row.template_key)} subtitle={row.content} meta={t('screen.campus.read.anonymous')}
-      onPress={()=>router.push(`/campus/wall/${row.id}` as never)}/>:<EntityCard domain="post" testID={`campus-row-${row.id}`} title={row.title||t('screen.campus.read.post')} subtitle={row.content} authorLabel={author} metaLabel={metaLabel} postMedia={media} metrics={metrics}
-      onPress={()=>router.push(`/campus/${row.id}` as never)}/>}
-     {kind==='wall'?media:null}
-   </View>})()}/>
+    </Pressable>:kind==='wall'?<ListItem testID={`campus-row-${row.id}`} title={wallTemplateLabel(t,row.template_key)} subtitle={row.content} meta={t('screen.campus.read.anonymous')}
+     onPress={()=>router.push(`/campus/wall/${row.id}` as never)}/>:<TreeholeFeedRow row={row}/>}/>
  </>;
 }
 
