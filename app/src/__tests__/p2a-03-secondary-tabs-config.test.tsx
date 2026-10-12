@@ -45,8 +45,7 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
       expect(hasSecondaryTabs('me')).toBe(false);
     });
 
-    it('广场 / 工具在 C-03 / C-04 拍板前也是空集合（⛔ 不预占所有者的决定）', () => {
-      expect(hasSecondaryTabs('square')).toBe(false);
+    it('工具仍在 C-04 拍板前保持空集合（⛔ 不预占所有者的决定）', () => {
       expect(hasSecondaryTabs('tools')).toBe(false);
     });
 
@@ -55,13 +54,13 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
     });
   });
 
-  describe('TC-P2A-03-2A · 「校园里」是唯一已定集合', () => {
+  describe('TC-P2A-03-2A · 「广场」是唯一已定集合', () => {
     it('恰好两项，顺序与宪法 4.1.1 一致（树洞 / 万能墙）', () => {
-      expect(getSecondaryTabs('campus').map((tab) => tab.key)).toEqual(['confession', 'wall']);
-      expect(hasSecondaryTabs('campus')).toBe(true);
+      expect(getSecondaryTabs('square').map((tab) => tab.key)).toEqual(['confession', 'wall']);
+      expect(hasSecondaryTabs('square')).toBe(true);
     });
 
-    it('现网集合整体通过不变量（含"第 5 格不得有二级 Tab"）', () => {
+    it('现网集合整体通过不变量（含“中央发布格不得有二级 Tab”）', () => {
       expect(() => assertSecondaryTabInvariants(DICT_KEYS)).not.toThrow();
     });
   });
@@ -69,7 +68,7 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
   describe('TC-P2A-03-3A · 注入坏集合必须抛（否则守卫是摆设）', () => {
     it('同一格下 key 重复 → 抛', () => {
       const bad: SecondaryTabRegistry = {
-        campus: [
+        square: [
           { key: 'wall', labelKey: 'secondary.wall' },
           { key: 'wall', labelKey: 'secondary.confession' },
         ],
@@ -79,7 +78,7 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
 
     it('labelKey 不在词条表 → 抛', () => {
       const bad: SecondaryTabRegistry = {
-        campus: [{ key: 'wall', labelKey: 'secondary.nope' as never }],
+        square: [{ key: 'wall', labelKey: 'secondary.nope' as never }],
       };
       expect(() => assertSecondaryTabInvariants(DICT_KEYS, bad)).toThrow(/词条表/);
     });
@@ -91,7 +90,7 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
       expect(() => assertSecondaryTabInvariants(DICT_KEYS, bad)).toThrow(/不存在的格/);
     });
 
-    it('⛔ 动作型格位（第 5 格"发布"）不得有二级 Tab —— 它没有内容区', () => {
+    it('⛔ 动作型格位（中央"发布"）不得有二级 Tab —— 它没有内容区', () => {
       const bad: SecondaryTabRegistry = {
         publish: [{ key: 'wall', labelKey: 'secondary.wall' }],
       };
@@ -132,7 +131,7 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
       const nonEmpty = Object.entries(SECONDARY_TABS)
         .filter(([, tabs]) => tabs.length > 0)
         .map(([primary]) => primary);
-      expect(nonEmpty).toEqual(['campus']);
+      expect(nonEmpty).toEqual(['square']);
     });
   });
 });

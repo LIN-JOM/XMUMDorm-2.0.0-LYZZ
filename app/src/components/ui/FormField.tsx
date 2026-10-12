@@ -79,6 +79,8 @@ export type FormFieldDescriptor = {
   enumTags?: readonly string[];
   /** `custom` 的渲染函数 */
   render?: (api: { value: unknown; onChange: (next: unknown) => void; disabled: boolean }) => React.ReactNode;
+  /** 自定义控件需要非字符串初始值时显式提供；默认仍按 kind 推导。 */
+  initialValue?: unknown;
   /**
    * ⛔ **不落草稿**：密码类字段（以及任何"值本身就是凭据"的字段）必须置位。
    * 依据宪法 4.1.2-2（凭据不得进 AsyncStorage）。`kind === 'password'` 会自动置为真。
@@ -141,7 +143,7 @@ export function inputKindFor(kind: FormFieldKind): InputKind {
 export function createInitialValues(fields: readonly FormFieldDescriptor[]): FormValues {
   const values: FormValues = {};
   for (const field of fields) {
-    values[field.name] =
+    values[field.name] = field.initialValue ??
       field.kind === 'checkbox'
         ? false
         : field.kind === 'switch'

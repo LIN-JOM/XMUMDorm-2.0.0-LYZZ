@@ -344,6 +344,7 @@ describe('Confession Wall Routes (M09)', () => {
 
     it('有效令牌可正常投稿（真实 auth 中间件）', async () => {
       query
+        .mockResolvedValueOnce([{ status: 'active' }])
         .mockResolvedValueOnce({ insertId: 101 })
         .mockResolvedValueOnce([RAW_CONFESSION])
         .mockResolvedValueOnce([])
@@ -355,7 +356,7 @@ describe('Confession Wall Routes (M09)', () => {
         .send({ content: 'hello', template_key: 'letter' });
 
       expect(res.status).toBe(200);
-      expect(query.mock.calls[0][1][0]).toBe(9);
+      expect(query.mock.calls[1][1][0]).toBe(9);
     });
 
     it('正文为空返回 400', async () => {
@@ -410,6 +411,17 @@ describe('Confession Wall Routes (M09)', () => {
         .send({ content: 'x'.repeat(60), template_key: 'bigtype' });
 
       expect(res.status).toBe(200);
+    });
+
+    it('公告模板在白名单内并写入原始模板键', async () => {
+      mockCreateSuccess();
+
+      const res = await request()
+        .post('/api/confessions')
+        .send({ content: '停水通知', template_key: 'announcement' });
+
+      expect(res.status).toBe(200);
+      expect(query.mock.calls[0][1]).toEqual([9, 'announcement', '停水通知']);
     });
 
     it('便签卡超过 300 字返回 400', async () => {

@@ -4,7 +4,7 @@
  * 设计取舍：**原生 Tabs 在 Jest 里跑不起来**（需要原生模块），所以这里验的是
  * 「配置 + 语义」这层 —— 而"点了不切页"恰恰是**纯逻辑**：
  *   `resolveTabPress('publish')` 必须返回 `switchTab: false`。
- * 真机行为（Android `disabled` 是否拒绝选中、`Label hidden` 是否只作用于第 5 格）
+ * 真机行为（Android `disabled` 是否拒绝选中、`Label hidden` 是否只作用于中央发布格）
  * 见 P0-05 §4.8 的 6 条清单。
  *
  * 依据：App 设计宪法 4.1 / 4.3 / 4.9 · 骨架规范 §2 / §3。
@@ -52,13 +52,13 @@ const readSrc = (rel: string): string => fs.readFileSync(path.join(SRC_ROOT, rel
 
 describe('P0-05 五格底栏导航壳', () => {
   describe('TC-P0-05-1A · 五格构成与第六格禁令', () => {
-    it('恰好 5 格，且顺序为 广场 / 工具 / 校园里 / 我的 / 发布', () => {
+    it('恰好 5 格，且顺序为 广场 / 工具 / 发布 / 消息 / 我的', () => {
       expect(TAB_DEFINITIONS.map((t) => t.key)).toEqual([
         'square',
         'tools',
-        'campus',
-        'me',
         'publish',
+        'mailbox',
+        'me',
       ]);
     });
 
@@ -67,10 +67,11 @@ describe('P0-05 五格底栏导航壳', () => {
       expect(MAX_TAB_SLOTS).toBe(5);
     });
 
-    it('动作型格位恰好 1 个（第 5 格）', () => {
+    it('动作型格位恰好 1 个，且位于居中的第 3 格', () => {
       const actions = TAB_DEFINITIONS.filter((t) => t.isAction);
       expect(actions).toHaveLength(1);
       expect(actions[0].key).toBe(ACTION_TAB_KEY);
+      expect(TAB_DEFINITIONS.indexOf(actions[0])).toBe(2);
     });
 
     it('不变量守卫可执行且不抛', () => {
@@ -84,19 +85,19 @@ describe('P0-05 五格底栏导航壳', () => {
   });
 
   describe('TC-P0-05-2A / 3A / 4A · 图标与标签', () => {
-    it('第 5 格图标是**平台图标名** add / plus（⛔ 不是 Lucide）', () => {
+    it('中央发布格图标是**平台图标名** add / plus（⛔ 不是 Lucide）', () => {
       const action = getTabDefinition('publish');
       expect(action?.icon.android).toBe('add');
       expect(action?.icon.ios).toBe('plus');
     });
 
-    it('第 5 格**没有可见文字标签**，但**有可读标签**（骨架规范 §2.4 / §3.4）', () => {
+    it('中央发布格**没有可见文字标签**，但**有可读标签**（骨架规范 §2.4 / §3.4）', () => {
       const action = getTabDefinition('publish');
       expect(action?.labelVisible).toBe(false);
       expect(action?.a11yLabelKey).toBe('tab.publish');
     });
 
-    it('四个导航格都有可见标签（只有第 5 格可以没有）', () => {
+    it('四个导航格都有可见标签（只有中央发布格可以没有）', () => {
       const navTabs = TAB_DEFINITIONS.filter((t) => !t.isAction);
       expect(navTabs.every((t) => t.labelVisible)).toBe(true);
       expect(navTabs).toHaveLength(4);
@@ -132,7 +133,7 @@ describe('P0-05 五格底栏导航壳', () => {
   });
 
   describe('TC-P0-05-6A · 动作型格位的语义：点了**不切页**', () => {
-    it('点第 5 格 → openPublish 且 switchTab=false（4.9.2-①）', () => {
+    it('点中央发布格 → openPublish 且 switchTab=false（4.9.2-①）', () => {
       expect(resolveTabPress('publish')).toEqual({
         type: 'openPublish',
         tab: 'publish',
@@ -140,7 +141,7 @@ describe('P0-05 五格底栏导航壳', () => {
       });
     });
 
-    it.each(['square', 'tools', 'campus', 'me'] as const)('点 %s → navigate 且 switchTab=true', (key) => {
+    it.each(['square', 'tools', 'mailbox', 'me'] as const)('点 %s → navigate 且 switchTab=true', (key) => {
       expect(resolveTabPress(key)).toEqual({ type: 'navigate', tab: key, switchTab: true });
     });
   });
@@ -148,11 +149,11 @@ describe('P0-05 五格底栏导航壳', () => {
   describe('TC-P0-05-7A · 重复点击不叠加（4.4.4）', () => {
     it('第一次请求应打开', () => {
       const { next, shouldOpen } = requestOpenPublishCenter(INITIAL_PUBLISH_CENTER_STATE, {
-        tab: '/campus',
+        tab: '/',
       });
       expect(shouldOpen).toBe(true);
       expect(next.open).toBe(true);
-      expect(next.openedFrom?.tab).toBe('/campus');
+      expect(next.openedFrom?.tab).toBe('/');
     });
 
     it('已打开时再点 → shouldOpen=false 且状态**引用不变**（无副作用）', () => {
@@ -164,12 +165,12 @@ describe('P0-05 五格底栏导航壳', () => {
 
     it('关闭后回到**进入前**的一级位置与滚动量（4.9.2-②）', () => {
       const opened = requestOpenPublishCenter(INITIAL_PUBLISH_CENTER_STATE, {
-        tab: '/campus',
+        tab: '/',
         secondary: 'wall',
         scrollOffset: 320,
       }).next;
       const closed = closePublishCenter(opened);
-      expect(closed.restoreTo).toEqual({ tab: '/campus', secondary: 'wall', scrollOffset: 320 });
+      expect(closed.restoreTo).toEqual({ tab: '/', secondary: 'wall', scrollOffset: 320 });
       expect(closed.next).toEqual(INITIAL_PUBLISH_CENTER_STATE);
     });
 
@@ -257,7 +258,7 @@ describe('P0-05 五格底栏导航壳', () => {
       expect(bad).toEqual([]);
     });
 
-    it('第 5 格占位路由存在且**只做重定向**（防深链进死路由）', () => {
+    it('中央发布格占位路由存在且**只做重定向**（防深链进死路由）', () => {
       const placeholder = readSrc(path.join('app', '(tabs)', 'publish.tsx'));
       expect(placeholder).toContain('<Redirect');
       expect(placeholder).not.toContain('Screen');
@@ -268,15 +269,19 @@ describe('P0-05 五格底栏导航壳', () => {
       expect(fs.existsSync(path.join(APP_DIR, 'publish-center.tsx'))).toBe(true);
     });
 
-    it('四个目的地屏 + 信箱 + 发布中心都有路由文件', () => {
-      for (const rel of ['(tabs)/index.tsx', '(tabs)/tools.tsx', '(tabs)/campus.tsx', '(tabs)/me.tsx', 'mailbox.tsx', 'publish-center.tsx']) {
+    it('四个目的地屏 + 发布占位路由 + 发布中心都有路由文件', () => {
+      for (const rel of ['(tabs)/index.tsx', '(tabs)/tools.tsx', '(tabs)/publish.tsx', '(tabs)/mailbox.tsx', '(tabs)/me.tsx', 'publish-center.tsx']) {
         expect(fs.existsSync(path.join(APP_DIR, rel))).toBe(true);
       }
+      expect(fs.existsSync(path.join(APP_DIR, '(tabs)', 'campus.tsx'))).toBe(false);
+      expect(fs.existsSync(path.join(APP_DIR, 'mailbox.tsx'))).toBe(false);
     });
 
-    it('深链 path 能映射回一级格（栈底校正用，4.4.1）', () => {
+    it('消息与广场深链能映射回对应一级格（栈底校正用，4.4.1）', () => {
+      expect(getTabByPath('/')?.key).toBe('square');
       expect(getTabByPath('/tools')?.key).toBe('tools');
-      expect(getTabByPath('/campus')?.key).toBe('campus');
+      expect(getTabByPath('/mailbox')?.key).toBe('mailbox');
+      expect(getTabByPath('/campus')?.key).toBe('square');
       expect(getTabByPath('/nowhere')).toBeUndefined();
     });
   });

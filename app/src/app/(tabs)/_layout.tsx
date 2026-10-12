@@ -1,7 +1,7 @@
 /**
  * 底栏布局（五格）—— 一级导航的挂载点。
  *
- * 这里只做三件事：取词、把"第 5 格被点"接到发布中心、渲染原生底栏。
+ * 这里只做三件事：取词、把中央发布格接到发布中心、渲染原生底栏。
  * ⛔ 不在这里画任何 Tab 视觉（宪法 4.3：底栏交原生容器）。
  */
 
@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'expo-router';
 
 import { useI18n } from '@/i18n';
 import { NativeTabBar } from '@/features/navigation/nativeTabs';
+import { useUnread } from '@/features/mailbox/useUnread';
 import {
   PUBLISH_CENTER_ROUTE,
   TAB_DEFINITIONS,
@@ -29,6 +30,7 @@ export default function TabsLayout(): React.ReactElement {
   const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
+  const { total } = useUnread();
   const gateRef = React.useRef(INITIAL_PUBLISH_CENTER_STATE);
 
   const labels = React.useMemo(() => {
@@ -39,7 +41,7 @@ export default function TabsLayout(): React.ReactElement {
     return out;
   }, [t]);
 
-  // 第 5 格：已被原生 `disabled` 拦下导航 → 打开发布中心（底栏选中态不变）
+  // 中央发布格：已被原生 `disabled` 拦下导航 → 打开发布中心（底栏选中态不变）
   // ⛔ 重复点击不叠加（4.4.4）：由 publishCenterGate 去重，不是靠"点了就当没点"
   const openPublishCenter = React.useCallback(() => {
     const { next, shouldOpen } = requestOpenPublishCenter(gateRef.current, { tab: pathname });
@@ -57,5 +59,5 @@ export default function TabsLayout(): React.ReactElement {
     }
   }, [pathname]);
 
-  return <NativeTabBar labels={labels} onActionPress={openPublishCenter} />;
+  return <NativeTabBar labels={labels} unreadCount={total ?? 0} onActionPress={openPublishCenter} />;
 }

@@ -3,7 +3,7 @@
  *
  * 验证的是**端到端意图声明**是否真的落进样式：
  *   - `bottomMode='tabbar'` → 内容底部留白 = Tab 栏高度（**不含** insets.bottom，S5）
- *   - 顶栏内容从真实 inset 之下开始，且信箱动作**存在且可读**（宪法 4.7）
+ *   - 顶栏内容从真实 inset 之下开始；消息迁移后，旧信箱动作默认不显示（宪法 4.7）
  *
  * ⚠️ RNTL 14 的 `render` 返回 Promise。
  */
@@ -44,16 +44,14 @@ async function renderScreen(
 }
 
 describe('P0-04 Screen 容器', () => {
-  it('顶栏存在，标题取词条，且信箱动作可读（宪法 4.7-3 常态可见）', async () => {
+  it('顶栏存在、标题取词条，且默认不再显示已迁移到消息格的信箱动作', async () => {
     const view = await renderScreen(ANDROID_TABBAR);
     expect(view.getByText('广场')).toBeTruthy();
-    const mailbox = view.getByTestId('topbar-mailbox');
-    expect(mailbox).toBeTruthy();
-    expect(mailbox.props.accessibilityLabel).toBe('信箱');
+    expect(view.queryByTestId('topbar-mailbox')).toBeNull();
   });
 
-  it('未读角标进无障碍标签（角标不是唯一语义，宪法 7.2 / 4.7-4）', async () => {
-    const view = await renderScreen(ANDROID_TABBAR, { unreadCount: 3 });
+  it('显式启用的顶栏动作仍将未读数放进无障碍标签', async () => {
+    const view = await renderScreen(ANDROID_TABBAR, { showMailbox: true, unreadCount: 3 });
     const mailbox = view.getByTestId('topbar-mailbox');
     expect(String(mailbox.props.accessibilityLabel)).toContain('3');
   });
@@ -93,7 +91,7 @@ describe('P0-04 Screen 容器', () => {
       <SafeAreaProvider initialMetrics={ANDROID_TABBAR}>
         <ThemeProvider source="light">
           <I18nProvider locale="en">
-            <Screen titleKey="screen.square">
+            <Screen titleKey="screen.square" showMailbox>
               <Text>body</Text>
             </Screen>
           </I18nProvider>

@@ -155,7 +155,7 @@ export function removeClubMember(clubId, userId) {
  * 发布社团活动。支持 JSON（无图）或 FormData（字段 + 最多 4 张 images 文件）。
  * @param {number} clubId
  * @param {Record<string, string|undefined>} fields - title, summary, location, signupLink, tag, time, endTime, status
- * @param {File[]} [imageFiles]
+ * @param {(File|{uri:string,name:string,type:string,size:number})[]} [imageFiles]
  */
 export function createClubActivity(clubId, fields, imageFiles = []) {
   const files = Array.isArray(imageFiles) ? imageFiles.filter(Boolean) : [];

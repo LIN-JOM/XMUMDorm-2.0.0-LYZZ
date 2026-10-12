@@ -15,14 +15,20 @@ import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
 import {ListItem} from '@/components/ui/ListItem';
 import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
+import {View} from 'react-native';
 import {SearchHighlight} from './SearchHighlight';
 import {MediaGrid} from '@/components/ui/MediaGrid';
+import {MediaCarousel} from '@/components/ui/MediaCarousel';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
 import {getPostList, getPostDetail} from '../../../../shared/api/posts';
+import { wallTemplateLabel, WallTemplateContent } from './wallTemplates';
 
-type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;template_key?:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
+ return Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
+}
 function asPost(value:unknown):Post {
  if(!value || typeof value!=='object') throw {kind:'content'};
  const row=value as Post & {hidden?:boolean;deleted_at?:unknown;hidden_by_admin?:boolean};
@@ -47,17 +53,18 @@ type Snapshot={rows:readonly Post[];page:number;cursor:number|null;hasMore:boole
 function asWall(value:unknown):Post {
  const row=asPost(value);
  // Never retain raw identity, title or images from an anonymous response.
- return {id:row.id,content:row.content,liked:row.liked,like_count:row.like_count,comment_count:row.comment_count};
+ return {id:row.id,content:row.content,template_key:row.template_key,liked:row.liked,like_count:row.like_count,comment_count:row.comment_count};
 }
 function snapshotKey(kind:CampusKind){
  return [...(kind==='wall'?QK.confessionWindow('_guest'):QK.postsInfinite('_guest',10)), 'campusReadSnapshot'];
 }
 
-export function CampusListScreen({initialTab='confession', ...screenProps}:{initialTab?:CampusKind} & Omit<ScreenProps, 'children' | 'titleKey'>={}):React.ReactElement {
+export function CampusListScreen({initialTab='confession', beforeTabs, ...screenProps}:{initialTab?:CampusKind;beforeTabs?:React.ReactNode} & Omit<ScreenProps, 'children' | 'titleKey'>={}):React.ReactElement {
  const {t}=useI18n();const router=useRouter();const [selected,setSelected]=React.useState<CampusKind>(initialTab);
  React.useEffect(() => setSelected(initialTab), [initialTab]);
  return <Screen titleKey="screen.campus" showMailbox={false} testID="campus-screen" {...screenProps}>
-  <TopTabStrip tabs={getSecondaryTabs('campus')} selectedKey={selected} onSelect={key=>{
+  {beforeTabs}
+  <TopTabStrip tabs={getSecondaryTabs('square')} selectedKey={selected} onSelect={key=>{
    if(key!=='confession'&&key!=='wall')return;
    setSelected(key);router.setParams({tab:key});
   }}/>
@@ -73,7 +80,7 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,cursor:null,hasMore:true});
  const [rows,setRows]=React.useState(snapshot.current.rows),[revision,setRevision]=React.useState(0);
- const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query?undefined:{primaryTab:'campus',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
+ const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query?undefined:{primaryTab:'square',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
  const persistScrollOffset=React.useCallback((offset:number)=>{
   if(query){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
   else persistTabScrollOffset(offset);
@@ -130,8 +137,11 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
     onPress={()=>router.push(`/campus/${row.id}` as never)}>
     <SearchHighlight value={row.title||t('screen.campus.read.post')} query={query}/>
     <SearchHighlight value={row.content} query={query}/>
-   </Pressable>:<ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?t('screen.campus.read.anonymous'):row.title||t('screen.campus.read.post')} subtitle={row.content}
-    onPress={()=>router.push((kind==='wall'?`/campus/wall/${row.id}`:`/campus/${row.id}`) as never)}/>}/>
+   </Pressable>:(()=>{const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;return <View>
+    <ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?wallTemplateLabel(t,row.template_key):row.title||t('screen.campus.read.post')} subtitle={row.content} meta={kind==='wall'?t('screen.campus.read.anonymous'):undefined}
+     onPress={()=>router.push((kind==='wall'?`/campus/wall/${row.id}`:`/campus/${row.id}`) as never)}/>
+    {images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null}
+   </View>})()}/>
  </>;
 }
 
@@ -162,14 +172,14 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
   message={['failed','denied','invalid','login'].includes(actions.report.state)?t(actions.report.state==='login'?'screen.campus.write.login':actions.report.state==='denied'?'screen.campus.write.denied':'screen.campus.report.failed'):undefined}
   action={actions.report.state==='login'?{label:t('screen.campus.write.login'),onPress:()=>{setReportOpen(false);router.push('/login');}}:undefined}
   labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
- const back=()=>published?router.replace('/(tabs)/campus' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/campus?tab=wall':'/campus') as never);
- const images=Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
- return <DetailScreen testID="campus-detail" title={kind==='wall'?t('screen.campus.read.wallTitle'):post?.title||t('screen.campus.read.title')}
+ const back=()=>published?router.replace('/' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/?tab=wall':'/') as never);
+ const images=postImageUrls(post);
+ return <DetailScreen testID="campus-detail" title={kind==='wall'?wallTemplateLabel(t,post?.template_key):post?.title||t('screen.campus.read.title')}
   author={post?.author ? {kind:'named',name:post.author.nickname||post.author.username||t('screen.campus.read.author')} : {kind:'anonymous'}}
   onReport={post&&actions.report.state!=='success'?()=>setReportOpen(true):undefined} interactions={actions.interactions} onToggleLike={post?actions.onToggleLike:undefined} comments={post?actions.comments:undefined} state={loading?'loading':error?.kind==='content'?'empty':error?'error':post?'content':'empty'} error={error}
   empty={{kind:'noResult',title:t('screen.campus.read.unavailable'),actionLabel:t('screen.campus.read.backToList'),onAction:back}}
   onBack={back} onRetry={()=>error?.kind==='content'?back():void load()}
-  body={<><Text role="body">{post?.content}</Text>{images.length>0?<MediaGrid testID="campus-media" uris={images} variant="hero"/>:null}{post?actions.body:null}{reportPanel}</>}
+  body={<>{kind==='wall'&&post?<WallTemplateContent templateKey={post.template_key} content={post.content}/>:<Text role="body">{post?.content}</Text>}{images.length>1?<MediaCarousel testID="campus-media" uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID="campus-media" uris={images} variant="hero"/>:null}{post?actions.body:null}{reportPanel}</>}
   labels={{back:t('action.back'),like:t('screen.campus.read.like'),favorite:t('action.save'),comment:t('screen.campus.read.comments'),report:t('screen.campus.read.report'),countPlaceholder:'—',anonymous:t('screen.campus.read.anonymous'),
    comments:{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')},commentsEnd:t('screen.campus.read.end'),commentsRetry:t('action.retry')}}/>;
 }

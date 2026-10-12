@@ -11,6 +11,7 @@ import type * as React from 'react';
 import Megaphone from 'lucide-react-native/icons/megaphone';
 import Ghost from 'lucide-react-native/icons/ghost';
 import Users from 'lucide-react-native/icons/users';
+import Notebook from 'lucide-react-native/icons/notebook';
 import ShoppingBag from 'lucide-react-native/icons/shopping-bag';
 import Bike from 'lucide-react-native/icons/bike';
 import Car from 'lucide-react-native/icons/car';
@@ -23,6 +24,7 @@ export const PUBLISH_ICONS: Record<string, PublishIconComponent> = {
   megaphone: Megaphone,
   ghost: Ghost,
   users: Users,
+  notebook: Notebook,
   'shopping-bag': ShoppingBag,
   bike: Bike,
   car: Car,

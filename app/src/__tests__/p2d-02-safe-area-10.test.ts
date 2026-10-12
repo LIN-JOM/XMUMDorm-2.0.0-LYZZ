@@ -46,7 +46,7 @@ describe('P2D-02 安全区 10 条清单', () => {
   });
 
   it('第 2 条 · 底部留白归属唯一：`bottomMode:"tabbar"` 必须传 `tabBarHeight`（⛔ 不双倍）', () => {
-    for (const file of ['index.tsx', 'tools.tsx', 'campus.tsx', 'me.tsx']) {
+    for (const file of ['index.tsx', 'tools.tsx', 'mailbox.tsx', 'me.tsx']) {
       const code = stripComments(readApp(path.join('(tabs)', file)));
       // `me.tsx` 是一行转发壳 → 跟到页面组合再断言（同 P2B-01 的处理）
       const forwarded = code.match(/from '@\/([^']+)'/);
@@ -56,6 +56,12 @@ describe('P2D-02 安全区 10 条清单', () => {
     }
     // 原生 Tab 栏高度只在一处定义，四屏共用
     expect(stripComments(readApp(path.join('(tabs)', '_layout.tsx')))).toContain('TAB_BAR_CLEARANCE');
+  });
+
+  it('第 2 条 · 消息改为一级 Tab 后，列表复用唯一 Tab 栏净空（⛔ 沿用旧全屏模式）', () => {
+    const mailbox = stripComments(read(path.join('features', 'mailbox', 'MailboxScreen.tsx')));
+    expect(mailbox).toContain('bottomMode="tabbar"');
+    expect(mailbox).toContain('tabBarHeight={TAB_BAR_HEIGHT}');
   });
 
   it('第 4 条 · 键盘：走容器显式计算（⛔ 不用 `KeyboardAvoidingView` 的隐式行为）', () => {

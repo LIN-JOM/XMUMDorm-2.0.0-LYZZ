@@ -13,7 +13,7 @@ function Probe() {
 }
 it('shows the title and blocks system removal until the user confirms', async () => {
   const view = await renderApp(<Probe />);
-  expect(view.getByTestId('topbar-mailbox')).toBeTruthy();
+  expect(view.queryByTestId('topbar-mailbox')).toBeNull();
   await fireEvent.changeText(view.getByLabelText('标题'), 'Unsaved');
   const hook = require('expo-router/react-navigation').usePreventRemove as jest.Mock;
   const [prevent, callback] = hook.mock.calls[hook.mock.calls.length - 1];

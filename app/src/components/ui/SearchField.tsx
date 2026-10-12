@@ -65,6 +65,7 @@ export function SearchField({
       {/* 装饰性图标：不给 label → 不进无障碍树（A06 的 a11y 二选一） */}
       <Icon source={Search} size="body" tint="secondary" />
       <TextInput
+        testID={testID ? `${testID}-input` : undefined}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

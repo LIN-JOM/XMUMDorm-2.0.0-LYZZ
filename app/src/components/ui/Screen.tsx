@@ -68,10 +68,12 @@ export type ScreenProps = {
   titleKey?: MessageKey;
   topMode?: TopMode;
   bottomMode?: BottomMode;
-  /** 顶栏是否显示信箱唯一动作（默认显示，宪法 4.7-3 常态可见） */
+  /** 顶栏是否显示旧信箱动作（默认不显示；消息格是唯一一级入口） */
   showMailbox?: boolean;
   unreadCount?: number;
   onMailboxPress?: () => void;
+  /** 已登记的顶栏动作；页面不得用它堆放导航入口。 */
+  topBarActions?: React.ReactNode;
   /** 原生 Tab 栏高度（不含 insets）—— 只有 `bottomMode='tabbar'` 时生效（S5） */
   tabBarHeight?: number;
   /** 内容是否可滚动（详情/列表骨架用）；默认 false，骨架由具体页面决定 */
@@ -90,9 +92,10 @@ export function Screen({
   titleKey,
   topMode = titleKey ? 'topbar' : 'none',
   bottomMode = 'none',
-  showMailbox = true,
+  showMailbox = false,
   unreadCount = 0,
   onMailboxPress,
+  topBarActions,
   tabBarHeight,
   scroll = false,
   headerOverlay,
@@ -146,6 +149,7 @@ export function Screen({
           showMailbox={showMailbox}
           unreadCount={unreadCount}
           onMailboxPress={onMailboxPress}
+          rightActions={topBarActions}
         />
       ) : null}
       {topMode === 'overlay' && headerOverlay ? (

@@ -8,14 +8,16 @@ import { ListScreen, useListPagination } from '@/components/ui/ListScreen';
 import { ListItem } from '@/components/ui/ListItem';
 import { SearchField } from '@/components/ui/SearchField';
 import { Screen } from '@/components/ui/Screen';
+import { TopTabStrip } from '@/components/ui/TopTabStrip';
 import { MarkdownReader, extractToc } from '@/components/ui/MarkdownReader';
 import { DetailScreen } from '@/proto/P3';
 import { useGuideActions } from './useGuideActions';
-import { useI18n } from '@/i18n';
+import { useI18n, type MessageKey } from '@/i18n';
+import type { SecondaryTabDefinition } from '@/features/navigation/secondaryTabs';
 import { getQueryClient } from '@/shared/queryClient';
 import { QK } from '../../../../shared/query/queryKeys';
 import type { AppError } from '@/i18n/errors';
-import { listHandbookArticles, getHandbookArticleDetail } from '../../../../shared/api/handbook';
+import { getHandbookTabs, listHandbookArticles, getHandbookArticleDetail } from '../../../../shared/api/handbook';
 
 type Article = { id: number; title: string; summary?: string; content?: string; contentType?: string; externalUrl?: string; authorInfo?: { nickname?: string; username?: string }; viewer?: { liked?: boolean }; liked?: boolean; likes_count?: number; comment_count?: number };
 function asArticle(value: unknown): Article {
@@ -37,17 +39,33 @@ function errorFor(error: unknown): AppError {
 }
 
 type ListSnapshot = { rows: readonly Article[]; page: number; hasMore: boolean };
-const guidesKey = (q?: string) => QK.handbookArticles({ pageSize: 10, ...(q ? {q} : {}) });
+type GuideTab = { slug: string; nameZh: string; nameEn: string };
+const guidesKey = (q?: string, tab = 'all') => QK.handbookArticles({ pageSize: 10, ...(q ? {q} : {}), ...(tab === 'all' ? {} : {tab}) });
 const guidesScope = { primaryTab: 'square', secondaryTab: 'guides' };
+
+function readGuideTabs(value: unknown): GuideTab[] {
+ if (!Array.isArray(value)) throw new Error('Invalid handbook tabs');
+ return value.map(row => {
+  if (!row || typeof row !== 'object') throw new Error('Invalid handbook tab');
+  const tab = row as {slug?: unknown;name_zh?: unknown;name_en?: unknown};
+  const slug = typeof tab.slug === 'string' ? tab.slug.trim() : '';
+  const nameZh = typeof tab.name_zh === 'string' ? tab.name_zh.trim() : '';
+  const nameEn = typeof tab.name_en === 'string' ? tab.name_en.trim() : '';
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/i.test(slug) || (!nameZh && !nameEn)) throw new Error('Invalid handbook tab');
+  return {slug,nameZh,nameEn};
+ });
+}
 
 /** 数据放入既有 QueryClient；位置和游标仍由公共列表仓库维护。 */
 export function GuidesListScreen(): React.ReactElement {
- const { t } = useI18n();
+ const { t,locale } = useI18n();
  const router = useRouter();
  const client = getQueryClient();
  const [query, setQuery] = React.useState('');
  const [appliedQuery, setAppliedQuery] = React.useState<string | undefined>();
- const key = React.useMemo(() => guidesKey(appliedQuery), [appliedQuery]);
+ const [tabs,setTabs]=React.useState<GuideTab[]>([]);
+ const [selectedTab,setSelectedTab]=React.useState('all');
+ const key = React.useMemo(() => guidesKey(appliedQuery,selectedTab), [appliedQuery,selectedTab]);
  const initial = React.useRef(client.getQueryData<ListSnapshot>(key));
  const snapshot = React.useRef<ListSnapshot>(initial.current ?? { rows: [], page: 0, hasMore: true });
  const [rows, setRows] = React.useState<readonly Article[]>(snapshot.current.rows);
@@ -64,7 +82,7 @@ export function GuidesListScreen(): React.ReactElement {
   pending.current = mode;
   dispatch({ type: mode === 'refresh' ? 'refresh:start' : 'append:start' });
   try {
-   const payload = await listHandbookArticles({ page, pageSize: 10, ...(appliedQuery ? {q:appliedQuery} : {}) });
+   const payload = await listHandbookArticles({ page, pageSize: 10, ...(selectedTab==='all'?{}:{tab:selectedTab}), ...(appliedQuery ? {q:appliedQuery} : {}) });
    if (request !== generation.current) return;
    if (!Array.isArray(payload?.list) || typeof payload.hasMore !== 'boolean') throw { kind: 'content' };
    const incoming = payload.list.map(asArticle);
@@ -86,24 +104,32 @@ export function GuidesListScreen(): React.ReactElement {
     type: mode === 'refresh' ? 'refresh:failure' : 'append:failure', error: errorFor(error),
    });
   } finally { if (request === generation.current) pending.current = null; }
- }, [client, dispatch, persistScrollOffset, setCursor, key, appliedQuery]);
- const previousQuery = React.useRef(appliedQuery);
+ }, [client, dispatch, persistScrollOffset, setCursor, key, appliedQuery, selectedTab]);
+ const previousQuery = React.useRef(`${selectedTab}\u0000${appliedQuery??''}`);
  React.useEffect(() => {
-  if (previousQuery.current === appliedQuery) return;
-  previousQuery.current = appliedQuery;
+  const identity=`${selectedTab}\u0000${appliedQuery??''}`;
+  if (previousQuery.current === identity) return;
+  previousQuery.current = identity;
   const cached = client.getQueryData<ListSnapshot>(key);
   snapshot.current = cached ?? { rows: [], page: 0, hasMore: true };
   setRows(snapshot.current.rows);
   setRevision(value => value + 1);
   void load('refresh');
- }, [appliedQuery, client, key, load]);
+ }, [selectedTab, appliedQuery, client, key, load]);
  React.useEffect(() => {
   if (!initial.current) void load('refresh');
   return () => { generation.current++; pending.current = null; };
  }, [load]);
  const refresh = () => void load('refresh');
  const append = () => void load('append');
+ React.useEffect(()=>{let active=true;void getHandbookTabs().then(readGuideTabs).then(data=>{if(active)setTabs(data);}).catch(()=>{if(active)setTabs([]);});return()=>{active=false;};},[]);
+ React.useEffect(()=>{if(selectedTab!=='all'&&!tabs.some(tab=>tab.slug===selectedTab))setSelectedTab('all');},[selectedTab,tabs]);
+ const navigationTabs=React.useMemo<SecondaryTabDefinition[]>(()=>tabs.length===0?[]:[
+  {key:'all',labelKey:'square.guides.all' as MessageKey},
+  ...tabs.map(tab=>({key:tab.slug,label:locale==='zh'?(tab.nameZh||tab.nameEn):(tab.nameEn||tab.nameZh)})),
+ ],[tabs,locale]);
  return <Screen titleKey="square.guides.title" showMailbox={false} testID="guides-screen">
+  <TopTabStrip testID="guides-tabs" tabs={navigationTabs} selectedKey={selectedTab} onSelect={setSelectedTab}/>
   <SearchField testID="guides-search-field" appearance="full" value={query} onChangeText={setQuery} onSubmit={() => setAppliedQuery(query.trim() || undefined)} />
   {rows.length > 0 && pagination.errorScope === 'refresh' ?
    <Button label={t('square.guides.refreshFailed')} onPress={refresh} /> : null}

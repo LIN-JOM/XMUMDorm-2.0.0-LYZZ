@@ -49,6 +49,14 @@ jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn() }
 jest.mock('@/features/publish/descriptors', () => ({ getPublishDescriptor: jest.fn() }));
 jest.mock('../../../shared/api/clubs', () => ({ listMyClubs: jest.fn() }));
 jest.mock('../../../shared/api/organizations', () => ({ getMyOrganizations: jest.fn() }));
+jest.mock('../../../shared/api/users', () => ({ getMyTermsStatus: jest.fn() }));
+jest.mock('@/features/publish/useViewer', () => ({
+  useViewer: () => ({
+    viewer: { signedIn: true, canManageClub: false, isOrgMember: false, acceptedTerms: true },
+    degraded: [],
+    loading: false,
+  }),
+}));
 
 const routerState = require('expo-router').__state as {
   replaced: unknown[];
@@ -63,6 +71,7 @@ const descriptors = require('@/features/publish/descriptors') as {
 const api = {
   clubs: require('../../../shared/api/clubs') as { listMyClubs: jest.Mock },
   orgs: require('../../../shared/api/organizations') as { getMyOrganizations: jest.Mock },
+  users: require('../../../shared/api/users') as { getMyTermsStatus: jest.Mock },
 };
 
 const PublishRoute = require('../app/publish/[type]').default as () => React.ReactElement;
@@ -92,7 +101,7 @@ function makeDescriptor(overrides: Partial<PublishFormDescriptor> = {}): Publish
       },
     ],
     submit: jest.fn(async () => ({ id: 9 })),
-    routeAfterSubmit: (result) => `/post/${(result as { id?: number })?.id ?? ''}`,
+    routeAfterSubmit: (result) => `/campus/${(result as { id?: number })?.id ?? ''}`,
     ...overrides,
   };
 }
@@ -106,6 +115,7 @@ beforeEach(() => {
   descriptors.getPublishDescriptor.mockReset();
   api.clubs.listMyClubs.mockReset();
   api.orgs.getMyOrganizations.mockReset();
+  api.users.getMyTermsStatus.mockReset().mockResolvedValue({ accepted: true });
 });
 
 describe('P2A-05 发布表单路由接线与端到端', () => {
@@ -163,7 +173,7 @@ describe('P2A-05 发布表单路由接线与端到端', () => {
       expect(descriptor.submit).toHaveBeenCalledWith(
         expect.objectContaining({ body: '今天的树洞' })
       );
-      await waitFor(() => expect(routerState.replaced).toEqual(['/post/9']));
+      await waitFor(() => expect(routerState.replaced).toEqual(['/campus/9']));
     });
   });
 

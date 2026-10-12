@@ -36,7 +36,7 @@ export function updateProfileInfo(body) {
 
 /**
  * 上传头像（FormData，字段名 avatar）
- * @param {File} file
+ * @param {File|{uri:string,name:string,type:string}} file Browser `File` or React Native FormData item.
  */
 export function updateAvatar(file) {
   const form = new FormData();

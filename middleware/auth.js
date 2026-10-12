@@ -8,6 +8,7 @@
 
 // 引入 JWT 库
 const jwt = require('jsonwebtoken');
+const { query } = require('../database');
 
 // 从环境变量获取 JWT 密钥
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -31,7 +32,7 @@ function authenticateToken(req, res, next) {
   }
 
   // 4. 验证令牌
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(403).json({
         status: -1,
@@ -39,10 +40,33 @@ function authenticateToken(req, res, next) {
       });
     }
 
-    // 5. 验证成功，将解码后的用户信息添加到请求对象
+    const userId = Number(decoded?.id);
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+      return res.status(403).json({
+        status: -1,
+        message: '身份验证令牌无效或已过期，请重新登录'
+      });
+    }
+
+    try {
+      // Token 签发后账号也可能被停用；每个受保护入口都必须复查数据库事实。
+      const rows = await query('SELECT status FROM users WHERE id = ? LIMIT 1', [userId]);
+      if (!rows || rows.length !== 1 || rows[0].status === 'deactivated') {
+        return res.status(403).json({
+          status: -1,
+          message: '该账号已注销，请重新登录',
+          accountDeactivated: true
+        });
+      }
+    } catch (_error) {
+      return res.status(503).json({
+        status: -1,
+        message: '身份状态暂时无法验证，请稍后重试'
+      });
+    }
+
+    // 验签和账号状态都通过后，才把解码后的用户交给受保护路由。
     req.user = decoded;
-    
-    // 6. 调用 next() 继续执行下一个中间件或路由处理函数
     next();
   });
 }
