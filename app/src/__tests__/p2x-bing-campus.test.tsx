@@ -194,6 +194,13 @@ it('从墙详情返回重新挂载时恢复墙位置与缓存',async()=>{
  await fireEvent.press(v.getByText('读详情'));await fireEvent.press(v.getByText('回列表'));await waitFor(()=>expect(v.getByText('墙正文')).toBeTruthy());
  expect(wall).toHaveBeenCalledTimes(1);expect(mockListProps.restoredScrollOffset).toBe(240);
 });
+it('从树洞详情返回重新挂载时恢复树洞位置与缓存',async()=>{
+ list.mockResolvedValue({list:[{id:7,title:'树洞首篇',content:'正文'}],hasMore:false});detail.mockResolvedValue({id:7,content:'正文'});
+ function Harness(){const [reading,setReading]=React.useState(false);return <><Button label={reading?'回列表':'读详情'} onPress={()=>setReading(!reading)}/>{reading?<CampusDetailScreen postId="7"/>:<CampusListScreen/>}</>;}
+ const v=await renderApp(<Harness/>);await waitFor(()=>expect(v.getByText('树洞首篇')).toBeTruthy());await act(async()=>mockListProps.onScrollOffset?.(260));
+ await fireEvent.press(v.getByText('读详情'));await waitFor(()=>expect(v.getByTestId('campus-detail')).toBeTruthy());await fireEvent.press(v.getByText('回列表'));
+ await waitFor(()=>expect(v.getByText('树洞首篇')).toBeTruthy());expect(list).toHaveBeenCalledTimes(1);expect(mockListProps.restoredScrollOffset).toBe(260);
+});
 it('刷新抢占追加，迟到旧页不覆盖刷新结果',async()=>{
  let finish:(data:unknown)=>void=()=>undefined;
  list.mockResolvedValueOnce({list:[{id:7,content:'旧首篇'}],hasMore:true}).mockReturnValueOnce(new Promise(resolve=>{finish=resolve;})).mockResolvedValueOnce({list:[{id:9,content:'刷新结果'}],hasMore:false});
