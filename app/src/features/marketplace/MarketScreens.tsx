@@ -1,6 +1,6 @@
+import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import * as React from 'react';
 import {useRouter} from 'expo-router';
-import {Screen} from '@/components/ui/Screen';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
 import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
@@ -31,7 +31,7 @@ function errorFor(error:unknown):AppError {
 }
 const categories=[{key:'all',labelKey:'screen.market.all'},{key:'electronics',labelKey:'screen.market.electronics'},{key:'transport',labelKey:'screen.market.transport'},{key:'dailyuse',labelKey:'screen.market.dailyuse'},{key:'books',labelKey:'screen.market.books'},{key:'others',labelKey:'screen.market.others'}] as const;
 const statusKeys={all:'screen.market.all',on_sale:'screen.market.on_sale',sold:'screen.market.sold'} as const;
-export function MarketListScreen():React.ReactElement {
+export function MarketListScreen({ embedded = false }: { embedded?: boolean } = {}):React.ReactElement {
  const {t}=useI18n();const client=getQueryClient();
  const [filters,setFilters]=React.useState<Filters>(()=>client.getQueryData<Filters>(['bing-market','selected'])??{});
  const [q,setQ]=React.useState(filters.q??''),[min,setMin]=React.useState(filters.priceMin==null?'':String(filters.priceMin)),[max,setMax]=React.useState(filters.priceMax==null?'':String(filters.priceMax));
@@ -41,7 +41,7 @@ export function MarketListScreen():React.ReactElement {
   if((priceMin!==undefined&&(!Number.isFinite(priceMin)||priceMin<0))||(priceMax!==undefined&&(!Number.isFinite(priceMax)||priceMax<0))||(priceMin!==undefined&&priceMax!==undefined&&priceMin>priceMax)){setInvalid(true);return;}
   setInvalid(false);select({...filters,q:q.trim()||undefined,priceMin,priceMax});
  };
- return <Screen titleKey="screen.market.title" showMailbox={false} testID="market-screen">
+ return <FeatureScreen embedded={embedded} titleKey="screen.market.title" showMailbox={false} testID="market-screen">
   <SearchField testID="market-search-field" appearance="full" value={q} onChangeText={setQ} onSubmit={apply} placeholder={t('screen.market.query')}/>
   <UnderlineFilter testID="filter-chip" options={categories} selectedKey={filters.category??'all'} onSelect={key=>select({...filters,category:key==='all'?undefined:key})}/>
   <UnderlineFilter testID="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
@@ -50,7 +50,7 @@ export function MarketListScreen():React.ReactElement {
   {invalid?<Text role="body">{t('screen.market.priceInvalid')}</Text>:null}
   <Button testID="market-apply" label={t('screen.market.apply')} onPress={apply}/>
   <MarketFeed key={JSON.stringify(filters)} filters={filters}/>
- </Screen>;
+ </FeatureScreen>;
 }
 function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
  const {t}=useI18n();const router=useRouter();const client=getQueryClient();

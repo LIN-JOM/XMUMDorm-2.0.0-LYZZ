@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import { loadNotificationClient } from '@/features/notifications/client';
 import { getScheduleWeek } from '../../../../../shared/api/schedule';
 import { resolveSemesterContext } from '../../../../../shared/config/semesters';
 import { notificationPermission } from '@/features/notifications/permissions';
@@ -12,19 +12,24 @@ const port: NativeReminderPort = {
     return { granted: (await notificationPermission.read()) === 'granted' };
   },
   async getAllScheduledNotificationsAsync() {
-    return (await Notifications.getAllScheduledNotificationsAsync()).map((item) => ({
+    const client = await loadNotificationClient();
+    if (!client) return [];
+    return (await client.getAllScheduledNotificationsAsync()).map((item) => ({
       identifier: item.identifier,
       content: { data: item.content.data as Record<string, unknown> | null | undefined },
     }));
   },
   async scheduleNotificationAsync(input) {
-    return Notifications.scheduleNotificationAsync({
+    const client = await loadNotificationClient();
+    if (!client) throw new Error('Notifications are unavailable in this preview');
+    return client.scheduleNotificationAsync({
       content: { title: input.content.title, body: input.content.body, data: input.content.data },
       trigger: input.trigger as never,
     });
   },
   async cancelScheduledNotificationAsync(identifier) {
-    await Notifications.cancelScheduledNotificationAsync(identifier);
+    const client = await loadNotificationClient();
+    if (client) await client.cancelScheduledNotificationAsync(identifier);
   },
 };
 

@@ -1,3 +1,4 @@
+import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import * as React from 'react';
 import * as Linking from 'expo-linking';
 import { View } from 'react-native';
@@ -7,7 +8,6 @@ import { useRouter } from 'expo-router';
 import { ListScreen, useListPagination } from '@/components/ui/ListScreen';
 import { ListItem } from '@/components/ui/ListItem';
 import { SearchField } from '@/components/ui/SearchField';
-import { Screen } from '@/components/ui/Screen';
 import { TopTabStrip } from '@/components/ui/TopTabStrip';
 import { MarkdownReader, extractToc } from '@/components/ui/MarkdownReader';
 import { DetailScreen } from '@/proto/P3';
@@ -57,7 +57,7 @@ function readGuideTabs(value: unknown): GuideTab[] {
 }
 
 /** 数据放入既有 QueryClient；位置和游标仍由公共列表仓库维护。 */
-export function GuidesListScreen(): React.ReactElement {
+export function GuidesListScreen({ embedded = false }: { embedded?: boolean } = {}): React.ReactElement {
  const { t,locale } = useI18n();
  const router = useRouter();
  const client = getQueryClient();
@@ -128,7 +128,7 @@ export function GuidesListScreen(): React.ReactElement {
   {key:'all',labelKey:'square.guides.all' as MessageKey},
   ...tabs.map(tab=>({key:tab.slug,label:locale==='zh'?(tab.nameZh||tab.nameEn):(tab.nameEn||tab.nameZh)})),
  ],[tabs,locale]);
- return <Screen titleKey="square.guides.title" showMailbox={false} testID="guides-screen">
+ return <FeatureScreen embedded={embedded} titleKey="square.guides.title" showMailbox={false} testID="guides-screen">
   <TopTabStrip testID="guides-tabs" tabs={navigationTabs} selectedKey={selectedTab} onSelect={setSelectedTab}/>
   <SearchField testID="guides-search-field" appearance="full" value={query} onChangeText={setQuery} onSubmit={() => setAppliedQuery(query.trim() || undefined)} />
   {rows.length > 0 && pagination.errorScope === 'refresh' ?
@@ -141,7 +141,7 @@ export function GuidesListScreen(): React.ReactElement {
     empty: { kind: 'noResult', title: t('square.guides.empty'), actionLabel: t('action.retry'), onAction: refresh } }}
    renderItem={row => <ListItem testID={`guide-row-${row.id}`} title={row.title} subtitle={row.summary}
     onPress={() => router.push(`/guides/${row.id}` as never)} />} />
- </Screen>;
+ </FeatureScreen>;
 }
 
 export function GuideDetailScreen({ articleId }: { articleId: string }): React.ReactElement {

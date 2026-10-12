@@ -1,13 +1,14 @@
 # App 本地预览与生产数据连接
 
-核对日期：2026-10-09。适用于本仓库 `app/` 中的 Expo SDK 57 原生 App，命令使用 Windows PowerShell。
+更新日期：2026-10-12（安卓 Expo Go 通知兼容修复）；数据库与 API 连接验证日期：2026-10-09。适用于本仓库 `app/` 中的 Expo SDK 57 原生 App，命令使用 Windows PowerShell。
 
 ## 当前连接与验证结果
 
 - 根目录 `.env` 已配置 Railway 公网 MySQL 的 `MYSQL_URL`。本机只执行 `SELECT 1` 验证，连接成功；未运行迁移或修改业务数据。连接测试无法独立证明实例归属，使用本地后端前需与 Railway 生产环境的 MySQL 服务配置核对。
 - 生产 API 为 `https://xmumdorm-200-lyzz-production.up.railway.app`，本机请求 `/health` 得到 HTTP 200。该健康接口本身不检查数据库，数据库连通性由上面的独立 SQL 验证确认。
 - 本机 `app/.env.local` 已设置 `EXPO_PUBLIC_API_BASE_URL` 指向生产 API。这个文件被 Git 忽略，其他电脑需按下文自行设置。
-- 本机已验证 Metro 启动、环境变量加载及 Android JavaScript bundle（HTTP 200，1383 个模块）；类型检查通过，lint 为 0 errors / 309 warnings（现有代码警告）。这不代表已完成手机上的原生交互验收。
+- 2026-10-09 已验证 Metro 启动、环境变量加载和基础入口打包；2026-10-12 按 Android Expo Go manifest 的实际入口参数（含 `transform.routerRoot=src/app`）验证完整 App bundle，HTTP 200、4337 个模块，并确认包含通知隔离与设置页提示。类型检查和 lint 无错误；手机上的原生交互仍未验收。
+- 本轮通知修复的 4 个针对性测试套件共 22 个用例通过，覆盖真实 SDK 的安卓 Expo Go 导入、权限与清理、设置页不可用状态，以及开发客户端的提醒安排/撤销和 iOS 权限路径。原始复现测试在修复前曾抛出与用户相同的 SDK 错误，修复后通过。
 - 本次提供预览教程，不执行原生构建、发布或上传商店；真机扫码后的界面与交互仍需在手机上检查。
 
 推荐连接方式：**本地 App → 生产 API → 生产 MySQL**。电脑只启动 Metro，不必启动本地 Express，也不需要把数据库密码交给 App。
@@ -17,6 +18,10 @@
 ## 一、最快开始：手机使用 Expo Go
 
 ### 1. 安装手机客户端
+
+**安卓 Expo Go 的预览限制**：当前代码在这一环境中不加载通知模块，设置页会显示“当前预览暂不支持通知”；上课和 Moodle 本地提醒不会安排到系统中。其他页面可继续预览。需要检查通知与提醒时，使用第四节的 development build。
+
+原因是本仓库安装的 `expo-notifications 57.0.22` 公共入口在导入时会注册 push-token listener，安卓 Expo Go 在这一步直接抛错，导致根布局加载失败并可能连带出现 `Cannot read property 'ErrorBoundary' of undefined`。修复将通知 SDK 加载放在环境判断之后，开发客户端仍保留完整通知路径。官方文档说明安卓 Expo Go 不支持远程推送，但本地通知仍有支持；本项目暂时隔离整个通知入口是针对该版本导入行为的预览兼容措施，参见 [Expo Notifications SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/notifications/)。
 
 安装支持 **SDK 57** 的 [Expo Go](https://expo.dev/go)。Android 可在官方页面选择对应版本；iPhone 上的 App Store 版本必须与 SDK 57 兼容。如果提示 SDK 不兼容，请使用兼容版本或下文的 development build，不要为此随意升级项目 SDK。
 
@@ -161,6 +166,7 @@ Windows 无法本地运行 iOS Simulator；iPhone 的自有 development build �
 
 | 现象 | 处理 |
 | --- | --- |
+| 启动报远程通知已从 Expo Go 移除，随后报 ErrorBoundary undefined | 本仓库已有环境隔离修复；停止旧 Metro，用 `--go --lan --clear` 重启并重新扫码。通知验收使用 development build。 |
 | 扫码后提示 SDK 不匹配 | 使用兼容 SDK 57 的 Expo Go，或构建本项目 development build。 |
 | 页面出来了，接口仍请求 127.0.0.1 | 检查是否在 `app/` 启动 Metro、变量名是否为 `EXPO_PUBLIC_API_BASE_URL`、当前终端是否留有旧变量；重启 Metro 并完整重载。 |
 | 返回 401 / 登录状态异常 | 使用真实已有账号重新登录；本地后端切换与线上后端可能使用不同 JWT 密钥，旧 token 不能假定通用。 |
