@@ -1,0 +1,12 @@
+{
+  "events": [
+    { "id": 501, "course": { "id": 42 }, "instance": 100, "name": "Tutorial 1 deadline", "timesort": 1791513000, "timestart": 1791510000, "visible": 1, "action": { "url": "https://l.xmu.edu.my/mod/assign/view.php?id=100&sesskey=fixture-only-secret", "name": "Submit" }, "viewurl": "https://l.xmu.edu.my/calendar/view.php?view=day", "description": "Synthetic private assignment body", "editurl": "https://l.xmu.edu.my/calendar/event.php?sesskey=fixture-only-secret" },
+    { "id": 502, "course": { "id": 43 }, "instance": null, "name": "Course event", "timesort": 1791599400, "visible": true, "viewurl": "https://l.xmu.edu.my/course/view.php?id=43" },
+    { "id": 503, "course": { "id": 42 }, "instance": 101, "name": "Hidden event", "timesort": 1791685800, "visible": 0 },
+    { "id": 504, "name": "Non-course event", "timesort": 1791772200, "visible": 1 },
+    { "id": 505, "course": { "id": 42 }, "name": "Unknown visibility", "timesort": 1791858600 }
+  ],
+  "firstid": 501,
+  "lastid": 540,
+  "password": "fixture-only-password"
+}

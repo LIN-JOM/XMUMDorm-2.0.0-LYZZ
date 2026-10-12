@@ -29,6 +29,7 @@ beforeEach(() => {
     React.useImperativeHandle(props.ref, () => ({
       readSchedule: mockReadSchedule,
       probeSession: jest.fn(),
+      readMoodle: () => null,
     }));
     return <View testID={props.testID} />;
   });

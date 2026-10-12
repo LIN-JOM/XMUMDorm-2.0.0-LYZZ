@@ -22,140 +22,241 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import WebView, { type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
-
 import { useTheme } from '@/design-system/theme';
 import { useScreenInsets } from '@/components/ui/Screen';
-import {
-  buildInsetBootstrapScript,
-  buildScheduleScrapeScript,
-  buildSessionProbeScript,
-  parseWebViewMessage,
-} from './injectedScripts';
+import { buildInsetBootstrapScript, buildScheduleScrapeScript, buildSessionProbeScript,
+  parseWebViewMessage } from './injectedScripts';
 import type { SchoolSystem } from './schoolSystems';
+import { buildMoodleReadScript, isMoodleOrigin, parseMoodleBridgeMessage,
+  type MoodleReadRequest, type MoodleBridgeResult } from './moodle/bridge';
+import type { MoodleStateResponse } from './moodle/contract';
+import { beginMoodleCourseSync, clearMoodleCache, moodleCacheGeneration, writeMoodleCache,
+  confirmMoodleSchoolIdentity, confirmedMoodleSchoolIdentity, prepareMoodlePage,
+  closeMoodleCache, subscribeMoodleInvalidation } from './moodle/cache';
+import { buildMoodleIdentityProbeScript, parseMoodleIdentityMessage, type MoodleIdentityResult } from './moodle/identity';
+import { authorizeMoodleDetail, buildMoodleDetailReadScript, parseMoodleDetailMessage,
+  type MoodleDetailRequest, type MoodleDetailResult } from './moodle/detail';
 
-/** 交给宿主页的命令式接口（`T-05` 工具栏的"读取本页课表"要用） */
 export type SchoolSystemWebViewHandle = {
-  /** 立刻再读一次本页课表（用户在课表页点了按钮） */
   readSchedule: () => void;
-  /** 立刻再探一次会话状态（"是不是登录页"） */
   probeSession: () => void;
+  readMoodle: (request: MoodleReadRequest) => string | null;
+  /** Optional additions preserve existing AC callers and mocks. */
+  probeMoodleIdentity?: () => string | null;
+  readMoodleDetail?: (request: MoodleDetailRequest) => string | null;
+  cancelMoodleReads?: () => void;
 };
-
 export type SchoolSystemWebViewProps = {
   system: SchoolSystem;
-  /** 是否在加载完成后尝试读表（只有 AC 的课表页需要） */
   scrapeSchedule?: boolean;
   onScheduleMessage?: (raw: string) => void;
-  /**
-   * 会话探测结果（P1-14）：`hasPasswordField === true` 表示**当前这页是登录页**。
-   * ⛔ 这是"观察到的事实"，不是"校方系统的权威状态"。
-   */
+  onMoodleResponse?: (response: MoodleBridgeResult, generation: number) => void;
+  onMoodleIdentity?: (identity: MoodleIdentityResult) => void;
+  onMoodleDetail?: (detail: MoodleDetailResult, generation: number) => void;
+  /** Opt-in workspace mode; only a fresh confirmed identity can preserve on close. */
+  preserveSnapshotOnClose?: boolean;
   onSessionProbe?: (probe: { hasPasswordField: boolean }) => void;
   onNavigationStateChange?: (event: WebViewNavigation) => void;
   testID?: string;
 };
 
-export const SchoolSystemWebView = React.forwardRef<
-  SchoolSystemWebViewHandle,
-  SchoolSystemWebViewProps
->(function SchoolSystemWebView(
-  {
-    system,
-    scrapeSchedule = false,
-    onScheduleMessage,
-    onSessionProbe,
-    onNavigationStateChange,
-    testID,
-  },
-  ref
-): React.ReactElement {
-  const theme = useTheme();
-  // S7 + S2：覆盖层需要 insets，但只能从唯一容器拿
-  const { insets } = useScreenInsets();
-  const webRef = React.useRef<WebView>(null);
+type PendingRead = { request: MoodleReadRequest; generation: number; userId: number | null;
+  timer: ReturnType<typeof setTimeout> };
+type PendingDetail = { request: MoodleDetailRequest; generation: number; userId: number;
+  timer: ReturnType<typeof setTimeout> };
 
-  // 17.3：把真实 insets 交给内嵌页（它自己的 env(safe-area-inset-*) 恒为 0）
-  const insetScript = React.useMemo(() => buildInsetBootstrapScript(insets), [insets]);
-  const scrapeScript = React.useMemo(() => buildScheduleScrapeScript(), []);
-  const probeScript = React.useMemo(() => buildSessionProbeScript(), []);
+export const SchoolSystemWebView = React.forwardRef<SchoolSystemWebViewHandle, SchoolSystemWebViewProps>(
+  function SchoolSystemWebView(props, ref): React.ReactElement {
+    const { system, scrapeSchedule = false, preserveSnapshotOnClose = false, testID } = props;
+    const callbacks = React.useRef(props); callbacks.current = props;
+    const theme = useTheme();
+    const { insets } = useScreenInsets();
+    const webRef = React.useRef<WebView>(null);
+    const currentUrl = React.useRef<string | null>(null);
+    const sequence = React.useRef(0);
+    const initialPage = React.useRef(true);
+    const identity = React.useRef<{ userId: number; url: string } | null>(null);
+    const pending = React.useRef(new Map<string, PendingRead>());
+    const details = React.useRef(new Map<string, PendingDetail>());
+    const discovered = React.useRef(new Map<string, string[]>());
+    const identityRead = React.useRef<{ id: string; url: string; generation: number;
+      timer: ReturnType<typeof setTimeout> } | null>(null);
+    const cancelMoodleReads = React.useCallback(() => {
+      for (const item of pending.current.values()) clearTimeout(item.timer);
+      for (const item of details.current.values()) clearTimeout(item.timer);
+      if (identityRead.current) clearTimeout(identityRead.current.timer);
+      pending.current.clear(); details.current.clear(); identityRead.current = null;
+    }, []);
+    const invalidateMoodleData = React.useCallback(() => {
+      cancelMoodleReads(); identity.current = null; discovered.current.clear(); initialPage.current = false;
+      if (system.id === 'moodle') clearMoodleCache();
+    }, [cancelMoodleReads, system.id]);
+    React.useEffect(() => {
+      currentUrl.current = null; initialPage.current = true;
+      if (system.id === 'moodle') {
+        if (preserveSnapshotOnClose) prepareMoodlePage(); else clearMoodleCache();
+      }
+      const unsubscribe = subscribeMoodleInvalidation(() => {
+        if (system.id === 'moodle') { cancelMoodleReads(); identity.current = null; discovered.current.clear(); }
+      });
+      return () => {
+        unsubscribe(); cancelMoodleReads();
+        if (system.id === 'moodle') closeMoodleCache(preserveSnapshotOnClose
+          && identity.current?.userId === confirmedMoodleSchoolIdentity());
+        identity.current = null;
+      };
+    }, [system.id, preserveSnapshotOnClose, cancelMoodleReads]);
 
-  // 命令式接口：宿主页的工具栏按钮用它（⛔ 不让宿主自己拿 webRef，那会绕过本组件的注入纪律）
-  React.useImperativeHandle(
-    ref,
-    () => ({
-      readSchedule: () => {
-        webRef.current?.injectJavaScript(scrapeScript);
+    const insetScript = React.useMemo(() => buildInsetBootstrapScript(insets), [insets]);
+    const scrapeScript = React.useMemo(() => buildScheduleScrapeScript(), []);
+    const probeScript = React.useMemo(() => buildSessionProbeScript(), []);
+    const probeIdentity = React.useCallback((): string | null => {
+      const url = currentUrl.current;
+      if (system.id !== 'moodle' || !url || !isMoodleOrigin(url) || !webRef.current) return null;
+      if (identityRead.current) clearTimeout(identityRead.current.timer);
+      const id = `identity:${++sequence.current}`;
+      const generation = moodleCacheGeneration();
+      const timer = setTimeout(() => {
+        if (identityRead.current?.id !== id) return;
+        invalidateMoodleData();
+        callbacks.current.onMoodleIdentity?.({ requestId: id, status: 'unknown' });
+      }, 12000);
+      identityRead.current = { id, url, generation, timer };
+      webRef.current.injectJavaScript(buildMoodleIdentityProbeScript(id)!);
+      return id;
+    }, [system.id, invalidateMoodleData]);
+
+    React.useImperativeHandle(ref, () => ({
+      readSchedule: () => { webRef.current?.injectJavaScript(scrapeScript); },
+      probeSession: () => { webRef.current?.injectJavaScript(probeScript); },
+      probeMoodleIdentity: probeIdentity,
+      cancelMoodleReads,
+      readMoodle: (request) => {
+        const url = currentUrl.current;
+        if (system.id !== 'moodle' || !url || !isMoodleOrigin(url) || !webRef.current) return null;
+        const userId = identity.current?.url === url ? identity.current.userId : null;
+        if (preserveSnapshotOnClose && (userId === null || userId !== confirmedMoodleSchoolIdentity())) return null;
+        const requestId = `moodle:${++sequence.current}`;
+        const script = buildMoodleReadScript(requestId, request, userId ?? undefined);
+        if (!script) return null;
+        const generation = request.method === 'courses' && (request.offset ?? 0) === 0
+          ? beginMoodleCourseSync() : moodleCacheGeneration();
+        const timer = setTimeout(() => {
+          if (!pending.current.delete(requestId) || generation !== moodleCacheGeneration()) return;
+          callbacks.current.onMoodleResponse?.({ requestId, method: request.method, status: 'timeout' }, generation);
+        }, 12000);
+        pending.current.set(requestId, { request: { ...request }, generation, userId, timer });
+        webRef.current.injectJavaScript(script);
+        return requestId;
       },
-      probeSession: () => {
-        webRef.current?.injectJavaScript(probeScript);
+      readMoodleDetail: (request) => {
+        const url = currentUrl.current;
+        const userId = identity.current?.url === url ? identity.current.userId : null;
+        const key = `${request.courseId}:${request.moduleId}`;
+        if (system.id !== 'moodle' || !url || !isMoodleOrigin(url) || !webRef.current
+          || userId === null || userId !== confirmedMoodleSchoolIdentity()
+          || !authorizeMoodleDetail(request, discovered.current.get(key))) return null;
+        const requestId = `detail:${++sequence.current}`;
+        const script = buildMoodleDetailReadScript(requestId, request, userId);
+        if (!script) return null;
+        const generation = moodleCacheGeneration();
+        const timer = setTimeout(() => {
+          if (!details.current.delete(requestId) || generation !== moodleCacheGeneration()) return;
+          callbacks.current.onMoodleDetail?.({ requestId, status: 'timeout' }, generation);
+        }, 12000);
+        details.current.set(requestId, { request: { ...request }, generation, userId, timer });
+        webRef.current.injectJavaScript(script);
+        return requestId;
       },
-    }),
-    [scrapeScript, probeScript]
-  );
+    }), [scrapeScript, probeScript, probeIdentity, cancelMoodleReads, system.id, preserveSnapshotOnClose]);
 
-  const handleMessage = React.useCallback(
-    (event: WebViewMessageEvent) => {
-      const message = parseWebViewMessage(event.nativeEvent.data);
-      if (message.kind === 'session') {
-        onSessionProbe?.({ hasPasswordField: message.hasPasswordField });
+    const handleMessage = React.useCallback((event: WebViewMessageEvent) => {
+      const url = currentUrl.current;
+      const nativeUrl = event.nativeEvent.url;
+      const samePage = system.id === 'moodle' && !!url && isMoodleOrigin(url) && nativeUrl === url;
+      const identityResult = parseMoodleIdentityMessage(event.nativeEvent.data);
+      if (identityResult) {
+        const item = identityRead.current;
+        if (!samePage || !item || item.id !== identityResult.requestId || item.url !== url
+          || item.generation !== moodleCacheGeneration()) return;
+        clearTimeout(item.timer); identityRead.current = null; initialPage.current = false;
+        if (identityResult.status === 'confirmed') {
+          confirmMoodleSchoolIdentity(identityResult.userId);
+          identity.current = { userId: identityResult.userId, url: url! };
+        } else invalidateMoodleData();
+        callbacks.current.onMoodleIdentity?.(identityResult);
         return;
       }
-      if (message.kind === 'schedule') {
-        // 课表的严格解析交给既有的 `extractSchedule`（⛔ 本组件不重复实现）
-        onScheduleMessage?.(message.raw);
+      const detail = parseMoodleDetailMessage(event.nativeEvent.data);
+      if (detail) {
+        const item = details.current.get(detail.requestId);
+        if (!samePage || !item || item.generation !== moodleCacheGeneration()
+          || item.userId !== identity.current?.userId || item.userId !== confirmedMoodleSchoolIdentity()) return;
+        if (detail.status === 'success' && (detail.data.courseId !== item.request.courseId
+          || detail.data.moduleId !== item.request.moduleId || detail.data.kind !== item.request.kind
+          || detail.data.url !== item.request.url || !authorizeMoodleDetail(item.request,
+            discovered.current.get(`${item.request.courseId}:${item.request.moduleId}`)))) return;
+        clearTimeout(item.timer); details.current.delete(detail.requestId);
+        if (detail.status === 'expired' || detail.status === 'wrong-origin') invalidateMoodleData();
+        if (detail.status === 'success' && detail.data.kind === 'forum') {
+          discovered.current.set(`${detail.data.courseId}:${detail.data.moduleId}`, detail.data.announcements.map((row) => row.url));
+        }
+        callbacks.current.onMoodleDetail?.(detail, item.generation);
+        return;
       }
-    },
-    [onScheduleMessage, onSessionProbe]
-  );
+      const moodle = parseMoodleBridgeMessage(event.nativeEvent.data);
+      if (moodle) {
+        const item = pending.current.get(moodle.requestId);
+        if (!samePage || !item || item.request.method !== moodle.method) return;
+        if (item.generation !== moodleCacheGeneration()
+          || (item.userId !== null && item.userId !== confirmedMoodleSchoolIdentity())) {
+          clearTimeout(item.timer); pending.current.delete(moodle.requestId); return;
+        }
+        if (moodle.status === 'success' && item.request.method === 'state'
+          && (moodle.data as MoodleStateResponse).courseId !== item.request.courseId) return;
+        clearTimeout(item.timer); pending.current.delete(moodle.requestId);
+        if (moodle.status === 'expired' || moodle.status === 'wrong-origin') invalidateMoodleData();
+        if (moodle.status === 'success') writeMoodleCache(moodle.method, moodle.data, item.generation);
+        callbacks.current.onMoodleResponse?.(moodle, item.generation);
+        return;
+      }
+      const message = parseWebViewMessage(event.nativeEvent.data);
+      if (message.kind === 'session') {
+        if (system.id === 'moodle' && (!isMoodleOrigin(nativeUrl) || (url !== null && nativeUrl !== url))) return;
+        if (system.id === 'moodle' && message.hasPasswordField) invalidateMoodleData();
+        callbacks.current.onSessionProbe?.({ hasPasswordField: message.hasPasswordField });
+      } else if (message.kind === 'schedule') callbacks.current.onScheduleMessage?.(message.raw);
+    }, [system.id, invalidateMoodleData]);
 
-  /**
-   * `injectedJavaScript` 只在文档结束时跑一次；异步渲染的课表要靠这里再补一枪。
-   * ⭐ **会话探测每次加载都补**：单页应用内部跳转（登录成功 → 首页）不触发文档加载，
-   *    只在文档结束时探一次会永远停在"登录页"那个结论上。
-   */
-  const handleLoadEnd = React.useCallback(() => {
-    webRef.current?.injectJavaScript(probeScript);
-    if (scrapeSchedule) {
-      webRef.current?.injectJavaScript(scrapeScript);
-    }
-  }, [scrapeSchedule, scrapeScript, probeScript]);
-
-  const handleNavigation = React.useCallback(
-    (event: WebViewNavigation) => {
-      onNavigationStateChange?.(event);
-      // 导航结束（含 SPA 内部跳转）后再探一次 —— 这是"登录成功后状态变 signedIn"的来源
+    const handleLoadEnd = React.useCallback(() => {
+      webRef.current?.injectJavaScript(probeScript);
+      if (scrapeSchedule) webRef.current?.injectJavaScript(scrapeScript);
+      if (callbacks.current.onMoodleIdentity) probeIdentity();
+    }, [scrapeSchedule, scrapeScript, probeScript, probeIdentity]);
+    const handleNavigation = React.useCallback((event: WebViewNavigation) => {
+      if (event.loading || event.url !== currentUrl.current) {
+        if (system.id === 'moodle' && preserveSnapshotOnClose && initialPage.current && isMoodleOrigin(event.url)) {
+          cancelMoodleReads(); identity.current = null; prepareMoodlePage();
+        } else invalidateMoodleData();
+      }
+      currentUrl.current = event.loading ? null : event.url;
+      callbacks.current.onNavigationStateChange?.(event);
       if (!event.loading) {
         webRef.current?.injectJavaScript(probeScript);
+        if (callbacks.current.onMoodleIdentity) probeIdentity();
       }
-    },
-    [onNavigationStateChange, probeScript]
-  );
+    }, [system.id, preserveSnapshotOnClose, cancelMoodleReads, invalidateMoodleData, probeScript, probeIdentity]);
 
-  return (
-    <View
-      testID={testID}
-      style={{ flex: 1, backgroundColor: theme.color['bg-canvas'].value }}
-    >
-      <WebView
-        ref={webRef}
-        source={{ uri: system.startUrl }}
-        style={{ flex: 1, backgroundColor: 'transparent' }}
-        // ── 会话（R3：默认持久；这三个是"意图声明"，⛔ 不加无痕模式）──────────
-        sharedCookiesEnabled
-        cacheEnabled
-        thirdPartyCookiesEnabled
-        domStorageEnabled
-        javaScriptEnabled
-        // ── UA：只追加，⛔ 不整串覆盖 ────────────────────────────────────────
-        applicationNameForUserAgent="XMUMDorm/1.0"
-        // ── 注入（Android 上 AtDocumentStart 不可靠 → 只塞 CSS 变量）──────────
-        injectedJavaScriptBeforeContentLoaded={insetScript}
-        injectedJavaScript={probeScript}
-        onMessage={handleMessage}
-        onLoadEnd={handleLoadEnd}
-        onNavigationStateChange={handleNavigation}
-        allowsBackForwardNavigationGestures={false}
-      />
-    </View>
-  );
-});
+    return <View testID={testID} style={{ flex: 1, backgroundColor: theme.color['bg-canvas'].value }}>
+      <WebView ref={webRef} source={{ uri: system.startUrl }} style={{ flex: 1, backgroundColor: 'transparent' }}
+        sharedCookiesEnabled cacheEnabled thirdPartyCookiesEnabled domStorageEnabled javaScriptEnabled
+        applicationNameForUserAgent="XMUMDorm/1.0" injectedJavaScriptBeforeContentLoaded={insetScript}
+        injectedJavaScript={probeScript} onMessage={handleMessage} onLoadStart={() => {
+          currentUrl.current = null;
+          if (system.id === 'moodle' && preserveSnapshotOnClose && initialPage.current) {
+            cancelMoodleReads(); identity.current = null; prepareMoodlePage();
+          } else invalidateMoodleData();
+        }} onLoadEnd={handleLoadEnd} onNavigationStateChange={handleNavigation}
+        allowsBackForwardNavigationGestures={false} />
+    </View>;
+  });

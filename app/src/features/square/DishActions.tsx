@@ -1,6 +1,9 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Heart from 'lucide-react-native/icons/heart';
+import { IconButton } from '@/components/ui/IconButton';
+import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { useSession } from '@/features/auth/session';
@@ -65,10 +68,14 @@ function OwnedDishActions({ productId }: { productId: number }): React.ReactElem
       if (active()) setError({ ...toToolsError(failure, auth), target: t('canteen.favorite.title'), params: { rule: t('canteen.favorite.serverRule') } });
     } finally { writeBusy.current = false; if (active() && !rereading) setBusy(false); }
   };
+  const FavoriteHeart = React.useCallback((props: React.ComponentProps<typeof Heart>) => <Heart {...props} fill={favorited ? props.color : 'none'} />, [favorited]);
   return <View style={{ gap: theme.space('space_2') }}>
     <View style={{ flexDirection: 'row', gap: theme.space('space_2') }}>
       <Button testID="dish-review" label={t('canteen.review.submit')} disabled={session.status === 'restoring'} onPress={() => session.status === 'signedIn' ? router.push({ pathname: '/canteen/review/[id]', params: { id: String(productId) } }) : router.push('/login')} />
-      <Button testID="dish-favorite" variant="secondary" loading={busy} disabled={session.status === 'restoring' || (session.status === 'signedIn' && favorited === null)} label={t(favorited ? 'canteen.favorite.remove' : 'canteen.favorite.add')} onPress={() => void toggle()} />
+      <View style={{ alignItems: 'center' }}>
+        <IconButton testID="dish-favorite" Icon={FavoriteHeart} disabled={busy || session.status === 'restoring' || (session.status === 'signedIn' && favorited === null)} accessibilityLabel={t(favorited ? 'canteen.favorite.remove' : 'canteen.favorite.add')} onPress={() => void toggle()} />
+        <Text role="caption" colorToken="text-secondary">{t(favorited ? 'canteen.favorite.remove' : 'canteen.favorite.add')}</Text>
+      </View>
     </View>
     {error ? <ErrorState testID="dish-favorite-error" error={error} onAction={() => setNonce((value) => value + 1)} /> : null}
   </View>;

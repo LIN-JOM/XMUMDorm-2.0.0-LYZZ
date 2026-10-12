@@ -5,7 +5,7 @@ import { clearNamespace } from '@/shared/storage';
 import { ReviewScreen } from '@/features/square/ReviewScreen';
 import { canteenRevision } from '@/features/square/canteenCache';
 jest.mock('expo-router', () => ({ __state: { targets: [] as unknown[] }, useNavigation: () => ({ dispatch: jest.fn() }), useRouter: () => ({ replace: (target: unknown) => require('expo-router').__state.targets.push(target), back: jest.fn(), canGoBack: () => false }) }));
-jest.mock('@/features/auth/session', () => ({ useSession: () => ({ handleAuthFailure: async (error: unknown) => error ?? { kind: 'unknown' } }) }));
+jest.mock('@/features/auth/session', () => ({ useSession: () => ({ status: 'signedIn', handleAuthFailure: async (error: unknown) => error ?? { kind: 'unknown' } }) }));
 jest.mock('../../../shared/api/canteen', () => ({ postProductComment: jest.fn() }));
 const api = require('../../../shared/api/canteen') as { postProductComment: jest.Mock };
 jest.mock('expo-router/react-navigation', () => ({ usePreventRemove: jest.fn() }));
@@ -61,7 +61,7 @@ it('submits three selected images with native multipart metadata', async () => {
   const view = await renderApp(<ReviewScreen productId={9} pickImage={pick} />);
   await fireEvent.press(view.getByTestId('review-rating-hot'));
   await fireEvent.changeText(view.getByLabelText(/正文/), 'Good');
-  for (const index of [0, 1, 2]) await fireEvent.press(view.getByTestId(`review-image-${index}-pick`));
+  for (let selected = 0; selected < 3; selected += 1) await fireEvent.press(view.getByTestId('review-images-add-pick'));
   await fireEvent.press(view.getByTestId('review-form-submit'));
   await waitFor(() => expect(api.postProductComment).toHaveBeenCalledWith(9, expect.objectContaining({ imageFiles: [0, 1, 2].map((index) => ({ uri: 'file:///dish.png', type: 'image/png', name: `review-${index}.png` })) })));
 });

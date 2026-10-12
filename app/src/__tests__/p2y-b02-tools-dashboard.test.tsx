@@ -3,18 +3,25 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { ToolsDashboardContent } from '@/features/tools/ToolsDashboard';
 import { clearNamespace } from '@/shared/storage';
-jest.mock('expo-router', () => ({ __state: { targets: [] as unknown[] }, useRouter: () => ({ push: (target: unknown) => require('expo-router').__state.targets.push(target) }) }));
+jest.mock('expo-router', () => ({ __state: { targets: [] as unknown[] }, useRouter: () => ({ push: (target: unknown) => jest.requireMock('expo-router').__state.targets.push(target) }) }));
 jest.mock('../../../shared/api/schedule', () => ({ getScheduleWeek: jest.fn() }));
 jest.mock('../../../shared/api/todos', () => ({ getTodayTodos: jest.fn() }));
-const api = require('../../../shared/api/schedule') as { getScheduleWeek: jest.Mock };
+const api = jest.requireMock('../../../shared/api/schedule') as { getScheduleWeek: jest.Mock };
 jest.mock('@/features/auth/session', () => ({ useSession: () => ({ handleAuthFailure: async () => ({ kind: 'unknown' }) }) }));
-const todos = require('../../../shared/api/todos') as { getTodayTodos: jest.Mock };
+const todos = jest.requireMock('../../../shared/api/todos') as { getTodayTodos: jest.Mock };
 beforeEach(async () => {
+  jest.useFakeTimers({ doNotFake: [
+    'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+    'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate',
+    'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval',
+  ] });
+  jest.setSystemTime(new Date('2026-10-05T01:00:00Z'));
   await clearNamespace();
   api.getScheduleWeek.mockReset().mockImplementation(async (week: number) => ({ week, currentWeek: week, totalWeeks: 14, days: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((day) => [day, [{ course_code: 'CS101', course_name: 'Algorithms', start_time: '08:00', end_time: '10:00', venue: 'A1', day_of_week: day }]])) }));
   todos.getTodayTodos.mockReset().mockResolvedValue({ total: 4, completed: 2, active: 2, topItems: [{ id: 7, title: 'Read paper' }] });
-  require('expo-router').__state.targets.length = 0;
+  jest.requireMock('expo-router').__state.targets.length = 0;
 });
+afterEach(() => jest.useRealTimers());
 it('renders all three real-data blocks and preserves tool entry points', async () => {
   const view = await renderApp(<ToolsDashboardContent />);
   await waitFor(() => expect(view.getByText('Algorithms')).toBeTruthy());
@@ -25,7 +32,7 @@ it('renders all three real-data blocks and preserves tool entry points', async (
   expect(view.getByTestId('tools-timetable')).toBeTruthy();
   expect(view.getByTestId('tools-schedule-import')).toBeTruthy();
   await fireEvent.press(view.getByTestId('tools-todos'));
-  expect(require('expo-router').__state.targets).toContain('/tools/todos');
+  expect(jest.requireMock('expo-router').__state.targets).toContain('/tools/todos');
 });
 it('keeps the course and school blocks when todos fail', async () => {
   todos.getTodayTodos.mockRejectedValue({ kind: 'offline' });
