@@ -163,6 +163,22 @@ describe('P0-06 二级顶部 Tab 条', () => {
       expect(chip.props.accessibilityState.selected).toBe(true);
     });
 
+    it('动态标签使用服务端文案，并把同一文案交给读屏', async () => {
+      const view = await render(
+        withProviders(
+          <FilterChips
+            options={[{ key: '7', label: '组队自习' }]}
+            selected={['7']}
+            onToggle={() => undefined}
+          />
+        )
+      );
+      const chip = view.getByTestId('filter-chip-7');
+      expect(view.getByText('组队自习')).toBeTruthy();
+      expect(chip.props.accessibilityLabel).toBe('组队自习');
+      expect(chip.props.accessibilityState.selected).toBe(true);
+    });
+
     it('Tab 条与 Chips 是两个文件、两个组件（导出面互不包含对方语义）', () => {
       const strip = fs.readFileSync(
         path.join(SRC_ROOT, 'components', 'ui', 'TopTabStrip.tsx'),
