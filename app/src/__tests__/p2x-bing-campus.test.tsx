@@ -53,6 +53,37 @@ it('树洞显示服务器标签，选择和清除都保留真实筛选状态',as
  expect(v.getByTestId('campus-row-7')).toBeTruthy();
  expect(secondaryTabStore.get('square','confession').filters).toEqual({});
 });
+it('标签各自保留分页内容和位置，追加请求不串标签',async()=>{
+ tags.mockResolvedValue([
+  {id:7,name_zh:'组队自习',name_en:'Study group'},
+  {id:8,name_zh:'失物招领',name_en:'Lost and found'},
+ ]);
+ list.mockImplementation(({tagId,page})=>{
+  if(tagId===7&&page===1)return Promise.resolve({list:[{id:70,content:'自习首篇'}],hasMore:true});
+  if(tagId===7&&page===2)return Promise.resolve({list:[{id:71,content:'自习次篇'}],hasMore:false});
+  if(tagId===8)return Promise.resolve({list:[{id:80,content:'失物首篇'}],hasMore:false});
+  return Promise.resolve({list:[{id:1,content:'全部首篇'}],hasMore:false});
+ });
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('filter-chip-7')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('filter-chip-7'));
+ await waitFor(()=>expect(v.getByText('自习首篇')).toBeTruthy());
+ await act(async()=>mockListProps.onScrollOffset?.(480));
+ await act(async()=>mockListProps.onEndReached?.());
+ await waitFor(()=>expect(v.getByText('自习次篇')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('filter-chip-8'));
+ await waitFor(()=>expect(v.getByText('失物首篇')).toBeTruthy());
+ expect(v.queryByText('自习次篇')).toBeNull();
+ await fireEvent.press(v.getByTestId('filter-chip-7'));
+ await waitFor(()=>expect(v.getByText('自习次篇')).toBeTruthy());
+ expect(mockListProps.restoredScrollOffset).toBe(480);
+ expect(list.mock.calls.map(call=>call[0])).toEqual([
+  {page:1,pageSize:10},
+  {page:1,pageSize:10,tagId:7},
+  {page:2,pageSize:10,tagId:7},
+  {page:1,pageSize:10,tagId:8},
+ ]);
+});
 it('树洞列表复用媒体层：单图保持静态，多图提供横滑页码',async()=>{
  list.mockResolvedValue({list:[
   {id:7,title:'单图',content:'一张',images:[{url:'https://example.com/one.jpg'}]},
