@@ -132,6 +132,66 @@ router.get('/', async (req, res, next) => {
 });
 
 // =========================
+// 我的发布（登录，只读归属列表）
+// GET /api/errands/me?page=1&pageSize=20
+// =========================
+router.get('/me', authenticateToken, async (req, res, next) => {
+  try {
+    const page = Math.max(1, toInt(req.query.page, 1));
+    const pageSize = Math.min(50, Math.max(1, toInt(req.query.pageSize, 20)));
+    const offset = (page - 1) * pageSize;
+    const limit = pageSize + 1;
+    const listSql = `
+      SELECT
+        e.id, e.title, e.reward, e.deadline, e.location, e.type, e.status,
+        e.created_at,
+        u.id AS owner_id, u.username AS owner_username, u.nickname AS owner_nickname, u.avatar AS owner_avatar
+      FROM errands e
+      JOIN users u ON u.id = e.owner_user_id
+      WHERE e.owner_user_id = ?
+      ORDER BY
+        CASE WHEN e.deadline IS NULL THEN 1 ELSE 0 END ASC,
+        e.deadline ASC,
+        e.created_at DESC
+      LIMIT ${limit} OFFSET ${offset};
+    `;
+    const rows = await query(listSql, [req.user.id]);
+    const countRows = await query(
+      'SELECT COUNT(*) AS cnt FROM errands WHERE owner_user_id = ?',
+      [req.user.id]
+    );
+    const total = countRows && countRows[0] ? Number(countRows[0].cnt) : 0;
+    res.json({
+      status: 0,
+      data: {
+        list: (rows || []).slice(0, pageSize).map((row) => ({
+          id: row.id,
+          title: row.title,
+          reward: Number(row.reward),
+          deadline: row.deadline,
+          location: row.location,
+          type: row.type,
+          status: row.status,
+          createdAt: row.created_at,
+          owner: {
+            id: row.owner_id,
+            username: row.owner_username,
+            nickname: row.owner_nickname,
+            avatar: row.owner_avatar,
+          },
+        })),
+        page,
+        pageSize,
+        total,
+        hasMore: (rows || []).length > pageSize,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// =========================
 // Detail
 // GET /api/errands/:id
 // =========================

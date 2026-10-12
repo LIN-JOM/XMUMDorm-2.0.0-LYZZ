@@ -17,6 +17,14 @@ export function listMarketplaceItems(params = {}) {
   return get(`/api/marketplace/items${query ? `?${query}` : ''}`);
 }
 
+export function listMarketplaceMyItems(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString();
+  return get(`/api/marketplace/me/items${query ? `?${query}` : ''}`);
+}
+
 export function listMarketplaceMyWants(params = {}) {
   const qs = new URLSearchParams();
   if (params.page) qs.set('page', String(params.page));
