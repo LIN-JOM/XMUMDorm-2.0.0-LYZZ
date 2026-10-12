@@ -10,6 +10,7 @@ export default function Modal({
   size = 'sm',
   children,
   footer = null,
+  className = '',
   closeOnBackdrop = true,
   closeOnEscape = true,
 }) {
@@ -22,6 +23,7 @@ export default function Modal({
       size={size === 'sm' ? 'sm' : size === 'md' ? 'md' : 'lg'}
       closeOnBackdrop={closeOnBackdrop}
       closeOnEscape={closeOnEscape}
+      className={className}
     >
       <div className="space-y-4">
         {children}
