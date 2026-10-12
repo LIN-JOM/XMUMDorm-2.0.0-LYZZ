@@ -157,9 +157,9 @@ function CampusFeedData({kind,query,tagId,filterChips}:{kind:CampusKind;query?:s
  const [rows,setRows]=React.useState(snapshot.current.rows),[revision,setRevision]=React.useState(0);
  const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query||tagId!=null?undefined:{primaryTab:'square',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
  const persistScrollOffset=React.useCallback((offset:number)=>{
-  if(query){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
+  if(query||tagId!=null){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
   else persistTabScrollOffset(offset);
- },[query,client,key,persistTabScrollOffset]);
+ },[query,tagId,client,key,persistTabScrollOffset]);
  const generation=React.useRef(0),pending=React.useRef<'refresh'|'append'|null>(null);
  const load=React.useCallback(async(mode:'refresh'|'append')=>{
   if(pending.current==='refresh'||(mode==='append'&&(pending.current||!snapshot.current.hasMore)))return;
@@ -204,7 +204,7 @@ function CampusFeedData({kind,query,tagId,filterChips}:{kind:CampusKind;query?:s
  return <>
   {rows.length>0&&pagination.errorScope==='refresh'?<Button label={t('screen.campus.read.refreshFailed')} onPress={refresh}/>:null}
   <ListScreen key={revision} testID="campus-list" data={rows} keyExtractor={row=>String(row.id)} pagination={pagination}
-   restoredScrollOffset={revision===0&&initial.current?(query?initial.current.scrollOffset??0:restoredScrollOffset):0} onScrollOffset={persistScrollOffset}
+   restoredScrollOffset={revision===0&&initial.current?(query||tagId!=null?initial.current.scrollOffset??0:restoredScrollOffset):0} onScrollOffset={persistScrollOffset}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    filterChips={filterChips}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.campus.read.listEnd'),empty:{kind:'noResult',title:t(query?'screen.campus.search.empty':'screen.campus.read.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
