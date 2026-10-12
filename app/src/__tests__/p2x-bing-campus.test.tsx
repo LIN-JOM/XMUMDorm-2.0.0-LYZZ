@@ -49,6 +49,18 @@ it('树洞列表复用媒体层：单图保持静态，多图提供横滑页码'
  await fireEvent.scroll(v.getByTestId('campus-row-8-media-scroll'),{nativeEvent:{contentOffset:{x:300,y:0},layoutMeasurement:{width:300,height:200}}});
  expect(v.getByTestId('campus-row-8-media-position')).toHaveTextContent('第 2 张，共 2 张');
 });
+it('树洞帖子按身份、正文、媒体和指标的顺序组合',async()=>{
+ list.mockResolvedValue({list:[{id:7,title:'晚间散步',content:'今晚有人想去湖边吗？',author:{nickname:'小林'},created_at:new Date().toISOString(),like_count:2,images:[{url:'https://example.com/one.jpg'}]}],hasMore:false});
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('campus-row-7-media-0',{includeHiddenElements:true})).toBeTruthy());
+ const sequence:string[]=[];
+ const visit=(node:unknown):void=>{if(typeof node==='string'){sequence.push(node);return;}if(Array.isArray(node)){node.forEach(visit);return;}if(node&&typeof node==='object'){const value=node as {props?:{testID?:unknown};children?:unknown};if(typeof value.props?.testID==='string')sequence.push(value.props.testID);visit(value.children);}};
+ visit(v.getByTestId('campus-row-7'));
+ expect(sequence.indexOf('小林')).toBeLessThan(sequence.indexOf('晚间散步'));
+ expect(sequence.indexOf('晚间散步')).toBeLessThan(sequence.indexOf('今晚有人想去湖边吗？'));
+ expect(sequence.indexOf('今晚有人想去湖边吗？')).toBeLessThan(sequence.indexOf('campus-row-7-media'));
+ expect(sequence.indexOf('campus-row-7-media')).toBeLessThan(sequence.indexOf('2 赞'));
+});
 it('详情显示正文作者和图片，返回原页',async()=>{
  detail.mockResolvedValue({id:7,title:'校内交流',content:'一起打球',author:{nickname:'小林'},images:[{url:'https://example.com/photo.jpg'}]});
  const v=await renderApp(<CampusDetailScreen postId="7"/>);

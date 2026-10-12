@@ -66,6 +66,10 @@ export type EntityCardProps = {
   status?: string;
   /** 点评作者：后端对普通用户点评**强制匿名**（调研 G18），因此有值才显示 */
   authorLabel?: string;
+  /** 帖子发布时间；只在 `post` 变体中与作者组成身份行 */
+  metaLabel?: string;
+  /** 帖子图集；只在 `post` 变体中排在正文之后 */
+  postMedia?: React.ReactNode;
   /** Localized metrics supplied by domain adapters (currency/status are business rules). */
   metrics?: readonly string[];
   onPress?: () => void;
@@ -108,6 +112,8 @@ export function EntityCard({
   reviewCount,
   status,
   authorLabel,
+  metaLabel,
+  postMedia,
   metrics: injectedMetrics,
   onPress,
   style,
@@ -116,40 +122,49 @@ export function EntityCard({
   const theme = useTheme();
   const hasMedia = typeof mediaUri === 'string' && mediaUri.length > 0;
   const metrics = injectedMetrics ?? entityMetrics({ domain, price, reward, score, reviewCount, status });
+  const isPost = domain === 'post';
+  const media = hasMedia ? (
+    <Image
+      source={{ uri: mediaUri }}
+      contentFit="cover"
+      // 用**比例**而不是像素高度：令牌源里没有"卡片媒体高度"这个档位，
+      // 而比例是无量纲的，不会变成"屏内魔法数字"（宪法 2.4 管的是尺寸/间距）。
+      style={{ width: '100%', aspectRatio: 16 / 9 }}
+      accessible={false}
+      transition={0}
+    />
+  ) : null;
 
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       // §7.3：整卡可点时**卡片语义必须是一条**，不能把卡内每个元素都读出来
-      accessibilityLabel={[title, subtitle, ...metrics].filter(Boolean).join('，')}
+      accessibilityLabel={[isPost ? authorLabel : '', isPost ? metaLabel : '', title, subtitle, ...metrics].filter(Boolean).join('，')}
       style={style}
     >
       <Surface rounded="radius_medium" bordered="subtle">
-        {hasMedia ? (
-          <Image
-            source={{ uri: mediaUri }}
-            contentFit="cover"
-            // 用**比例**而不是像素高度：令牌源里没有"卡片媒体高度"这个档位，
-            // 而比例是无量纲的，不会变成"屏内魔法数字"（宪法 2.4 管的是尺寸/间距）。
-            style={{ width: '100%', aspectRatio: 16 / 9 }}
-            accessible={false}
-            transition={0}
-          />
-        ) : null}
+        {isPost ? null : media}
         <View style={{ padding: theme.space('space_3'), gap: theme.space('space_1') }}>
           {badges ? (
             <View style={{ flexDirection: 'row', gap: theme.space('space_1') }}>{badges}</View>
+          ) : null}
+          {isPost && (authorLabel || metaLabel) ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_1') }}>
+              {authorLabel ? <Text role="caption" emphasis="strong" colorToken="text-primary" numberOfLines={1}>{authorLabel}</Text> : null}
+              {metaLabel ? <Text role="caption" colorToken="text-muted" numberOfLines={1}>{metaLabel}</Text> : null}
+            </View>
           ) : null}
           <Text role="body" emphasis="strong" colorToken="text-primary" numberOfLines={2}>
             {title}
           </Text>
           {subtitle ? (
-            <Text role="caption" colorToken="text-secondary" numberOfLines={2}>
+            <Text role={isPost ? 'body' : 'caption'} colorToken="text-secondary" numberOfLines={isPost ? 4 : 2}>
               {subtitle}
             </Text>
           ) : null}
-          {authorLabel ? (
+          {isPost ? (postMedia ?? media) : null}
+          {!isPost && authorLabel ? (
             <Text role="caption" colorToken="text-muted" numberOfLines={1}>
               {authorLabel}
             </Text>
