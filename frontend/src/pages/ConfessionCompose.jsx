@@ -91,6 +91,9 @@ export default function ConfessionCompose() {
                         <i /><i /><i />
                       </span>
                     )}
+                    {item.key === 'announcement' && <span className="cf-tpl-demo cf-tpl-demo--announcement">!</span>}
+                    {item.key === 'dialogue' && <span className="cf-tpl-demo cf-tpl-demo--dialogue">“…”</span>}
+                    {item.key === 'checklist' && <span className="cf-tpl-demo cf-tpl-demo--checklist">☐ ☑</span>}
                   </span>
                   <strong className="cf-template-option__name">
                     {isZh ? item.labelZh : item.labelEn}
@@ -175,7 +178,7 @@ export default function ConfessionCompose() {
         {overLimit && (
           <p className="cf-compose__warning" role="alert">
             {isZh
-              ? `当前版式最多 ${maxLength} 字，请精简或换用信笺卡`
+              ? `当前版式最多 ${maxLength} 字，请精简或切换版式`
               : `This layout allows up to ${maxLength} characters.`}
           </p>
         )}

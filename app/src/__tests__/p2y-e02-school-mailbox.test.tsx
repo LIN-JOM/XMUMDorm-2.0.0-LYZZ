@@ -4,7 +4,6 @@ import { act, fireEvent } from '@testing-library/react-native';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 
 import SchoolSystemScreen from '@/app/system/[id]';
-import { useMailboxBadge } from '@/features/mailbox/useUnread';
 import { SchoolSystemWebView } from '@/features/tools/SchoolSystemWebView';
 import { SCRAPE_KIND } from '@/features/tools/injectedScripts';
 import { renderApp } from './helpers/renderApp';
@@ -18,20 +17,14 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
   Redirect: jest.fn(() => null),
 }));
-jest.mock('@/features/mailbox/useUnread', () => ({ useMailboxBadge: jest.fn() }));
 jest.mock('@/features/tools/SchoolSystemWebView', () => ({ SchoolSystemWebView: jest.fn() }));
 
-const badgeHook = jest.mocked(useMailboxBadge);
 const paramsHook = jest.mocked(useLocalSearchParams);
 const schoolView = jest.mocked(SchoolSystemWebView);
 
 beforeEach(() => {
   jest.clearAllMocks();
   paramsHook.mockReturnValue({ id: 'ac' });
-  badgeHook.mockReturnValue({
-    unreadCount: 7,
-    onMailboxPress: () => mockPush('/mailbox'),
-  });
   schoolView.mockImplementation(function SchoolSystemStub(props) {
     React.useImperativeHandle(props.ref, () => ({
       readSchedule: mockReadSchedule,
@@ -42,13 +35,10 @@ beforeEach(() => {
   });
 });
 
-it('shows one tools TopBar with the shared unread badge and mailbox destination', async () => {
+it('keeps the school-system top bar focused on its own actions', async () => {
   const view = await renderApp(<SchoolSystemScreen />);
   expect(view.getByText('工具')).toBeTruthy();
-  expect(view.getAllByTestId('topbar-mailbox')).toHaveLength(1);
-  expect(view.getByTestId('topbar-mailbox').props.accessibilityLabel).toContain('7');
-  await fireEvent.press(view.getByTestId('topbar-mailbox'));
-  expect(mockPush).toHaveBeenCalledWith('/mailbox');
+  expect(view.queryByTestId('topbar-mailbox')).toBeNull();
   expect(mockBack).not.toHaveBeenCalled();
 });
 
@@ -59,7 +49,7 @@ it('keeps the close action independent from opening the mailbox', async () => {
   expect(mockPush).not.toHaveBeenCalled();
 });
 
-it('preserves AC reading, its import destination, and mailbox access after results arrive', async () => {
+it('preserves AC reading and its import destination after results arrive', async () => {
   const view = await renderApp(<SchoolSystemScreen />);
   await fireEvent.press(view.getByTestId('school-read-schedule'));
   expect(mockReadSchedule).toHaveBeenCalledTimes(1);
@@ -73,19 +63,16 @@ it('preserves AC reading, its import destination, and mailbox access after resul
     pathname: '/tools/schedule-import',
     params: { text: 'Course\tTime\nAlgorithms\t08:00' },
   });
-  await fireEvent.press(view.getByTestId('topbar-mailbox'));
-  expect(mockPush).toHaveBeenLastCalledWith('/mailbox');
-  expect(view.getAllByTestId('topbar-mailbox')).toHaveLength(1);
+  expect(view.queryByTestId('topbar-mailbox')).toBeNull();
 });
 
-it('keeps a mailbox and close action on Moodle without exposing AC reading', async () => {
+it('keeps a close action on Moodle without exposing AC reading', async () => {
   paramsHook.mockReturnValue({ id: 'moodle' });
   const view = await renderApp(<SchoolSystemScreen />);
   expect(view.getByTestId('webview-moodle')).toBeTruthy();
   expect(view.queryByTestId('school-read-schedule')).toBeNull();
   expect(view.getByTestId('school-system-close')).toBeTruthy();
-  await fireEvent.press(view.getByTestId('topbar-mailbox'));
-  expect(mockPush).toHaveBeenCalledWith('/mailbox');
+  expect(view.queryByTestId('topbar-mailbox')).toBeNull();
 });
 
 it('redirects an unknown system to tools without mounting browser controls', async () => {

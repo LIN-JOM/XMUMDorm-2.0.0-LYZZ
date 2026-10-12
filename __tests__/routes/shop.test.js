@@ -4,20 +4,34 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sharp = require('sharp');
 process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
-jest.mock('../../database', () => ({ query: jest.fn(), pool: { getConnection: jest.fn() } }));
-const { query, pool } = require('../../database');
+jest.mock('../../database', () => {
+  const shopQuery = jest.fn();
+  const accountQuery = jest.fn();
+  return {
+    query: (sql, ...args) => sql === 'SELECT status FROM users WHERE id = ? LIMIT 1'
+      ? accountQuery(sql, ...args) : shopQuery(sql, ...args),
+    shopQuery, accountQuery, pool: { getConnection: jest.fn() },
+  };
+});
+const { shopQuery: query, accountQuery, pool } = require('../../database');
 const service = require('../../services/shop');
 const app = express();app.use(express.json());app.use('/api/shop',require('../../routes/shop'));
 const token = (role='student') => jwt.sign({id:1,role},process.env.JWT_SECRET);
 const authed = (method,path,role='student') => request(app)[method]('/api/shop'+path).set('Authorization',`Bearer ${token(role)}`);
 const product={category:'water',name_zh:'演示',name_en:'Demo',spec_zh:'1瓶',spec_en:'1 bottle',description_zh:'演示商品',description_en:'Demo only',image_url:'/shop-demo/water.svg',price_cents:100,stock:3,sold_out:false,is_demo:true};
-beforeEach(()=>{jest.clearAllMocks();query.mockImplementation(async sql => {
+beforeEach(()=>{jest.clearAllMocks();accountQuery.mockReset().mockResolvedValue([{status:'active'}]);query.mockImplementation(async sql => {
   if(sql.includes('FROM shop_merchants'))return [{id:1,slug:'water-home',enabled:1}];
   if(sql.includes('user_sanctions'))return [];
   if(sql.includes('SELECT role'))return [{role:'student',status:'active'}];
   return [];
 });});
 describe('shop public and authorization contracts',()=>{
+  test('deactivated account is rejected before shop access',async()=>{
+    accountQuery.mockResolvedValueOnce([{status:'deactivated'}]);
+    const res=await authed('get','/address');
+    expect(res.status).toBe(403);expect(res.body.accountDeactivated).toBe(true);
+    expect(query.mock.calls.some(([sql])=>sql.includes('shop_addresses'))).toBe(false);
+  });
   test('public catalog returns products, settings and available slots',async()=>{
     const today=service.campusNow().slice(0,10);
     query.mockResolvedValueOnce([{id:1,slug:'water-home',enabled:1}]).mockResolvedValueOnce([product]).mockResolvedValueOnce([{id:2,delivery_date:today,delivery_start:'00:00:00',delivery_end:'23:59:59',capacity:2,is_special:1,enabled:1}]).mockResolvedValueOnce([{payment_zh:'演示',payment_methods:[{id:'qr'}]}]).mockResolvedValueOnce([{slot_id:2,n:1}]);

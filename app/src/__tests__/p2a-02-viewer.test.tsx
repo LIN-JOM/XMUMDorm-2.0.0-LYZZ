@@ -73,7 +73,7 @@ describe('P2A-02 viewer 真源', () => {
   });
 
   describe('TC-P2A-02-2A · 后端 role=admin → canManageClub', () => {
-    it('5 条可见，且第 5 条是社团活动', () => {
+    it('6 条可见，包含两项社团发布', () => {
       const { viewer, degraded } = resolveViewer({
         signedIn: true,
         clubRows: [{ role: 'member' }, { role: 'admin' }],
@@ -85,6 +85,7 @@ describe('P2A-02 viewer 真源', () => {
         'wall',
         'confession',
         'clubActivity',
+        'clubPost',
         'marketplace',
         'errand',
       ]);

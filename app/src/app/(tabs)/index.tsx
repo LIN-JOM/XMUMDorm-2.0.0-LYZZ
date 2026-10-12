@@ -1,56 +1,46 @@
-/**
- * 广场（一级 Tab 1）—— Phase 0 只放骨架；内容与二级 Tab 由 Phase 1/2 填。
- * 二级 Tab 的**集合**尚未拍板（TO-CONFIRM C-03），故此处不预置任何子栏目。
- *
- * P1-17 只加**一件事**：把食堂切片接通（README §5-1：「两个切片一律从 `T-01`/`S-07`
- * 首页入口进入」—— `S-07` 的父页是 `S-01 服务入口`，也就是本页）。
- * ⛔ 不预置其他广场栏目（那要等 C-03 拍板）。
- */
 import * as React from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
-import Utensils from 'lucide-react-native/icons/utensils';
-
-import { Screen } from '@/components/ui/Screen';
-import { SectionHeader } from '@/components/ui/SectionHeader';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CampusListScreen } from '@/features/campus/CampusScreens';
 import { QuickActionGrid, type QuickAction } from '@/components/ui/QuickActionGrid';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
-import { useMailboxBadge } from '@/features/mailbox/useUnread';
+import Utensils from 'lucide-react-native/icons/utensils';
+import ShoppingBag from 'lucide-react-native/icons/shopping-bag';
+import Bike from 'lucide-react-native/icons/bike';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import UsersRound from 'lucide-react-native/icons/users-round';
 import { TAB_BAR_CLEARANCE } from './_layout';
 
+/** 广场（一级 Tab 1）承接已批准的树洞与万能墙；其他广场区块留待 Phase 1 接线。 */
 export default function SquareScreen(): React.ReactElement {
   const theme = useTheme();
   const { t } = useI18n();
   const router = useRouter();
-  // 顶栏信箱动作 + 未读角标：**四个一级 Tab 必须同源**（宪法 4.7-3/4）
-  const badge = useMailboxBadge();
-
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
   const actions = React.useMemo<readonly QuickAction[]>(
     () => [
-      {
-        key: 'canteen',
-        label: t('canteen.title'),
-        icon: Utensils,
-        onPress: () => router.push('/canteen'),
-      },
+      { key: 'canteen', label: t('canteen.title'), icon: Utensils, onPress: () => router.push('/canteen') },
+      { key: 'market', label: t('screen.market.title'), icon: ShoppingBag, onPress: () => router.push('/market') },
+      { key: 'errand', label: t('screen.errand.title'), icon: Bike, onPress: () => router.push('/errand') },
+      { key: 'guides', label: t('square.guides.title'), icon: BookOpen, onPress: () => router.push('/guides') },
+      { key: 'clubs', label: t('clubs.title'), icon: UsersRound, onPress: () => router.push('/clubs' as never) },
     ],
     [router, t]
   );
-
-  // S5：底部留白 = 原生 Tab 栏高度，**不含** insets.bottom
   return (
-    <Screen
+    <CampusListScreen
       testID="screen-square"
-      titleKey="screen.square"
+      initialTab={tab === 'wall' ? 'wall' : 'confession'}
+      beforeTabs={
+        <View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
+          <SectionHeader title={t('square.services')} />
+          <QuickActionGrid testID="square-services" actions={actions} />
+        </View>
+      }
       bottomMode="tabbar"
       tabBarHeight={TAB_BAR_CLEARANCE}
-      {...badge}
-    >
-      <View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
-        <SectionHeader title={t('square.services')} />
-        <QuickActionGrid testID="square-services" actions={actions} />
-      </View>
-    </Screen>
+    />
   );
 }

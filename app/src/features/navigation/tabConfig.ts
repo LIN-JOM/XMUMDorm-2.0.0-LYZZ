@@ -9,7 +9,7 @@
  * ⛔ 三条红线：
  *   1. **第六格禁令**（4.9.4）：底栏上限 5 格，五格已用满；
  *   2. **不得自绘 Tab 栏**（4.3）：本文件不产生任何视觉，图标是**平台图标名**；
- *   3. **发布入口唯一**（4.9.3）：第 5 格是唯一入口，⛔ 不得另加 FAB。
+ *   3. **发布入口唯一**（4.9.3）：中央第 3 格是唯一入口，⛔ 不得另加 FAB。
  */
 
 import type { AndroidSymbol } from 'expo-symbols';
@@ -17,7 +17,7 @@ import type { SFSymbol } from 'sf-symbols-typescript';
 
 import type { MessageKey } from '@/i18n';
 
-export type TabKey = 'square' | 'tools' | 'campus' | 'me' | 'publish';
+export type TabKey = 'square' | 'tools' | 'publish' | 'mailbox' | 'me';
 
 /**
  * 平台原生图标名（第 2 层；⛔ 不是 Lucide 组件，宪法 16.1 / 4.9.6）。
@@ -38,12 +38,12 @@ export type TabDefinition = {
   /** 深链 path 段（宪法 4.8.2：二级 Tab 可深链，一级亦须稳定） */
   path: string;
   titleKey: MessageKey;
-  /** 读屏标签（第 5 格必须读"发布"，⛔ 不是"加号"，宪法 4.9.7） */
+  /** 读屏标签（中央发布格必须读"发布"，⛔ 不是"加号"，宪法 4.9.7） */
   a11yLabelKey: MessageKey;
   icon: PlatformIcon;
   /** 动作型格位：没有内容区、不参与选中态、不进返回栈（4.9.1） */
   isAction: boolean;
-  /** 是否绘制可见文字标签（第 5 格 = false，登记为 6.3 的显式例外） */
+  /** 是否绘制可见文字标签（中央发布格 = false，登记为 6.3 的显式例外） */
   labelVisible: boolean;
 };
 
@@ -73,12 +73,24 @@ export const TAB_DEFINITIONS: readonly TabDefinition[] = [
     labelVisible: true,
   },
   {
-    key: 'campus',
-    route: 'campus',
-    path: '/campus',
-    titleKey: 'tab.campus',
-    a11yLabelKey: 'tab.campus',
-    icon: { android: 'forum', ios: 'bubble.left.and.bubble.right' },
+    key: 'publish',
+    // ⚠️ 原生 Tabs 的 Trigger **必须**有一个存在的路由名 → 这个路由只做重定向，
+    //    真正的发布中心在 `src/app/publish-center.tsx`（见 nativeTabs.tsx 注释）
+    route: 'publish',
+    path: '/publish',
+    titleKey: 'tab.publish',
+    a11yLabelKey: 'tab.publish',
+    icon: { android: 'add', ios: 'plus' },
+    isAction: true,
+    labelVisible: false,
+  },
+  {
+    key: 'mailbox',
+    route: 'mailbox',
+    path: '/mailbox',
+    titleKey: 'tab.messages',
+    a11yLabelKey: 'tab.messages',
+    icon: { android: 'mail', ios: 'envelope' },
     isAction: false,
     labelVisible: true,
   },
@@ -92,21 +104,9 @@ export const TAB_DEFINITIONS: readonly TabDefinition[] = [
     isAction: false,
     labelVisible: true,
   },
-  {
-    key: 'publish',
-    // ⚠️ 原生 Tabs 的 Trigger **必须**有一个存在的路由名 → 这个路由只做重定向，
-    //    真正的发布中心在 `src/app/publish-center.tsx`（见 nativeTabs.tsx 注释）
-    route: 'publish',
-    path: '/publish',
-    titleKey: 'tab.publish',
-    a11yLabelKey: 'tab.publish',
-    icon: { android: 'add', ios: 'plus' },
-    isAction: true,
-    labelVisible: false,
-  },
 ];
 
-/** 第 5 格的 key（多处判断要一致，避免散落的字面量） */
+/** 中央动作格的 key（多处判断要一致，避免散落的字面量） */
 export const ACTION_TAB_KEY: TabKey = 'publish';
 
 /** 发布中心的真实路由（⛔ 与占位路由 `(tabs)/publish` 不是同一个） */
@@ -128,7 +128,8 @@ export function getTabDefinition(key: TabKey): TabDefinition | undefined {
 
 /** 按深链 path 找一级格（深链进来时用于校正栈底，宪法 4.4.1） */
 export function getTabByPath(path: string): TabDefinition | undefined {
-  return TAB_DEFINITIONS.find((tab) => tab.path === path);
+  return TAB_DEFINITIONS.find((tab) => tab.path === path) ??
+    (path === '/campus' || path.startsWith('/campus/') ? getTabDefinition('square') : undefined);
 }
 
 export function assertTabBarInvariants(): void {
@@ -139,11 +140,14 @@ export function assertTabBarInvariants(): void {
   if (actions.length !== 1) {
     throw new Error(`动作型格位必须恰好 1 个，当前 ${actions.length} 个`);
   }
+  if (TAB_DEFINITIONS.indexOf(actions[0]) !== 2) {
+    throw new Error('动作型格位必须位于中央第 3 格（宪法 4.9.1）');
+  }
   if (actions[0].labelVisible) {
-    throw new Error('第 5 格不得有可见文字标签（骨架规范 §2.4 的例外）');
+    throw new Error('中央发布格不得有可见文字标签（骨架规范 §2.4 的例外）');
   }
   if (TAB_DEFINITIONS.some((tab) => !tab.isAction && !tab.labelVisible)) {
-    throw new Error('只有第 5 格可以没有文字标签；四个导航格必须显示标签');
+    throw new Error('只有中央发布格可以没有文字标签；四个导航格必须显示标签');
   }
 }
 
@@ -158,7 +162,7 @@ export type TabBarConfig = {
 
 /**
  * 按 R2 结论构造底栏配置。
- * - `action`（首选）：第 5 格是动作型格位（`disabled` + `tabPress`，见 nativeTabs.tsx）
+ * - `action`（首选）：中央第 3 格是动作型格位（`disabled` + `tabPress`，见 nativeTabs.tsx）
  * - `fab`（**降级路径 B**，仅当 R2 判定原生容器做不到时启用）：回到四格 + 发布 FAB
  *   → ⛔ 必须请所有者重新裁决（宪法 4.9.9），不得自行切换
  */
@@ -179,7 +183,7 @@ export type TabPressIntent =
 
 /**
  * 点击某格的**语义**（纯逻辑）：这是"动作型格位"最核心的一条 ——
- * 点第 5 格**不切换 Tab**，只打开发布中心（宪法 4.9.2）。
+ * 点中央发布格**不切换 Tab**，只打开发布中心（宪法 4.9.2）。
  */
 export function resolveTabPress(key: TabKey): TabPressIntent {
   const tab = getTabDefinition(key);

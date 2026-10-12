@@ -8,11 +8,9 @@ const text=(max:number)=>(value:unknown)=>typeof value==='string'&&value.trim().
 const money=(value:unknown)=>typeof value==='string'&&/^\d+(?:\.\d{1,2})?$/.test(value.trim())&&Number.isFinite(Number(value))?undefined:invalid;
 const idOf=(result:unknown)=>{const id=(result as {id?:unknown})?.id;if(typeof id!=='number'||!Number.isSafeInteger(id)||id<=0)throw {kind:'unknown'};return id;};
 function validate(d:PublishFormDescriptor,values:FormValues){if(Object.keys(validateAll(fieldsOf(d),values)).length)throw {kind:'validation'};}
-export type PublishImage={uri:string;name:string;type:string;size:number};
 type MediaRender=NonNullable<FormFieldDescriptor['render']>;
-function imagesValid(value:unknown,max:number,gif:boolean){return value===''||Array.isArray(value)&&value.length<=max&&value.every(x=>x&&typeof x.uri==='string'&&/^(file:|content:|blob:)/.test(x.uri)&&typeof x.name==='string'&&x.name.length>0&&typeof x.size==='number'&&x.size>0&&x.size<=8*1024*1024&&['image/jpeg','image/png','image/webp',...(gif?['image/gif']:[])].includes(x.type))?undefined:invalid;}
 import {MARKET_DORM_AREAS, MARKET_DELIVERY_METHODS} from '../../../../shared/constants/serviceEnums';
-import {appendPublishImage} from '@/features/publish/images';
+import {appendPublishImage,isValidPublishImages} from '@/features/publish/images';
 import {createMarketplaceItem} from '../../../../shared/api/marketplace';
 export function createMarketplacePublishDescriptor(t:Translate,options:{categories:readonly FormOption[];renderMedia:MediaRender}):PublishFormDescriptor {
  const dorms=MARKET_DORM_AREAS;
@@ -25,7 +23,7 @@ export function createMarketplacePublishDescriptor(t:Translate,options:{categori
  {kind:'segmented',name:'delivery_method',labelKey:'publish.bing.delivery',required:true,source:{kind:'constants',options:delivery},validate:v=>delivery.some(x=>x.value===v)?undefined:invalid},
  {kind:'select',name:'dorm_area',labelKey:'publish.bing.dorm',required:true,source:{kind:'constants',options:dorms.map(value=>({value,label:value}))},validate:v=>dorms.includes(String(v))?undefined:invalid},
  {kind:'tags',name:'tags',labelKey:'publish.bing.tags',max:10,maxLength:20,validate:v=>Array.isArray(v)&&v.length<=10&&v.every(x=>typeof x==='string'&&x.trim().length>0&&x.length<=20)?undefined:invalid},
- {kind:'custom',name:'images',labelKey:'publish.bing.images',neverDraft:true,render:options.renderMedia,validate:v=>imagesValid(v,4,false)},
+ {kind:'custom',name:'images',labelKey:'publish.bing.images',neverDraft:true,render:options.renderMedia,validate:v=>isValidPublishImages(v,4,false)?undefined:invalid},
  ]}],submit:async values=>{validate(d,values);const form=new FormData();for(const name of ['title','description','category','delivery_method','dorm_area'])form.append(name,String(values[name]).trim());form.append('price',String(Number(values.price)));form.append('tags',JSON.stringify(values.tags));for(const image of Array.isArray(values.images)?values.images:[])await appendPublishImage(form,image);const id=idOf(await createMarketplaceItem(form));getQueryClient().removeQueries({queryKey:['bing-market','list']});return {id};},routeAfterSubmit:r=>r?.id?`/market/${r.id}?published=1`:'/market'};
  return d;
 }

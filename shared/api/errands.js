@@ -10,6 +10,14 @@ export function listErrands(params = {}) {
   return get(`/api/errands${query ? `?${query}` : ''}`);
 }
 
+export function listMyErrands(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString();
+  return get(`/api/errands/me${query ? `?${query}` : ''}`);
+}
+
 export function getErrandDetail(id) {
   return get(`/api/errands/${id}`);
 }
@@ -27,7 +35,14 @@ export function doneErrand(id) {
 }
 
 export function reportErrand(id, body = {}) {
-  return post(`/api/errands/${id}/report`, body);
+  const { reason, detail, screenshots } = body;
+  return post('/api/reports', {
+    target_type: 'errand',
+    target_id: id,
+    reason,
+    detail,
+    screenshots,
+  });
 }
 
 export function deleteErrand(id) {

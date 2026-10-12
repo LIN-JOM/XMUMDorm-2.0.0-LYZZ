@@ -120,7 +120,7 @@ export function usePublishFormCore(
         // 创建后表单必须从栈中移除。详情改为回执动作显式打开，
         // 这样系统返回始终稳定落在列表，避免回到已提交表单。
         if(descriptor.listAfterSubmit){
-          router.replace(descriptor.listAfterSubmit as never);
+          router.replace(descriptor.listAfterSubmit);
           if (plan.announce === 'toast') toast.show({
             message: t(descriptor.successKey ?? 'publish.submitted'), tone: 'success',
             actionLabel: t('publish.viewDetail'), onAction: () => router.push(destination),

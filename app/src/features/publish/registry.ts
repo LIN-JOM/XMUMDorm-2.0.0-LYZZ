@@ -10,17 +10,22 @@
  * 四条硬纪律（骨架规范 §3.5）：
  *   1. **一一对应**：注册表里有 route ⇒ 路由存在；路由存在但没注册 ⇒ **不许出现在界面上**
  *   2. **权限过滤由后端布尔字段驱动**（`viewer.*`），⛔ UI 不得自行推断
- *   3. **入口唯一**：只有第 5 格 + 注册表条目（4.9.3）
+ *   3. **入口唯一**：只有中央发布格 + 注册表条目（4.9.3）
  *   4. **合规门禁**（A-05）挂在**每个发布表单的提交链路**上，见 `complianceGate.ts`
  */
 
+import type { Href } from 'expo-router';
+
 import type { MessageKey } from '@/i18n';
+
+type StringHref = Extract<Href, string>;
 
 /** 发布类型 id（也是表单路由的参数段） */
 export type PublishId =
   | 'wall'
   | 'confession'
   | 'clubActivity'
+  | 'clubPost'
   | 'marketplace'
   | 'errand'
   | 'carpool'
@@ -43,8 +48,8 @@ export type Viewer = {
 /** 表单承载路由：**一条动态路由**承载所有发布表单（宪法 9.2 的参数化框架） */
 export const PUBLISH_FORM_ROUTE_PATTERN = '/publish/[type]';
 
-export function formRouteFor(id: PublishId): string {
-  return `/publish/${id}`;
+export function formRouteFor(id: PublishId): StringHref {
+  return `/publish/${id}` as StringHref;
 }
 
 export type PublishEntry = {
@@ -81,6 +86,13 @@ export const PUBLISH_REGISTRY: readonly PublishEntry[] = [
     titleKey: 'publish.entry.clubActivity',
     icon: 'users',
     // 后端字段驱动（⛔ 不猜）
+    permission: (viewer) => viewer.canManageClub === true,
+    status: 'ready',
+  },
+  {
+    id: 'clubPost',
+    titleKey: 'publish.entry.clubPost',
+    icon: 'notebook',
     permission: (viewer) => viewer.canManageClub === true,
     status: 'ready',
   },

@@ -325,6 +325,85 @@ router.get('/items', async (req, res) => {
 });
 
 // ============================================
+// 我的发布（登录，只读归属列表）
+// GET /api/marketplace/me/items?page=1&pageSize=20
+// ============================================
+router.get('/me/items', authenticateToken, async (req, res) => {
+  try {
+    const page = clamp(toInt(req.query.page, 1), 1, 2000);
+    const pageSize = clamp(toInt(req.query.pageSize, 20), 1, 50);
+    const offset = (page - 1) * pageSize;
+    const rows = await query(
+      `SELECT
+         i.id, i.title, i.description, i.price, i.status,
+         i.delivery_method, i.dorm_area, i.tags_json, i.wants_count,
+         i.views_count, i.created_at,
+         c.slug AS category,
+         COALESCE(NULLIF(u.nickname, ''), u.username) AS sellerName,
+         u.avatar AS sellerAvatar,
+         img.file_path AS cover_path
+       FROM marketplace_items i
+       JOIN marketplace_categories c ON c.id = i.category_id
+       JOIN users u ON u.id = i.seller_user_id
+       LEFT JOIN (
+         SELECT ii.item_id, ii.file_path
+         FROM marketplace_item_images ii
+         JOIN (
+           SELECT item_id, MIN(sort_order) AS min_sort
+           FROM marketplace_item_images
+           GROUP BY item_id
+         ) x ON x.item_id = ii.item_id AND x.min_sort = ii.sort_order
+       ) img ON img.item_id = i.id
+       WHERE i.seller_user_id = ? AND i.deleted_at IS NULL
+       ORDER BY i.created_at DESC, i.id DESC
+       LIMIT ${pageSize + 1} OFFSET ${offset}`,
+      [req.user.id]
+    );
+
+    const list = (rows || []).slice(0, pageSize).map((row) => {
+      let tags = [];
+      if (row.tags_json) {
+        try {
+          const parsed = typeof row.tags_json === 'string' ? JSON.parse(row.tags_json) : row.tags_json;
+          tags = Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          tags = [];
+        }
+      }
+      return {
+        id: row.id,
+        title: row.title,
+        description: row.description || '',
+        price: Number(row.price),
+        status: row.status,
+        delivery_method: row.delivery_method || 'pickup',
+        dorm_area: row.dorm_area || null,
+        tags,
+        category: row.category,
+        sellerName: row.sellerName,
+        sellerAvatar: assetUrl(row.sellerAvatar),
+        cover: assetUrl(row.cover_path),
+        wants_count: Number(row.wants_count) || 0,
+        views_count: Number(row.views_count) || 0,
+        created_at: row.created_at,
+      };
+    });
+
+    res.status(200).json({
+      status: 0,
+      message: 'ok',
+      data: { list, hasMore: (rows || []).length > pageSize, page, pageSize },
+    });
+  } catch (e) {
+    if (e.code === 'ER_NO_SUCH_TABLE') {
+      return res.status(503).json({ status: -1, message: '数据库缺少 marketplace 表，请先执行 migrations/026_marketplace.sql' });
+    }
+    console.error('marketplace my items error:', e);
+    res.status(500).json({ status: -1, message: '服务器错误，请稍后重试' });
+  }
+});
+
+// ============================================
 // 详情（公开读 + 可选登录态）
 // ============================================
 router.get('/items/:id', async (req, res) => {

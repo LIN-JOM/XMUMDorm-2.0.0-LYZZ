@@ -29,6 +29,18 @@ it('树洞从第一页读取，点击进入帖子',async()=>{
  await fireEvent.press(v.getByTestId('campus-row-7'));
  expect(mockPush).toHaveBeenCalledWith('/campus/7');
 });
+it('树洞列表复用媒体层：单图保持静态，多图提供横滑页码',async()=>{
+ list.mockResolvedValue({list:[
+  {id:7,title:'单图',content:'一张',images:[{url:'https://example.com/one.jpg'}]},
+  {id:8,title:'多图',content:'两张',images:[{url:'https://example.com/two-a.jpg'},{url:'https://example.com/two-b.jpg'}]},
+ ],hasMore:false});
+ const v=await renderApp(<CampusListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('campus-row-7-media-0',{includeHiddenElements:true})).toBeTruthy());
+ expect(v.queryByTestId('campus-row-7-media-position')).toBeNull();
+ expect(v.getByTestId('campus-row-8-media-position')).toHaveTextContent('第 1 张，共 2 张');
+ await fireEvent.scroll(v.getByTestId('campus-row-8-media-scroll'),{nativeEvent:{contentOffset:{x:300,y:0},layoutMeasurement:{width:300,height:200}}});
+ expect(v.getByTestId('campus-row-8-media-position')).toHaveTextContent('第 2 张，共 2 张');
+});
 it('详情显示正文作者和图片，返回原页',async()=>{
  detail.mockResolvedValue({id:7,title:'校内交流',content:'一起打球',author:{nickname:'小林'},images:[{url:'https://example.com/photo.jpg'}]});
  const v=await renderApp(<CampusDetailScreen postId="7"/>);
@@ -128,6 +140,16 @@ it('万能墙详情只投影匿名作者',async()=>{
  wallDetail.mockResolvedValue({id:40,content:'匿名正文',title:'身份标题',author:{nickname:'泄漏作者'},images:[{url:'https://example.com/leak'}]});
  const v=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>);
  await waitFor(()=>expect(v.getByText('匿名正文')).toBeTruthy());expect(v.queryByText('泄漏作者')).toBeNull();expect(v.queryByText('身份标题')).toBeNull();expect(v.getByText('匿名')).toBeTruthy();expect(detail).not.toHaveBeenCalled();
+});
+it('万能墙列表按服务端模板键标明模板',async()=>{
+ wall.mockResolvedValue({items:[{id:40,content:'停水通知',template_key:'announcement'}],has_older:false,oldest_cursor:40});
+ const listView=await renderApp(<CampusListScreen initialTab="wall"/>,{locale:'en'});
+ await waitFor(()=>expect(listView.getByText('Announcement')).toBeTruthy());
+});
+it('万能墙详情按服务端模板键标明模板',async()=>{
+ wallDetail.mockResolvedValue({id:40,content:'停水通知',template_key:'announcement'});
+ const detailView=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>,{locale:'en'});
+ await waitFor(()=>expect(detailView.getByText('Announcement')).toBeTruthy());
 });
 it('慢树洞请求在切栏后不污染墙及其缓存',async()=>{
  let finish:(data:unknown)=>void=()=>undefined;list.mockReturnValueOnce(new Promise(resolve=>{finish=resolve;})).mockResolvedValueOnce({list:[{id:9,content:'新树洞'}],hasMore:false});
@@ -348,7 +370,7 @@ it('发布后的详情返回树洞列表，普通阅读仍走原返回栈',async
  detail.mockResolvedValue({id:7,title:'新帖',content:'新内容'});
  const v=await renderApp(<CampusDetailScreen postId="7" published/>);
  await waitFor(()=>expect(v.getByText('新内容')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockReplace).toHaveBeenCalledWith('/(tabs)/campus');expect(mockBack).not.toHaveBeenCalled();
+ await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockReplace).toHaveBeenCalledWith('/');expect(mockBack).not.toHaveBeenCalled();
 });
 
 it('树洞列表卸载时解绑查询缓存订阅',async()=>{

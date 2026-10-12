@@ -245,6 +245,7 @@ describe('P0-03 双语词条层与错误文案', () => {
         'tools.',
         'canteen.',
         'square.',
+        'clubs.',
         'form.',
         'auth.',
         'import.',
