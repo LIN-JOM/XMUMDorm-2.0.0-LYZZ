@@ -3,10 +3,11 @@ const supertest = require('supertest');
 
 jest.mock('../../database', () => ({ query: jest.fn() }));
 jest.mock('../../services/termsAcceptance', () => ({ requireCurrentTerms: (_req, _res, next) => next() }));
-jest.mock('../../middleware/auth', () => (req, _res, next) => {
+const mockAuthenticateToken = jest.fn((req, _res, next) => {
   req.user = { id: 9, role: 'student' };
   next();
 });
+jest.mock('../../middleware/auth', () => mockAuthenticateToken);
 jest.mock('../../middleware/checkSanction', () => ({
   checkSanction: (_req, _res, next) => next(),
 }));
@@ -62,6 +63,11 @@ function app() {
 describe('Posts Routes', () => {
   beforeEach(() => {
     query.mockReset();
+    mockAuthenticateToken.mockReset();
+    mockAuthenticateToken.mockImplementation((req, _res, next) => {
+      req.user = { id: 9, role: 'student' };
+      next();
+    });
     revokeByRef.mockClear();
     grantExp.mockClear();
     checkAndGrantPostPopularRewards.mockClear();
@@ -90,6 +96,48 @@ describe('Posts Routes', () => {
 
       expect(res.status).toBe(503);
       expect(res.body.message).toContain('posts.title');
+    });
+  });
+
+  describe('post topics', () => {
+    it('lets a signed-in student create a bilingual topic and refreshes the topic cache', async () => {
+      query.mockResolvedValueOnce([]).mockResolvedValueOnce({ insertId: 41 });
+
+      const res = await supertest(app())
+        .post('/api/posts/tags')
+        .send({ name_zh: '自习', name_en: 'Study' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ id: 41, slug: 'study', name_zh: '自习', name_en: 'Study' });
+      expect(query).toHaveBeenCalledWith(
+        'INSERT INTO tags (slug, name_zh, name_en, created_by) VALUES (?, ?, ?, ?)',
+        ['study', '自习', 'Study', 9]
+      );
+      const { simpleCache } = require('../../utils/simpleCache');
+      expect(simpleCache.delete).toHaveBeenCalledWith('posts:tags:v1');
+    });
+
+    it('searches topics remotely with parameterized query values', async () => {
+      query.mockResolvedValueOnce([{ id: 7, slug: 'study', name_zh: '自习', name_en: 'Study' }]);
+
+      const res = await supertest(app()).get('/api/posts/tags?q=study&limit=5');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([{ id: 7, slug: 'study', name_zh: '自习', name_en: 'Study' }]);
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE name_zh LIKE ? OR name_en LIKE ? OR slug LIKE ?'),
+        ['%study%', '%study%', '%study%', 5]
+      );
+    });
+
+    it('keeps anonymous requests and malformed bilingual names rejected', async () => {
+      mockAuthenticateToken.mockImplementationOnce((_req, res) => res.status(401).json({ status: -1, message: '未登录' }));
+      const anonymous = await supertest(app()).post('/api/posts/tags').send({ name_zh: '自习', name_en: 'Study' });
+      expect(anonymous.status).toBe(401);
+
+      const malformed = await supertest(app()).post('/api/posts/tags').send({ name_zh: '只有中文' });
+      expect(malformed.status).toBe(400);
+      expect(query).not.toHaveBeenCalled();
     });
   });
 
