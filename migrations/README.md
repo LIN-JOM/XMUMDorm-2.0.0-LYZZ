@@ -145,3 +145,4 @@ node scripts/createAdmin.js
 - `071_campus_shop.sql`：校园商城六张表；运行 `node scripts/run-migration-071-shop.js`；参见 [商城实施说明](../docs/07-Implement/校园商城/本地商城说明.md)。
 `072_shop_merchants.sql`：独立商户、账号归属、按店铺隔离商品/时段/订单、付款方式与配送费用配置、私有付款截图；支持重复执行。
 `073_daily_delivery_schedule.sql`：历史迁移，曾用于每日重复配送时段。表结构为兼容既有数据库而保留；当前商城已改为商家指定日期开放下单，不再读取每日计划或接受非指定日期时段。
+`075_shop_store_soft_delete.sql`：为店铺增加逻辑删除时间和查询索引；商家可下架自己的店铺，管理员可下架任意店铺，历史订单与付款截图保留。使用 `npm run migrate:shop` 或 `node scripts/run-incremental-migrations.js` 执行；不会自动迁移生产数据库。

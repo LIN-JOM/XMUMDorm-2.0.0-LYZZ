@@ -19,18 +19,12 @@ const wrap = fn => async (req, res) => {
 };
 const ok = (res, data) => res.json({ status: 0, data });
 const id = value => s.integer(Number(value), 1);
-const parseJsonArray = value => {
-  if (Array.isArray(value)) return value;
-  if (typeof value !== 'string' || !value.trim()) return [];
-  try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; }
-  catch { return []; }
-};
 const slotSelect = 'SELECT *, CAST(delivery_date AS CHAR) AS delivery_date, CAST(cutoff_at AS CHAR) AS cutoff_at FROM shop_slots';
 
 router.use(async (req, res, next) => {
   try {
     const slug=req.params.slug || 'water-home';
-    const rows=await query('SELECT * FROM shop_merchants WHERE slug = ? AND enabled = 1',[slug]);
+    const rows=await query('SELECT * FROM shop_merchants WHERE slug = ? AND enabled = 1 AND deleted_at IS NULL',[slug]);
     if (!rows[0]) return res.status(404).json({status:-1,message:'商户不存在 / Store not found'});
     req.merchant=rows[0]; next();
   } catch { res.status(500).json({status:-1,message:'商户暂不可用 / Store unavailable'}); }
@@ -43,12 +37,13 @@ router.get('/catalog', wrap(async (req, res) => {
   ]);
   const counts = await query("SELECT slot_id, COUNT(*) AS n FROM shop_orders WHERE status <> 'cancelled' GROUP BY slot_id");
   const used = new Map(counts.map(c => [c.slot_id, c.n]));
-  const hasPaymentMethods = !!settings[0] && parseJsonArray(settings[0].payment_methods).length > 0;
+  const paymentMethods = s.paymentMethods(settings[0]?.payment_methods);
+  const hasPaymentMethods = paymentMethods.length > 0;
   const availableSlots = specialSlots.filter(t => s.isSpecialSlotOpen(t) && (used.get(t.id) || 0) < t.capacity);
   const setting = settings[0] ? { ...settings[0],
     has_payment_methods: hasPaymentMethods,
-    payment_methods: availableSlots.length ? parseJsonArray(settings[0].payment_methods) : [],
-    delivery_zones: parseJsonArray(settings[0].delivery_zones),
+    payment_methods: availableSlots.length ? paymentMethods : [],
+    delivery_zones: [],
   } : null;
   ok(res, { merchant:req.merchant, products, categories: s.CATEGORIES, has_scheduled_slots: specialSlots.length > 0, order_window_open: availableSlots.length > 0, slots: availableSlots, settings: setting });
 }));
@@ -74,6 +69,14 @@ router.use('/admin', (req, res, next) => {
   });
   next();
 });
+router.delete('/admin/store', wrap(async (req,res)=>{
+  await s.transaction(async conn=>{
+    const [stores]=await conn.execute('SELECT id FROM shop_merchants WHERE id=? AND deleted_at IS NULL FOR UPDATE',[req.merchant.id]);
+    if(!stores[0]) s.fail('店铺不存在或已删除 / Store not found or already deleted',404);
+    await conn.execute('UPDATE shop_merchants SET enabled=0,deleted_at=NOW() WHERE id=? AND deleted_at IS NULL',[req.merchant.id]);
+  });
+  ok(res,{deleted:true});
+}));
 
 const productImageStorage=multer.diskStorage({
  destination:(req,file,cb)=>{const dir=path.join(process.env.SHOP_ASSET_DIR||path.join(__dirname,'../.local/shop-assets'),'products');require('fs').mkdirSync(dir,{recursive:true});cb(null,dir);},
@@ -256,17 +259,16 @@ router.put('/admin/special-slots/:id', wrap(async (req,res)=>{
   ok(res,{id:rowId});
 }));
 router.put('/admin/settings', wrap(async (req, res) => {
-  const fields = ['payment_zh', 'payment_en'];
-  const values = fields.map(k => req.body[k] === '' || req.body[k] == null ? '' : s.text(req.body[k], 2000));
   const methods = req.body.payment_methods || [];
-  const zones = req.body.delivery_zones || [];
-  if(!Array.isArray(methods)||methods.length>8||!Array.isArray(zones)||zones.length>20) s.fail('配置无效 / Invalid settings');
-  const safeMethods=methods.map(m=>({id:s.text(m.id,40),name_zh:s.text(m.name_zh,120),name_en:s.text(m.name_en,120),qr_url:s.text(m.qr_url,500),note_zh:s.text(m.note_zh||'—',500),note_en:s.text(m.note_en||'—',500)}));
+  // Legacy field retained in storage, but new orders accept all student-entered addresses.
+  const safeZones = [];
+  if(!Array.isArray(methods)||methods.length>8) s.fail('配置无效 / Invalid settings');
+  const safeMethods=methods.map(m=>({id:m.id?s.text(m.id,40):require('crypto').randomUUID(),name_zh:s.text(m.name_zh,120),name_en:s.text(m.name_en,120),qr_url:s.text(m.qr_url,500)}));
+  for(const m of safeMethods) if(!m.name_zh||!m.name_en||!m.qr_url) s.fail('请填写中英文名称并上传二维码 / Chinese name, English name, and QR image are required');
   for(const m of safeMethods) if(!/^\/(?!\/)[\w/.-]+$/.test(m.qr_url)&&!/^https:\/\//.test(m.qr_url)) s.fail('二维码地址无效 / Invalid QR URL');
-  const safeZones=zones.map(z=>({id:s.text(z.id,40),name_zh:s.text(z.name_zh,120),name_en:s.text(z.name_en,120),fee_cents:s.integer(z.fee_cents,0,100000)}));
-  if(new Set(safeMethods.map(m=>m.id)).size!==safeMethods.length||new Set(safeZones.map(z=>z.id)).size!==safeZones.length) s.fail('标识不能重复 / Duplicate IDs');
+  if(new Set(safeMethods.map(m=>m.id)).size!==safeMethods.length) s.fail('标识不能重复 / Duplicate IDs');
   await s.transaction(async conn=>{
-    await conn.execute(`INSERT INTO shop_settings (id,delivery_notice_zh,delivery_notice_en,${fields.join(', ')},payment_methods,delivery_zones) VALUES (?, '', '', ?, ?, ?, ?) ON DUPLICATE KEY UPDATE ${fields.map(k => `${k} = VALUES(${k})`).join(', ')},payment_methods=VALUES(payment_methods),delivery_zones=VALUES(delivery_zones)`,[req.merchant.id,...values,JSON.stringify(safeMethods),JSON.stringify(safeZones)]);
+    await conn.execute(`INSERT INTO shop_settings (id,delivery_notice_zh,delivery_notice_en,payment_zh,payment_en,payment_methods,delivery_zones) VALUES (?, '', '', '', '', ?, ?) ON DUPLICATE KEY UPDATE payment_methods=VALUES(payment_methods),delivery_zones=VALUES(delivery_zones)`,[req.merchant.id,JSON.stringify(safeMethods),JSON.stringify(safeZones)]);
   });
   ok(res, { saved: true });
 }));
@@ -293,11 +295,29 @@ router.get('/admin/orders', wrap(async (req, res) => {
 }));
 router.patch('/admin/orders/:id/status', wrap(async (req, res) => ok(res, await s.changeStatus(id(req.params.id), req.body.status, req.merchant.id))));
 const entry=express.Router();
-entry.get('/merchants', wrap(async (req,res)=>ok(res,await query('SELECT id,slug,name_zh,name_en FROM shop_merchants WHERE enabled=1 ORDER BY id'))));
+const requireShopAdmin=async(req,res,next)=>{
+ try{
+  const users=await query('SELECT role,status FROM users WHERE id=?',[req.user.id]);
+  if(users[0]?.role!=='admin'||users[0]?.status==='deactivated')return res.status(403).json({status:-1,message:'需要管理员权限 / Admin required'});
+  next();
+ }catch{return res.status(500).json({status:-1,message:'权限校验失败 / Authorization unavailable'});}
+};
+entry.get('/admin/stores',auth,checkBan,requireShopAdmin,wrap(async(req,res)=>ok(res,await query('SELECT id,slug,name_zh,name_en,enabled,created_at FROM shop_merchants WHERE deleted_at IS NULL ORDER BY id'))));
+entry.delete('/admin/stores/:id',auth,checkBan,requireShopAdmin,wrap(async(req,res)=>{
+ const merchantId=id(req.params.id);
+ await s.transaction(async conn=>{
+  const [stores]=await conn.execute('SELECT id,slug FROM shop_merchants WHERE id=? AND deleted_at IS NULL FOR UPDATE',[merchantId]);
+  if(!stores[0])s.fail('店铺不存在或已删除 / Store not found or already deleted',404);
+  await conn.execute('UPDATE shop_merchants SET enabled=0,deleted_at=NOW() WHERE id=? AND deleted_at IS NULL',[merchantId]);
+ });
+ void logAudit({userId:req.user.id,role:'admin',action:'SHOP_STORE_DELETE',targetType:'shop',targetId:merchantId,meta:{scope:'admin'}});
+ ok(res,{deleted:true});
+}));
+entry.get('/merchants', wrap(async (req,res)=>ok(res,await query('SELECT id,slug,name_zh,name_en FROM shop_merchants WHERE enabled=1 AND deleted_at IS NULL ORDER BY id'))));
 entry.get('/my-merchants',auth,checkBan,wrap(async(req,res)=>{
  const users=await query('SELECT role,status FROM users WHERE id=?',[req.user.id]);
  if(users[0]?.status==='deactivated') s.fail('账号停用 / Inactive',403);
- const rows=users[0]?.role==='admin'?await query('SELECT * FROM shop_merchants WHERE enabled=1'):users[0]?.role==='merchant'?await query('SELECT m.* FROM shop_merchants m JOIN shop_merchant_members u ON u.merchant_id=m.id WHERE u.user_id=? AND m.enabled=1',[req.user.id]):[];
+ const rows=users[0]?.role==='admin'?await query('SELECT * FROM shop_merchants WHERE enabled=1 AND deleted_at IS NULL'):users[0]?.role==='merchant'?await query('SELECT m.* FROM shop_merchants m JOIN shop_merchant_members u ON u.merchant_id=m.id WHERE u.user_id=? AND m.enabled=1 AND m.deleted_at IS NULL',[req.user.id]):[];
  ok(res,rows);
 }));
 entry.post('/merchants',auth,checkBan,wrap(async(req,res)=>{

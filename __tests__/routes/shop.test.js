@@ -34,11 +34,12 @@ describe('shop public and authorization contracts',()=>{
   });
   test('public catalog returns products, settings and available slots',async()=>{
     const today=service.campusNow().slice(0,10);
-    query.mockResolvedValueOnce([{id:1,slug:'water-home',enabled:1}]).mockResolvedValueOnce([product]).mockResolvedValueOnce([{id:2,delivery_date:today,delivery_start:'00:00:00',delivery_end:'23:59:59',capacity:2,is_special:1,enabled:1}]).mockResolvedValueOnce([{payment_zh:'演示',payment_methods:[{id:'qr'}]}]).mockResolvedValueOnce([{slot_id:2,n:1}]);
-    const res=await request(app).get('/api/shop/catalog');expect(res.status).toBe(200);expect(res.body.data.slots).toHaveLength(1);expect(res.body.data.slots[0].is_special).toBe(1);expect(res.body.data.order_window_open).toBe(true);expect(res.body.data.settings.payment_methods).toEqual([{id:'qr'}]);expect(query.mock.calls.some(([sql])=>sql.includes('shop_daily_schedules'))).toBe(false);
+    const method={id:'qr',name_zh:'电子钱包',name_en:'E-wallet',qr_url:'/qr.png',note_zh:'旧备注'};
+    query.mockResolvedValueOnce([{id:1,slug:'water-home',enabled:1}]).mockResolvedValueOnce([product]).mockResolvedValueOnce([{id:2,delivery_date:today,delivery_start:'00:00:00',delivery_end:'23:59:59',capacity:2,is_special:1,enabled:1}]).mockResolvedValueOnce([{payment_zh:'演示',payment_methods:[method]}]).mockResolvedValueOnce([{slot_id:2,n:1}]);
+    const res=await request(app).get('/api/shop/catalog');expect(res.status).toBe(200);expect(res.body.data.slots).toHaveLength(1);expect(res.body.data.slots[0].is_special).toBe(1);expect(res.body.data.order_window_open).toBe(true);expect(res.body.data.settings.payment_methods).toEqual([{id:'qr',name_zh:'电子钱包',name_en:'E-wallet',qr_url:'/qr.png'}]);expect(query.mock.calls.some(([sql])=>sql.includes('shop_daily_schedules'))).toBe(false);
   });
   test('public catalog hides payment methods outside the open date and time',async()=>{
-    query.mockResolvedValueOnce([{id:1,slug:'water-home',enabled:1}]).mockResolvedValueOnce([product]).mockResolvedValueOnce([{id:2,delivery_date:'2099-01-01',delivery_start:'10:00:00',delivery_end:'12:00:00',capacity:2,is_special:1,enabled:1}]).mockResolvedValueOnce([{payment_zh:'',payment_methods:[{id:'qr'}]}]).mockResolvedValueOnce([]);
+    query.mockResolvedValueOnce([{id:1,slug:'water-home',enabled:1}]).mockResolvedValueOnce([product]).mockResolvedValueOnce([{id:2,delivery_date:'2099-01-01',delivery_start:'10:00:00',delivery_end:'12:00:00',capacity:2,is_special:1,enabled:1}]).mockResolvedValueOnce([{payment_zh:'',payment_methods:[{id:'qr',name_zh:'电子钱包',name_en:'E-wallet',qr_url:'/qr.png'}]}]).mockResolvedValueOnce([]);
     const res=await request(app).get('/api/shop/catalog');expect(res.status).toBe(200);expect(res.body.data.has_scheduled_slots).toBe(true);expect(res.body.data.order_window_open).toBe(false);expect(res.body.data.slots).toEqual([]);expect(res.body.data.settings.payment_methods).toEqual([]);expect(res.body.data.settings.has_payment_methods).toBe(true);
   });
   test('database failure returns generic error',async()=>{query.mockRejectedValueOnce(new Error('private data'));const spy=jest.spyOn(console,'error').mockImplementation(()=>{});const res=await request(app).get('/api/shop/catalog');expect(res.status).toBe(500);expect(JSON.stringify(res.body)).not.toContain('private data');spy.mockRestore();});
@@ -68,6 +69,10 @@ describe('shop public and authorization contracts',()=>{
 describe('shop validation and atomic service',()=>{
   test.each([NaN,1.5,-1,'1',Infinity])('reject invalid integer %s',v=>{expect(()=>service.integer(v)).toThrow();});
   test('sanitizes text',()=>expect(service.text('<b>Demo</b>',20)).toBe('Demo'));
+  test('normalizes legacy payment methods and removes notes or invalid entries',()=>{
+    expect(service.paymentMethods(JSON.stringify([{id:'qr',name_zh:'电子钱包',name_en:'E-wallet',qr_url:'/qr.png',note_zh:'legacy'}, {id:'invalid',name_zh:'缺二维码',name_en:'Missing QR'}])))
+      .toEqual([{id:'qr',name_zh:'电子钱包',name_en:'E-wallet',qr_url:'/qr.png'}]);
+  });
   test('valid product',()=>expect(service.product(product).price_cents).toBe(100));
   test.each([{category:'invalid'},{image_url:'javascript:alert(1)'},{price_cents:0},{stock:-1},{sold_out:1}])('invalid product %s',changes=>expect(()=>service.product({...product,...changes})).toThrow());
   test('valid slot',()=>expect(service.slot({delivery_date:'2099-01-01',cutoff_at:'2099-01-01T16:00:00',label_zh:'演示',label_en:'Demo',capacity:2,enabled:true,is_demo:true}).cutoff_at).toBe('2099-01-01 16:00:00'));
@@ -87,16 +92,16 @@ describe('shop validation and atomic service',()=>{
   test('transaction failure rolls back and releases',async()=>{const conn={beginTransaction:jest.fn(),commit:jest.fn(),rollback:jest.fn(),release:jest.fn()};pool.getConnection.mockResolvedValue(conn);await expect(service.transaction(async()=>{throw Error('test');})).rejects.toThrow('test');expect(conn.rollback).toHaveBeenCalled();expect(conn.commit).not.toHaveBeenCalled();expect(conn.release).toHaveBeenCalled();});
   test('deactivated user cannot write',async()=>{const conn={execute:jest.fn().mockResolvedValue([[{id:1,status:'deactivated'}]])};await expect(service.lockUser(conn,1)).rejects.toThrow();});
   test('checkout rejects legacy and recurring dates that were not explicitly opened',async()=>{
-    const execute=jest.fn().mockResolvedValueOnce([[{id:1,status:'active'}]]).mockResolvedValueOnce([[]]).mockResolvedValueOnce([[{id:4,merchant_id:1,is_special:0,enabled:1,delivery_date:'2099-01-01',cutoff_at:'2099-01-01 10:00:00'}]]);
+    const execute=jest.fn().mockResolvedValueOnce([[{id:1,status:'active'}]]).mockResolvedValueOnce([[{id:1}]]).mockResolvedValueOnce([[]]).mockResolvedValueOnce([[{id:4,merchant_id:1,is_special:0,enabled:1,delivery_date:'2099-01-01',cutoff_at:'2099-01-01 10:00:00'}]]);
     const conn={beginTransaction:jest.fn(),commit:jest.fn(),rollback:jest.fn(),release:jest.fn(),execute};pool.getConnection.mockResolvedValue(conn);
     await expect(service.checkout(1,{address:{contact_name:'Demo',contact:'demo@example.test',building:'A',room:'1'},slot_id:4,expected_total_cents:100},'explicit-date-key-1234',1)).rejects.toMatchObject({status:409});
-    expect(execute).toHaveBeenCalledTimes(3);expect(conn.rollback).toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledTimes(4);expect(conn.rollback).toHaveBeenCalled();
   });
   test('checkout rejects a specific-date slot outside its configured date and time window',async()=>{
-    const execute=jest.fn().mockResolvedValueOnce([[{id:1,status:'active'}]]).mockResolvedValueOnce([[]]).mockResolvedValueOnce([[{id:4,merchant_id:1,is_special:1,enabled:1,delivery_date:'2099-01-01',delivery_start:'10:00:00',delivery_end:'12:00:00'}]]);
+    const execute=jest.fn().mockResolvedValueOnce([[{id:1,status:'active'}]]).mockResolvedValueOnce([[{id:1}]]).mockResolvedValueOnce([[]]).mockResolvedValueOnce([[{id:4,merchant_id:1,is_special:1,enabled:1,delivery_date:'2099-01-01',delivery_start:'10:00:00',delivery_end:'12:00:00'}]]);
     const conn={beginTransaction:jest.fn(),commit:jest.fn(),rollback:jest.fn(),release:jest.fn(),execute};pool.getConnection.mockResolvedValue(conn);
     await expect(service.checkout(1,{address:{contact_name:'Demo',contact:'demo@example.test',building:'A',room:'1'},slot_id:4,expected_total_cents:100},'explicit-date-key-1234',1)).rejects.toMatchObject({status:409,message:expect.stringContaining('下单时段')});
-    expect(execute).toHaveBeenCalledTimes(3);expect(conn.rollback).toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledTimes(4);expect(conn.rollback).toHaveBeenCalled();
   });
   test('invalid state never opens transaction',async()=>{await expect(service.changeStatus(1,'paid')).rejects.toThrow();expect(pool.getConnection).not.toHaveBeenCalled();});
 });
@@ -113,11 +118,11 @@ describe('receipt deletion and merchant payment image permissions',()=>{
     if(sql.includes('shop_merchant_members'))return [{user_id:1}];
     return [];
   });
-  test('merchant settings save does not require obsolete delivery-rule text',async()=>{
+  test('merchant settings save ignores obsolete delivery areas and delivery-rule text',async()=>{
     allowMerchant();const conn=mockTx([]);
-    const res=await authed('put','/admin/settings','merchant').send({payment_zh:'',payment_en:'',payment_methods:[],delivery_zones:[]});
+    const res=await authed('put','/admin/settings','merchant').send({payment_zh:'',payment_en:'',payment_methods:[],delivery_zones:[{id:'old',name_zh:'LY1',name_en:'LY1',fee_cents:250}]});
     expect(res.status).toBe(200);expect(conn.execute).toHaveBeenCalledTimes(1);
-    const [sql,params]=conn.execute.mock.calls[0];expect(sql).toContain("delivery_notice_zh,delivery_notice_en");expect(sql).not.toContain("delivery_notice_zh = VALUES");expect(params).toHaveLength(5);
+    const [sql,params]=conn.execute.mock.calls[0];expect(sql).toContain("delivery_notice_zh,delivery_notice_en");expect(sql).not.toContain("delivery_notice_zh = VALUES");expect(params).toHaveLength(3);expect(JSON.parse(params[2])).toEqual([]);
   });
   test.each([['get','/admin/daily-schedule'],['put','/admin/daily-schedule'],['get','/admin/slots'],['put','/admin/slots/new']])('old recurring or generic schedule API is unavailable: %s %s',async(method,path)=>{
     allowMerchant();expect((await authed(method,path,'merchant').send({})).status).toBe(404);
@@ -151,5 +156,70 @@ describe('receipt deletion and merchant payment image permissions',()=>{
     const res=await authed('put','/admin/special-slots/new','merchant').send({delivery_date:'2099-01-01',delivery_start:'10:30',delivery_end:'12:00',label_zh:'指定日期配送',label_en:'Special delivery'});
     expect(res.status).toBe(200);expect(res.body.data.id).toBe(42);
     expect(query.mock.calls.find(([sql])=>sql.includes('INSERT INTO shop_slots'))[1]).toEqual([1,'2099-01-01','10:30:00','12:00:00','指定日期配送 10:30-12:00','Special delivery 10:30-12:00','2099-01-01 10:30:00',100000,1]);
+  });
+});
+
+describe('simplified product fields',()=>{
+  test('product introduction and legacy specifications may be omitted or empty',()=>{
+    const value=service.product({...product,spec_zh:undefined,spec_en:'',description_zh:'',description_en:undefined});
+    expect(value).toMatchObject({spec_zh:'',spec_en:'',description_zh:'',description_en:'',price_cents:100});
+  });
+  test('optional introduction is sanitized',()=>{
+    expect(service.product({...product,description_zh:'<b>说明</b>',description_en:'   '}).description_zh).toBe('说明');
+    expect(service.product({...product,description_en:'   '}).description_en).toBe('');
+  });
+  test.each([42,{},'x'.repeat(2001)])('invalid optional introduction is rejected: %s',description_zh=>{
+    expect(()=>service.product({...product,description_zh})).toThrow();
+  });
+});
+
+describe('store deletion permissions and simplified payment methods',()=>{
+  const memberAccess=(role='merchant')=>query.mockImplementation(async sql=>{
+    if(sql.includes('FROM shop_merchants'))return [{id:1,slug:'water-home',enabled:1}];
+    if(sql.includes('SELECT role'))return [{role,status:'active'}];
+    if(sql.includes('shop_merchant_members'))return role==='merchant'?[{user_id:1}]:[];
+    if(sql.includes('SELECT id,slug,name_zh,name_en,enabled,created_at FROM shop_merchants'))return [{id:1,slug:'water-home',name_zh:'水屋',name_en:'Water Home',enabled:1}];
+    return [];
+  });
+  const deletionConnection=()=>{
+    const execute=jest.fn().mockResolvedValueOnce([[{id:1,slug:'water-home'}]]).mockResolvedValueOnce([{}]);
+    const conn={beginTransaction:jest.fn(),commit:jest.fn(),rollback:jest.fn(),release:jest.fn(),execute};
+    pool.getConnection.mockResolvedValue(conn);return conn;
+  };
+  test('merchant can soft-delete only the store they manage',async()=>{
+    memberAccess('merchant');const conn=deletionConnection();
+    const res=await authed('delete','/admin/store','merchant');
+    expect(res.status).toBe(200);expect(res.body.data.deleted).toBe(true);
+    expect(conn.execute.mock.calls[1][0]).toContain('SET enabled=0,deleted_at=NOW()');
+    expect(conn.commit).toHaveBeenCalled();
+  });
+  test('ordinary student cannot delete a store',async()=>{
+    memberAccess('student');
+    expect((await authed('delete','/admin/store')).status).toBe(403);
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+  test('admin can list and soft-delete any active store',async()=>{
+    query.mockImplementation(async sql=>{
+      if(sql.includes('SELECT role'))return [{role:'admin',status:'active'}];
+      if(sql.includes('SELECT id,slug,name_zh,name_en,enabled,created_at'))return [{id:1,slug:'water-home',name_zh:'水屋',name_en:'Water Home',enabled:1}];
+      return [];
+    });
+    expect((await authed('get','/admin/stores','admin')).body.data).toHaveLength(1);
+    const conn=deletionConnection();
+    const res=await authed('delete','/admin/stores/1','admin');
+    expect(res.status).toBe(200);expect(conn.execute.mock.calls[1][0]).toContain('deleted_at=NOW()');
+  });
+  test('payment methods require bilingual names and QR, with server-generated internal IDs',async()=>{
+    memberAccess('merchant');const execute=jest.fn().mockResolvedValue([{}]);
+    pool.getConnection.mockResolvedValue({beginTransaction:jest.fn(),commit:jest.fn(),rollback:jest.fn(),release:jest.fn(),execute});
+    const res=await authed('put','/admin/settings','merchant').send({payment_methods:[{name_zh:'电子钱包',name_en:'E-wallet',qr_url:'/api/shop/assets/payment/1/code.png',note_zh:'旧字段'}]});
+    expect(res.status).toBe(200);
+    const [sql,params]=execute.mock.calls[0];expect(sql).toContain('payment_methods');
+    const methods=JSON.parse(params[1]);expect(methods[0]).toMatchObject({name_zh:'电子钱包',name_en:'E-wallet',qr_url:'/api/shop/assets/payment/1/code.png'});expect(methods[0].id).toBeTruthy();expect(methods[0]).not.toHaveProperty('note_zh');expect(Object.keys(methods[0]).sort()).toEqual(['id','name_en','name_zh','qr_url']);
+  });
+  test('payment methods reject missing bilingual names or QR before writing',async()=>{
+    memberAccess('merchant');
+    const res=await authed('put','/admin/settings','merchant').send({payment_methods:[{name_zh:'电子钱包',qr_url:'/qr.png'}]});
+    expect(res.status).toBe(400);expect(pool.getConnection).not.toHaveBeenCalled();
   });
 });
