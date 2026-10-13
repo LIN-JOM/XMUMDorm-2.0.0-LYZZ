@@ -49,7 +49,7 @@ function isSpecialSlotOpen(slot, now = campusNow()) {
   const start = String(slot?.delivery_start || '').slice(0, 5);
   const end = String(slot?.delivery_end || '').slice(0, 5);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(start)
-    || !/^([01]\d|2[0-3]):[0-5]\d$/.test(end) || start >= end) return false;
+    || !/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/.test(end) || start >= end) return false;
   return `${date} ${start}:00` <= now && now < `${date} ${end}:00`;
 }
 function slot(body) {
@@ -65,10 +65,11 @@ function slot(body) {
 }
 function specialSlot(body) {
   const date = text(body.delivery_date, 10);
-  const start = text(body.delivery_start, 8);
-  const end = text(body.delivery_end, 8);
+  if (body.all_day !== undefined) flag(body.all_day);
+  const start = body.all_day ? '00:00' : text(body.delivery_start, 8);
+  const end = body.all_day ? '24:00' : text(body.delivery_end, 8);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date
-    || !/^([01]\d|2[0-3]):[0-5]\d$/.test(start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(end)
+    || !/^([01]\d|2[0-3]):[0-5]\d$/.test(start) || !/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/.test(end)
     || start >= end) fail('日期或配送时间段无效 / Invalid date or delivery period');
   return { delivery_date: date, delivery_start: `${start}:00`, delivery_end: `${end}:00`,
     label_zh: text(body.label_zh, 120), label_en: text(body.label_en, 120),

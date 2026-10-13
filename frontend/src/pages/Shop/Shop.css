@@ -34,3 +34,8 @@
 .shop-image-drop{width:100%;min-height:190px;border:2px dashed #b9b5a8;border-radius:16px;background:#faf9f5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#615c4e;cursor:pointer;padding:14px}.shop-image-drop.is-dragging{border-color:#c69e1d;background:#fff7d6}.shop-image-drop img{max-height:220px;max-width:100%;object-fit:contain;border-radius:10px}.shop-image-drop span{font-size:12px}.shop-image-actions{display:flex;gap:8px;margin-top:8px}
 
 .shop-image-drop{width:100%;min-height:190px;border:2px dashed #b9b5a8;border-radius:16px;background:#faf9f5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#615c4e;cursor:pointer;padding:14px}.shop-image-drop.is-dragging{border-color:#c69e1d;background:#fff7d6}.shop-image-drop img{max-height:220px;max-width:100%;object-fit:contain;border-radius:10px}.shop-image-drop span{font-size:12px}.shop-image-actions{display:flex;gap:8px;margin-top:8px}
+
+.shop-time-select{border:0;padding:0;margin:0;min-width:0}
+.shop-time-select legend{font-weight:600}
+.shop-time-parts{display:flex;align-items:center;gap:12px}
+.shop-time-parts .shop-field{flex:1;min-width:0}
