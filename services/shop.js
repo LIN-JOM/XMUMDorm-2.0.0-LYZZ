@@ -19,17 +19,30 @@ function text(value, max) {
   if (!clean || clean.length > max) fail('文字为空或过长 / Empty or too long');
   return clean;
 }
+function optionalText(value, max) {
+  if (value == null || value === '') return '';
+  if (typeof value !== 'string') fail('文字格式无效 / Invalid text');
+  const clean = sanitize(value, { allowedTags: [], allowedAttributes: {} }).trim();
+  if (clean.length > max) fail('文字过长 / Text too long');
+  return clean;
+}
+function paymentMethods(value) {
+  let methods = value;
+  if (typeof methods === 'string') {
+    try { methods = JSON.parse(methods); } catch { return []; }
+  }
+  if (!Array.isArray(methods)) return [];
+  return methods.filter(method => method && typeof method === 'object' && !Array.isArray(method)).map(method => ({
+    id: optionalText(String(method.id || ''), 40),
+    name_zh: optionalText(method.name_zh, 120),
+    name_en: optionalText(method.name_en, 120),
+    qr_url: optionalText(method.qr_url, 500),
+  })).filter(method => method.id && method.name_zh && method.name_en && method.qr_url
+    && (/^\/(?!\/)[\w/.-]+$/.test(method.qr_url) || /^https:\/\//.test(method.qr_url)));
+}
 function address(body) {
   return { contact_name: text(body.contact_name, 100), contact: text(body.contact, 120),
     building: text(body.building, 40), room: text(body.room, 30) };
-}
-function resolveDeliveryZone(zones, building) {
-  if (!zones.length) return null;
-  const normalize = value => String(value || '').normalize('NFKC').trim().toLocaleLowerCase();
-  const name = normalize(building);
-  const matches = zones.filter(zone => [zone.name_zh, zone.name_en].some(alias => normalize(alias) === name));
-  if (matches.length !== 1) fail('请填写与商家配送地区名称一致的宿舍楼；如不在列表中，请联系商家 / Enter a dorm building matching one merchant delivery area', 409);
-  return matches[0];
 }
 function flag(value) { if (typeof value !== 'boolean') fail('开关值无效 / Invalid flag'); return value ? 1 : 0; }
 function product(body) {
@@ -37,8 +50,8 @@ function product(body) {
   const image = text(body.image_url, 500);
   if (!/^\/(?!\/)[\w/.-]+$/.test(image) && !/^https:\/\//.test(image)) fail('图片须为本地路径或 HTTPS / Invalid image URL');
   return { category: body.category, name_zh: text(body.name_zh, 120), name_en: text(body.name_en, 120),
-    spec_zh: text(body.spec_zh, 120), spec_en: text(body.spec_en, 120),
-    description_zh: text(body.description_zh, 2000), description_en: text(body.description_en, 2000),
+    spec_zh: optionalText(body.spec_zh, 120), spec_en: optionalText(body.spec_en, 120),
+    description_zh: optionalText(body.description_zh, 2000), description_en: optionalText(body.description_en, 2000),
     image_url: image, price_cents: integer(body.price_cents, body.sold_out ? 0 : 1, 1000000), stock: integer(body.stock, 0, 1000000),
     sold_out: flag(body.sold_out), is_demo: flag(body.is_demo ?? false) };
 }
@@ -101,6 +114,8 @@ async function checkout(userId, body, key, merchantId = 1) {
   const fingerprint = crypto.createHash('sha256').update(JSON.stringify({ location, slotId, expected, merchantId, paymentMethod })).digest('hex');
   return transaction(async (conn) => {
     await lockUser(conn, userId); // serializes cart writes, checkout and repeated requests for this user
+    const [merchants] = await conn.execute('SELECT id FROM shop_merchants WHERE id=? AND enabled=1 AND deleted_at IS NULL FOR UPDATE', [merchantId]);
+    if (!merchants[0]) fail('店铺已停止营业 / Store is unavailable', 409);
     const [existing] = await conn.execute('SELECT * FROM shop_orders WHERE user_id = ? AND idempotency_key = ?', [userId, key]);
     if (existing[0]) {
       if (existing[0].merchant_id !== merchantId) fail('订单不属于此商户 / Wrong merchant', 404);
@@ -136,16 +151,13 @@ async function checkout(userId, body, key, merchantId = 1) {
       items.push({ product_id: p.id, name_zh: p.name_zh, name_en: p.name_en, spec_zh: p.spec_zh, spec_en: p.spec_en,
         price_cents: p.price_cents, quantity: line.quantity, is_demo: p.is_demo });
     }
-    const [settings] = await conn.execute('SELECT payment_zh, payment_en, payment_methods, delivery_zones FROM shop_settings WHERE id = ?', [merchantId]);
+    const [settings] = await conn.execute('SELECT payment_zh, payment_en, payment_methods FROM shop_settings WHERE id = ?', [merchantId]);
     if (!settings[0]) fail('商家尚未配置付款说明 / Payment instructions unavailable', 409);
     const parse = value => typeof value === 'string' ? JSON.parse(value) : value;
-    const zones = parse(settings[0].delivery_zones) || [];
-    const methods = parse(settings[0].payment_methods) || [];
-    const zone = resolveDeliveryZone(zones, location.building);
+    const methods = paymentMethods(settings[0].payment_methods);
     const method = methods.find(m => m.id === paymentMethod);
     if (methods.length && !method) fail('请选择付款方式 / Choose payment method');
-    total += zone?.fee_cents || 0;
-    const payment = { ...settings[0], selected_method: method || null, delivery_zone: zone || null };
+    const payment = { ...settings[0], payment_methods: methods, delivery_zones: [], selected_method: method || null, delivery_zone: null };
     if (total !== expected) fail('价格已变更，请刷新购物车并确认 / Price changed', 409);
     for (const item of items) await conn.execute('UPDATE shop_products SET stock = stock - ? WHERE id = ?', [item.quantity, item.product_id]);
     const [insert] = await conn.execute(`INSERT INTO shop_orders (user_id, slot_id, idempotency_key, request_hash, address_json, items_json, slot_json, payment_json, total_cents, merchant_id)
@@ -179,4 +191,4 @@ async function changeStatus(id, next, merchantId = 1) {
     return { ...order, status: next };
   });
 }
-module.exports = { CATEGORIES, TRANSITIONS, fail, integer, text, address, product, slot, specialSlot, decode, transaction, lockUser, checkout, changeStatus, campusNow, isSpecialSlotOpen, resolveDeliveryZone };
+module.exports = { CATEGORIES, TRANSITIONS, fail, integer, text, address, product, paymentMethods, slot, specialSlot, decode, transaction, lockUser, checkout, changeStatus, campusNow, isSpecialSlotOpen };
