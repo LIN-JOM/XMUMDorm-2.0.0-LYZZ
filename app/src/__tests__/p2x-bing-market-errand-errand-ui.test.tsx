@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Linking from 'expo-linking';
-import {act,fireEvent,waitFor} from '@testing-library/react-native';
+import {act,fireEvent,waitFor,within} from '@testing-library/react-native';
 import {renderApp} from './helpers/renderApp';
 import {ErrandListScreen,ErrandDetailScreen} from '@/features/errand/ErrandScreens';
 import {listErrands,getErrandDetail,takeErrand,doneErrand,deleteErrand} from '../../../shared/api/errands';
@@ -26,6 +26,17 @@ it('跑腿列表分页按返回页大小且列表没有联系字段',async()=>{
  expect(v.queryByText('test contact')).toBeNull();await act(async()=>mockListProps.onEndReached?.());
  await waitFor(()=>expect(v.getByTestId('errand-row-4')).toBeTruthy());expect(mockListProps.pagination.hasMore).toBe(false);
  await fireEvent.press(v.getByTestId('errand-row-2'));expect(mockPush).toHaveBeenCalledWith('/errand/2');
+});
+it('任务卡显示类型地点截止时间和报酬',async()=>{
+ const task={...row,type:'urgent',location:'Library',deadline:'2026-10-16T12:00:00.000Z'};
+ list.mockResolvedValue({list:[task],page:1,pageSize:5,total:1});const v=await renderApp(<ErrandListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ const card=v.getByTestId('errand-row-2');
+ const cardView=within(card);
+ expect(cardView.getByText('紧急')).toBeTruthy();
+ expect(cardView.getByText('Library · 2026/10/16 20:00')).toBeTruthy();
+ expect(cardView.getByText('RM 5.00')).toBeTruthy();
+ expect(card.props.accessibilityLabel).toContain('2026/10/16 20:00');
 });
 it('列表泄漏联系方式作为错误，不展示内容',async()=>{
  list.mockResolvedValue({list:[{...row,contactInfo:'test contact'}],page:1,pageSize:5,total:1});

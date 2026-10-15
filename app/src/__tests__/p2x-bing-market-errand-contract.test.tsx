@@ -1,5 +1,5 @@
 import {readMarketPage,readMarketDetail} from '@/features/marketplace/model';
-import {readErrandPage,readErrandDetail} from '@/features/errand/model';
+import {formatErrandDeadline,readErrandPage,readErrandDetail} from '@/features/errand/model';
 const market={id:1,title:'Book',description:'Used',price:12,status:'on_sale'};
 const errand={id:2,title:'Pickup',reward:5,type:'delivery',status:'open',owner:{id:3,username:'test'}};
 it('二手列表保留金额并读取hasMore',()=>{
@@ -22,6 +22,10 @@ it('跑腿列表保留类型地点和截止时间用于任务卡',()=>{
  expect(row.type).toBe('delivery');
  expect(row.location).toBe('Library');
  expect(row.deadline).toBe('2026-10-16T12:00:00.000Z');
+});
+it('跑腿截止时间格式化为本地可读时间，空值保持为空',()=>{
+ expect(formatErrandDeadline('2026-10-16T12:00:00.000Z','zh')).toContain('2026');
+ expect(formatErrandDeadline(null,'zh')).toBeNull();
 });
 it('跑腿列表响应包含联系方式判为契约违例，不能靠隐藏掩盖',()=>{
  expect(()=>readErrandPage({list:[{...errand,contactInfo:'secret'}],page:1,pageSize:5,total:1})).toThrow();
