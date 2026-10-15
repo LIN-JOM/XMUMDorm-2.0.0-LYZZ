@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {useCampusReport} from './useCampusReport';
 import {useRouter} from 'expo-router';
-import {CommentComposer} from '@/components/ui/CommentComposer';
+import {TreeholeComposer} from './TreeholeComposer';
 import type {CommentNode} from '@/components/ui/CommentThread';
 import {Button} from '@/components/ui/Button';
 import {Text} from '@/components/ui/Text';
@@ -121,7 +121,7 @@ export function useCampusActions(post:CampusInteractionPost|null,kind:CampusKind
   {like.notice==='login'?<Button label={t('screen.campus.write.login')} onPress={()=>router.push('/login')}/>:null}
   {notice&&notice!=='login'?<Text role="body">{t(notice==='denied'?'screen.campus.write.denied':'screen.campus.write.sendFailed')}</Text>:null}
   {notice==='login'?<Button label={t('screen.campus.write.login')} onPress={()=>router.push('/login')}/>:null}
-  <CommentComposer testID="campus-composer" value={draft} onChangeText={setDraft} placeholder={t('screen.campus.write.placeholder')}
+  <TreeholeComposer testID="campus-composer" value={draft} onChangeText={setDraft} placeholder={t('screen.campus.write.placeholder')}
    sendLabel={t('screen.campus.write.send')} sending={sending} disabled={pagination.append==='loading'} maxLength={kind==='wall'?500:undefined} onSend={()=>void send()}
    replyContext={reply?(kind==='wall'||reply.author.kind==='anonymous'
     ?{kind:'anonymous',anonymousLabel:t('screen.campus.write.replying'),cancelLabel:t('action.cancel'),onCancel:()=>setReply(null)}

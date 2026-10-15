@@ -363,6 +363,7 @@ it('评论失败保留草稿，重试成功显示评论',async()=>{
  (createComment as jest.Mock).mockRejectedValueOnce(new TypeError('secret')).mockResolvedValueOnce({id:90,content:'一起运动',author:{nickname:'我'}});
  const v=await renderApp(<CampusDetailScreen postId="7"/>);
  await waitFor(()=>expect(v.getByLabelText('写评论')).toBeTruthy());
+ expect(v.getByTestId('campus-composer-input')).toBeTruthy();
  await fireEvent.changeText(v.getByLabelText('写评论'),'一起运动');
  await fireEvent.press(v.getByTestId('campus-composer-send'));
  await waitFor(()=>expect(v.getByText('评论未发送，请重试')).toBeTruthy());
