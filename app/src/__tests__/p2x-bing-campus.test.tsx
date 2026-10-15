@@ -31,9 +31,10 @@ jest.mock('heroui-native',()=>{
  Card.Description=function CardDescription(props:unknown){return React.createElement(Text,props);};
  function Chip(props:unknown){return React.createElement(View,props);}
  Chip.Label=function ChipLabel(props:unknown){return React.createElement(Text,props);};
+ function Skeleton(props:unknown){return React.createElement(View,props);}
  function HeroUINativeProvider({children}: {children:unknown}){return children;}
  function TextArea(props:unknown){return React.createElement(TextInput,props);}
- return {HeroUINativeProvider,Avatar,BottomSheet,Button,Card,Chip,Dialog,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
+ return {HeroUINativeProvider,Avatar,BottomSheet,Button,Card,Chip,Dialog,Skeleton,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
 });
 const mockPush=jest.fn(), mockBack=jest.fn(), mockReplace=jest.fn(), mockSetParams=jest.fn();
 jest.mock('expo-router',()=>({useRouter:()=>({setParams:mockSetParams,push:mockPush,back:mockBack,replace:mockReplace,canGoBack:()=>true})}));

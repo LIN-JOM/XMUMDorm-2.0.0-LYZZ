@@ -13,7 +13,8 @@ import {getQueryClient} from '@/shared/queryClient';
 import {QK} from '../../../../shared/query/queryKeys';
 import {getConfessionWindow,getConfession} from '../../../../shared/api/confessions';
 import {Screen, type ScreenProps} from '@/components/ui/Screen';
-import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
+import {ListScreen, resolveListState, useListPagination} from '@/components/ui/ListScreen';
+import {TreeholeFeedState} from './TreeholeFeedState';
 import {ListItem} from '@/components/ui/ListItem';
 import {TreeholeTagFilters} from './TreeholeTagFilters';
 import {Text} from '@/components/ui/Text';
@@ -195,6 +196,8 @@ function CampusFeedData({kind,query,tagId,filterChips}:{kind:CampusKind;query?:s
   return unsubscribe;
  },[client,key,load]);
  const refresh=()=>void load('refresh'),append=()=>void load('append');
+ const treeholeState=kind==='confession'?resolveListState({pagination,itemCount:rows.length}):'data';
+ if(treeholeState!=='data')return <>{filterChips}<TreeholeFeedState testID={`campus-list-${treeholeState}`} state={treeholeState} error={pagination.error} title={t(query?'screen.campus.search.empty':'screen.campus.read.empty')} actionLabel={t('action.retry')} onAction={refresh}/></>;
  return <>
   {rows.length>0&&pagination.errorScope==='refresh'?<Button label={t('screen.campus.read.refreshFailed')} onPress={refresh}/>:null}
   <ListScreen key={revision} testID="campus-list" data={rows} keyExtractor={row=>String(row.id)} pagination={pagination}
