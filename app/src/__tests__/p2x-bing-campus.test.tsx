@@ -168,6 +168,12 @@ it('树洞详情不再渲染 Phase 1 tracer',async()=>{
  await waitFor(()=>expect(v.getByTestId('treehole-post-detail')).toBeTruthy());
  expect(v.queryByTestId('treehole-heroui-tracer')).toBeNull();
 });
+it('树洞详情只由业务帖子组件呈现标题',async()=>{
+ detail.mockResolvedValue({id:7,title:'不重复的标题',content:'正文'});
+ const v=await renderApp(<CampusDetailScreen postId="7"/>);
+ await waitFor(()=>expect(v.getByText('不重复的标题')).toBeTruthy());
+ expect(v.getAllByText('不重复的标题')).toHaveLength(1);
+});
 it('树洞详情把正文放在媒体之前',async()=>{
  detail.mockResolvedValue({id:7,content:'正文优先',images:[{url:'https://example.com/one'}]});
  const v=await renderApp(<CampusDetailScreen postId="7"/>);
