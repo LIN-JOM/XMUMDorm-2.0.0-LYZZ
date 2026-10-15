@@ -6,6 +6,9 @@ it('二手列表保留金额并读取hasMore',()=>{
  expect(readMarketPage({list:[market],hasMore:true}).hasMore).toBe(true);
  expect(readMarketPage({list:[market],hasMore:false}).rows[0].price).toBe(12);
 });
+it('二手列表保留服务端分类用于商品卡',()=>{
+ expect(readMarketPage({list:[{...market,category:'books'}],hasMore:false}).rows[0].category).toBe('books');
+});
 it('二手详情使用服务端viewer及actions权限',()=>{
  const row=readMarketDetail({...market,sellerInfo:{name:'Seller'},viewer:{want:true},actions:{want:false},images:[{url:'https://example.com/book.jpg'}]});
  expect(row.sellerName).toBe('Seller');expect(row.want).toBe(true);expect(row.canWant).toBe(false);
@@ -13,6 +16,12 @@ it('二手详情使用服务端viewer及actions权限',()=>{
 it('跑腿按实际返回页大小计算分页',()=>{
  expect(readErrandPage({list:[errand],page:1,pageSize:5,total:6}).hasMore).toBe(true);
  expect(readErrandPage({list:[errand],page:2,pageSize:5,total:6}).hasMore).toBe(false);
+});
+it('跑腿列表保留类型地点和截止时间用于任务卡',()=>{
+ const row=readErrandPage({list:[{...errand,location:'Library',deadline:'2026-10-16T12:00:00.000Z'}],page:1,pageSize:5,total:1}).rows[0];
+ expect(row.type).toBe('delivery');
+ expect(row.location).toBe('Library');
+ expect(row.deadline).toBe('2026-10-16T12:00:00.000Z');
 });
 it('跑腿列表响应包含联系方式判为契约违例，不能靠隐藏掩盖',()=>{
  expect(()=>readErrandPage({list:[{...errand,contactInfo:'secret'}],page:1,pageSize:5,total:1})).toThrow();
