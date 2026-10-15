@@ -1,5 +1,6 @@
 import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import * as React from 'react';
+import {View} from 'react-native';
 import {ContactCopy} from './ContactCopy';
 import * as Linking from 'expo-linking';
 import {useRouter} from 'expo-router';
@@ -13,6 +14,7 @@ import {ReportSheet} from '@/components/ui/ReportSheet';
 import {useToast} from '@/components/ui/Toast';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
+import {useTheme} from '@/design-system/theme';
 import type {AppError} from '@/i18n/errors';
 import {getQueryClient} from '@/shared/queryClient';
 import {useSession} from '@/features/auth/session';
@@ -45,7 +47,7 @@ export function ErrandListScreen({ embedded = false }: { embedded?: boolean } = 
  </FeatureScreen>;
 }
 function ErrandFeed({filters}:{filters:Filters}):React.ReactElement {
- const {t,locale}=useI18n();const router=useRouter();const client=getQueryClient();
+ const {t,locale}=useI18n();const theme=useTheme();const router=useRouter();const client=getQueryClient();
  const key=React.useMemo(()=>['bing-errand','list',filters] as const,[filters]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,hasMore:true,scrollOffset:0});
@@ -80,7 +82,7 @@ function ErrandFeed({filters}:{filters:Filters}):React.ReactElement {
   <ListScreen key={revision} testID="errand-list" data={rows} keyExtractor={r=>String(r.id)} pagination={pagination} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={saveScroll}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.errand.end'),empty:{kind:'noResult',title:t('screen.errand.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={r=>{const typeKey=typeKeys[r.type as keyof typeof typeKeys]??typeKeys.all;const deadline=formatErrandDeadline(r.deadline,locale);return <EntityCard domain="errand" testID={`errand-row-${r.id}`} title={r.title} subtitle={[r.location,deadline].filter(Boolean).join(' · ')||undefined} badges={<Badge text={t(typeKey)} tone={r.type==='urgent'?'warning':'neutral'}/>} metrics={[`RM ${r.reward.toFixed(2)}`,t(statusKeys[r.status as 'open'|'taken'|'done'])]} style={{alignSelf:'stretch'}} onPress={()=>router.push(`/errand/${r.id}` as never)}/>;}}/>
+   renderItem={r=>{const typeKey=typeKeys[r.type as keyof typeof typeKeys]??typeKeys.all;const deadline=formatErrandDeadline(r.deadline,locale);return <View style={{marginBottom:theme.space('space_3')}}><EntityCard domain="errand" testID={`errand-row-${r.id}`} title={r.title} subtitle={[r.location,deadline].filter(Boolean).join(' · ')||undefined} badges={<Badge text={t(typeKey)} tone={r.type==='urgent'?'warning':'neutral'}/>} metrics={[`RM ${r.reward.toFixed(2)}`,t(statusKeys[r.status as 'open'|'taken'|'done'])]} style={{alignSelf:'stretch'}} onPress={()=>router.push(`/errand/${r.id}` as never)}/></View>;}}/>
  </>;
 }
 type Detail=ReturnType<typeof readErrandDetail>;

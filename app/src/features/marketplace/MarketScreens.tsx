@@ -1,5 +1,6 @@
 import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import * as React from 'react';
+import {View} from 'react-native';
 import {useRouter} from 'expo-router';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
@@ -14,6 +15,7 @@ import {ReportSheet} from '@/components/ui/ReportSheet';
 import {useToast} from '@/components/ui/Toast';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
+import {useTheme} from '@/design-system/theme';
 import type {AppError} from '@/i18n/errors';
 import {getQueryClient} from '@/shared/queryClient';
 import {useSession} from '@/features/auth/session';
@@ -54,7 +56,7 @@ export function MarketListScreen({ embedded = false }: { embedded?: boolean } = 
  </FeatureScreen>;
 }
 function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
- const {t}=useI18n();const router=useRouter();const client=getQueryClient();
+ const {t}=useI18n();const theme=useTheme();const router=useRouter();const client=getQueryClient();
  const key=React.useMemo(()=>['bing-market','list',filters] as const,[filters]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,hasMore:true,scrollOffset:0});
@@ -89,7 +91,7 @@ function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
   <ListScreen key={revision} testID="market-list" data={rows} keyExtractor={r=>String(r.id)} pagination={pagination} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={saveScroll}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.market.end'),empty:{kind:'noResult',title:t('screen.market.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={r=><EntityCard domain="listing" testID={`market-row-${r.id}`} title={r.title} subtitle={r.description} mediaUri={r.cover} authorLabel={r.sellerName} badges={r.category?<Badge text={t(categories.find(option=>option.key===r.category)?.labelKey??'screen.market.all')} tone="neutral"/>:undefined} metrics={[`RM ${r.price.toFixed(2)}`, t(r.status==='sold'?'screen.market.sold':'screen.market.on_sale')]} onPress={()=>router.push(`/market/${r.id}` as never)}/>}/>
+   renderItem={r=><View style={{marginBottom:theme.space('space_3')}}><EntityCard domain="listing" testID={`market-row-${r.id}`} title={r.title} subtitle={r.description} mediaUri={r.cover} authorLabel={r.sellerName} badges={r.category?<Badge text={t(categories.find(option=>option.key===r.category)?.labelKey??'screen.market.all')} tone="neutral"/>:undefined} metrics={[`RM ${r.price.toFixed(2)}`, t(r.status==='sold'?'screen.market.sold':'screen.market.on_sale')]} onPress={()=>router.push(`/market/${r.id}` as never)}/></View>}/>
  </>;
 }
 type Detail=ReturnType<typeof readMarketDetail>;

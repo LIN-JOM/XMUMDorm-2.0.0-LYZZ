@@ -22,6 +22,8 @@ afterEach(()=>getQueryClient().clear());
 it('跑腿列表分页按返回页大小且列表没有联系字段',async()=>{
  list.mockResolvedValueOnce({list:[row],page:1,pageSize:5,total:6}).mockResolvedValue({list:[{...row,id:4}],page:2,pageSize:5,total:6});
  const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ const rendered=mockListProps.renderItem(row,0) as React.ReactElement<{style?:unknown}>;
+ expect(rendered.props.style).toEqual(expect.objectContaining({marginBottom:12}));
  expect(v.getByTestId('errand-row-2').props.style[0]).toEqual(expect.arrayContaining([expect.objectContaining({alignSelf:'stretch'})]));
  expect(v.queryByText('test contact')).toBeNull();await act(async()=>mockListProps.onEndReached?.());
  await waitFor(()=>expect(v.getByTestId('errand-row-4')).toBeTruthy());expect(mockListProps.pagination.hasMore).toBe(false);

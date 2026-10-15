@@ -19,6 +19,8 @@ afterEach(()=>getQueryClient().clear());
 it('列表到详情，并带修剪查询及价格筛选',async()=>{
  list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
  await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ const rendered=mockListProps.renderItem(row,0) as React.ReactElement<{style?:unknown}>;
+ expect(rendered.props.style).toEqual(expect.objectContaining({marginBottom:12}));
  await fireEvent.press(v.getByTestId('market-row-1'));expect(mockPush).toHaveBeenCalledWith('/market/1');
  expect(v.getByTestId('market-search-field')).toBeTruthy();
  await fireEvent.changeText(v.getByTestId('market-search-field'),' Book ');
