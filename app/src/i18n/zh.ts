@@ -562,6 +562,8 @@ export const zh = {
   'screen.market.others': "其他",
   'screen.market.category': "分类",
   'screen.market.status': "状态",
+  'screen.market.price': "价格",
+  'screen.market.priceAny': "不限",
   'screen.market.query': "搜索商品",
   'screen.market.min': "最低价",
   'screen.market.max': "最高价",

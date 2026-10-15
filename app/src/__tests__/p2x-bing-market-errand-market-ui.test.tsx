@@ -57,6 +57,16 @@ it('二手组合筛选显示已应用条件并可清除',async()=>{
  await fireEvent.press(v.getByTestId('market-filter-clear'));
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10}));
 });
+it('价格输入收纳且未应用草稿不覆盖已应用摘要',async()=>{
+ list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ await fireEvent.changeText(v.getByTestId('market-min-input'),'5');
+ await fireEvent.changeText(v.getByTestId('market-max-input'),'15');
+ await fireEvent.press(v.getByTestId('market-apply'));
+ await waitFor(()=>expect(v.getByTestId('market-price-summary').props.children).toBe('RM 5.00 – RM 15.00'));
+ await fireEvent.changeText(v.getByTestId('market-max-input'),'20');
+ expect(v.getByTestId('market-price-summary').props.children).toBe('RM 5.00 – RM 15.00');
+});
 it('追加失败保留行，重试同页，返回分类恢复滚动与数据',async()=>{
  list.mockResolvedValueOnce({list:[row],hasMore:true}).mockRejectedValueOnce(new TypeError('private'))
  .mockResolvedValueOnce({list:[{...row,id:2}],hasMore:false}).mockResolvedValue({list:[],hasMore:false});

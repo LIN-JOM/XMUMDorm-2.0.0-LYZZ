@@ -46,6 +46,7 @@ export function MarketListScreen({ embedded = false }: { embedded?: boolean } = 
  };
  const clearFilters=()=>{setInvalid(false);setQ('');setMin('');setMax('');client.removeQueries({queryKey:['bing-market','list',{}]});select({});};
  const hasAppliedFilters=Object.values(filters).some(value=>value!==undefined&&value!=='');
+ const priceSummary=filters.priceMin==null&&filters.priceMax==null?t('screen.market.priceAny'):`${filters.priceMin==null?'—':`RM ${filters.priceMin.toFixed(2)}`} – ${filters.priceMax==null?'—':`RM ${filters.priceMax.toFixed(2)}`}`;
  return <FeatureScreen embedded={embedded} titleKey="screen.market.title" showMailbox={false} testID="market-screen">
   <SearchField testID="market-search-field" appearance="full" value={q} onChangeText={setQ} onSubmit={apply} placeholder={t('screen.market.query')}/>
   <View testID="market-filters">
@@ -55,8 +56,14 @@ export function MarketListScreen({ embedded = false }: { embedded?: boolean } = 
    <FilterChips testID="market-status" itemTestIDPrefix="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selected={[filters.status??'all']} onToggle={status=>select({...filters,status:status==='all'?undefined:status})}/>
    {hasAppliedFilters?<Button testID="market-filter-clear" label={t('action.clear')} variant="link" size="small" onPress={clearFilters}/>:null}
   </View>
-  <Input testID="market-min-input" value={min} onChangeText={setMin} label={t('screen.market.min')} kind="number"/>
-  <Input testID="market-max-input" value={max} onChangeText={setMax} label={t('screen.market.max')} kind="number"/>
+  <View testID="market-price-filter">
+   <Text role="label">{t('screen.market.price')}</Text>
+   <Text testID="market-price-summary" role="caption" colorToken="text-secondary">{priceSummary}</Text>
+   <View style={{flexDirection:'row',gap:8}}>
+    <Input testID="market-min-input" value={min} onChangeText={setMin} label={t('screen.market.min')} kind="number" style={{flex:1}}/>
+    <Input testID="market-max-input" value={max} onChangeText={setMax} label={t('screen.market.max')} kind="number" style={{flex:1}}/>
+   </View>
+  </View>
   {invalid?<Text role="body">{t('screen.market.priceInvalid')}</Text>:null}
   <Button testID="market-apply" label={t('screen.market.apply')} onPress={apply}/>
   <MarketFeed key={JSON.stringify(filters)} filters={filters}/>
