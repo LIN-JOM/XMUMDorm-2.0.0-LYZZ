@@ -102,8 +102,8 @@ it('接单成功但重读失败时要求刷新，不允许再次切换',async()=
  detail.mockResolvedValueOnce(full).mockRejectedValueOnce(new TypeError('private')).mockResolvedValue({...full,status:'taken'});me.mockResolvedValue({id:3,role:'student'});take.mockResolvedValue(undefined);
  const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByTestId('errand-take')).toBeTruthy());
  await fireEvent.press(v.getByTestId('errand-take'));await fireEvent.press(v.getByText('确认'));
- await waitFor(()=>expect(v.getByText('操作未确认，请刷新后重试')).toBeTruthy());await fireEvent.press(v.getByTestId('errand-take'));expect(take).toHaveBeenCalledTimes(1);expect(v.queryByText('private')).toBeNull();
- await fireEvent.press(v.getByText('刷新详情'));await waitFor(()=>expect(v.getByText('取消接单')).toBeTruthy());
+ await waitFor(()=>expect(v.getByText('操作未确认，请刷新后重试')).toBeTruthy());expect(v.getByTestId('errand-detail-refresh')).toBeTruthy();await fireEvent.press(v.getByTestId('errand-take'));expect(take).toHaveBeenCalledTimes(1);expect(v.queryByText('private')).toBeNull();
+ await fireEvent.press(v.getByTestId('errand-detail-refresh'));await waitFor(()=>expect(v.getByText('取消接单')).toBeTruthy());
 });
 it('管理员能切换接单但不能替非本人非接单者标记完成',async()=>{
  detail.mockResolvedValue(full);me.mockResolvedValue({id:9,role:'admin'});
