@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {act,fireEvent,waitFor} from '@testing-library/react-native';
 import {renderApp} from './helpers/renderApp';
+import {within} from '@testing-library/react-native';
 import {MarketListScreen,MarketDetailScreen} from '@/features/marketplace/MarketScreens';
 import {listMarketplaceItems,getMarketplaceItemDetail,toggleMarketplaceWant} from '../../../shared/api/marketplace';
 import {getQueryClient} from '@/shared/queryClient';
@@ -11,7 +12,7 @@ jest.mock('@/features/auth/session',()=>({useSession:()=>mockSession}));
 jest.mock('../../../shared/api/marketplace',()=>({listMarketplaceItems:jest.fn(),getMarketplaceItemDetail:jest.fn(),toggleMarketplaceWant:jest.fn()}));
 jest.mock('@/components/ui/ListScreen',()=>{const actual=jest.requireActual('@/components/ui/ListScreen'),React=require('react');return {...actual,ListScreen:(p:ListScreenProps<unknown>)=>{mockListProps=p;return React.createElement(actual.ListScreen,{...p,onEndReached:()=>undefined});}};});
 const list=listMarketplaceItems as jest.Mock,detail=getMarketplaceItemDetail as jest.Mock,want=toggleMarketplaceWant as jest.Mock;
-const row={id:1,title:'Book',description:'Used',price:12,status:'on_sale'};
+const row={id:1,title:'Book',description:'Used',price:12,status:'on_sale',category:'books',sellerName:'Alice'};
 const full={...row,sellerInfo:{name:'Seller'},viewer:{want:false},actions:{want:true},images:[],wants_count:2};
 beforeEach(()=>{getQueryClient().clear();jest.clearAllMocks();list.mockReset();detail.mockReset();want.mockReset();mockSession.isSignedIn=true;});
 afterEach(()=>getQueryClient().clear());
@@ -25,6 +26,14 @@ it('列表到详情，并带修剪查询及价格筛选',async()=>{
  await fireEvent.changeText(v.getByTestId('market-max-input'),'15');
  await fireEvent.press(v.getByTestId('market-apply'));
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,q:'Book',priceMin:5,priceMax:15}));
+});
+it('商品卡显示分类卖家且价格作为主信息',async()=>{
+ list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ const card=within(v.getByTestId('market-row-1'));
+ expect(card.getByText('书籍资料')).toBeTruthy();
+ expect(card.getByText('Alice')).toBeTruthy();
+ expect(card.getByText('RM 12.00')).toBeTruthy();
 });
 it('无效价格不请求，分类切换独立',async()=>{
  list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);

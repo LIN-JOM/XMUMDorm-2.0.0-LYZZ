@@ -4,6 +4,7 @@ import {useRouter} from 'expo-router';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
 import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
+import {Badge} from '@/components/ui/Badge';
 import {Input} from '@/components/ui/Input';
 import {SearchField} from '@/components/ui/SearchField';
 import {Button} from '@/components/ui/Button';
@@ -88,7 +89,7 @@ function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
   <ListScreen key={revision} testID="market-list" data={rows} keyExtractor={r=>String(r.id)} pagination={pagination} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={saveScroll}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.market.end'),empty:{kind:'noResult',title:t('screen.market.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={r=><EntityCard domain="listing" testID={`market-row-${r.id}`} title={r.title} subtitle={r.description} mediaUri={r.cover} metrics={[`RM ${r.price.toFixed(2)}`, t(r.status==='sold'?'screen.market.sold':'screen.market.on_sale')]} onPress={()=>router.push(`/market/${r.id}` as never)}/>}/>
+   renderItem={r=><EntityCard domain="listing" testID={`market-row-${r.id}`} title={r.title} subtitle={r.description} mediaUri={r.cover} authorLabel={r.sellerName} badges={r.category?<Badge text={t(categories.find(option=>option.key===r.category)?.labelKey??'screen.market.all')} tone="neutral"/>:undefined} metrics={[`RM ${r.price.toFixed(2)}`, t(r.status==='sold'?'screen.market.sold':'screen.market.on_sale')]} onPress={()=>router.push(`/market/${r.id}` as never)}/>}/>
  </>;
 }
 type Detail=ReturnType<typeof readMarketDetail>;

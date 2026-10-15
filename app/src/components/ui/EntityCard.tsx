@@ -132,6 +132,7 @@ export function EntityCard({
   const hasMedia = typeof mediaUri === 'string' && mediaUri.length > 0;
   const metrics = injectedMetrics ?? entityMetrics({ domain, price, reward, score, reviewCount, status });
   const isPost = domain === 'post';
+  const isListing = domain === 'listing';
   const media = hasMedia ? (
     <Image
       source={{ uri: mediaUri }}
@@ -186,9 +187,9 @@ export function EntityCard({
                 marginTop: theme.space('space_1'),
               }}
             >
-              {metrics.map((metric, index) => (
+                {metrics.map((metric, index) => (
                 // 指标串可能重复（如两条都是"暂无价格"）→ key 里带上位置
-                <Text key={`metric-${index}`} role="caption" colorToken="text-secondary">
+                <Text key={`metric-${index}`} role={isListing && index === 0 ? 'body' : 'caption'} emphasis={isListing && index === 0 ? 'strong' : 'regular'} colorToken={isListing && index === 0 ? 'text-primary' : 'text-secondary'}>
                   {metric}
                 </Text>
               ))}
