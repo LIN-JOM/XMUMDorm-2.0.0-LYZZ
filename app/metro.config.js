@@ -11,6 +11,7 @@
  */
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const { withUniwindConfig } = require('uniwind/metro');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '..');
@@ -30,4 +31,7 @@ config.resolver.extraNodeModules = {
   '@babel/runtime': path.resolve(projectRoot, 'node_modules', '@babel', 'runtime'),
 };
 
-module.exports = config;
+module.exports = withUniwindConfig(config, {
+  cssEntryFile: './global.css',
+  dtsFile: './src/uniwind.d.ts',
+});
