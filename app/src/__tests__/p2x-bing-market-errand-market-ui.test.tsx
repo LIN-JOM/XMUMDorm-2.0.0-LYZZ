@@ -97,6 +97,11 @@ it('商品详情首屏显示媒体和交易摘要',async()=>{
  expect(v.getByTestId('market-media')).toBeTruthy();expect(v.getByTestId('market-detail-summary')).toBeTruthy();
  expect(v.getByText('RM 12.00')).toBeTruthy();expect(v.getByText('在售')).toBeTruthy();
 });
+it('商品交易动作位于独立操作区',async()=>{
+ detail.mockResolvedValue(full);const v=await renderApp(<MarketDetailScreen itemId="1"/>);
+ await waitFor(()=>expect(v.getByTestId('market-want')).toBeTruthy());
+ expect(v.getByTestId('market-transaction-actions')).toBeTruthy();
+});
 it('想要响应缺少计数时重读详情，不重复切换',async()=>{
  detail.mockResolvedValueOnce(full).mockResolvedValue({...full,viewer:{want:true},wants_count:3});want.mockResolvedValue({want:true});
  const v=await renderApp(<MarketDetailScreen itemId="1"/>);await waitFor(()=>expect(v.getByText('Seller')).toBeTruthy());
