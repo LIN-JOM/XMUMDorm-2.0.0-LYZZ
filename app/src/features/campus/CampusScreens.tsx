@@ -14,8 +14,6 @@ import {Screen, type ScreenProps} from '@/components/ui/Screen';
 import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
 import {ListItem} from '@/components/ui/ListItem';
 import {FilterChips, type FilterChipOption} from '@/components/ui/FilterChips';
-import {EntityCard} from '@/components/ui/EntityCard';
-import {Icon} from '@/components/ui/Icon';
 import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
 import {View} from 'react-native';
@@ -25,12 +23,9 @@ import {MediaCarousel} from '@/components/ui/MediaCarousel';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
-import {useTheme} from '@/design-system/theme';
 import {getPostList, getPostDetail, getPostTagsList} from '../../../../shared/api/posts';
 import { wallTemplateLabel, WallTemplateContent } from './wallTemplates';
 import {formatPostTime} from '../../../../shared/utils/formatTime';
-import Heart from 'lucide-react-native/icons/heart';
-import MessageCircle from 'lucide-react-native/icons/message-circle';
 import {TreeholeHeroUITracer} from './TreeholeHeroUITracer';
 import {TreeholePost} from './TreeholePost';
 import {TreeholeMedia} from './TreeholeMedia';
@@ -118,24 +113,17 @@ export function CampusListScreen({initialTab='confession', beforeTabs, ...screen
 }
 
 function TreeholeFeedRow({row,query}:{row:Post;query?:string}):React.ReactElement {
- const {t,locale}=useI18n();const router=useRouter();const theme=useTheme();const like=useCampusLike(row,'confession');
- const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;
- const media=images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null;
- const author=row.author?.nickname||row.author?.username;
- const metaLabel=row.created_at?formatPostTime(row.created_at,{locale}):'';
- const likeLabel=`${like.likeCount??'—'} ${t('screen.campus.read.like')}`;
- const replyLabel=`${like.commentCount??'—'} ${t('screen.campus.read.comments')}`;
- const title=row.title||t('screen.campus.read.post');
+ const {t,locale}=useI18n();const router=useRouter();const like=useCampusLike(row,'confession');
+ const images=postImageUrls(row);
  return <>
-  <EntityCard domain="post" testID={`campus-row-${row.id}`} title={title} titleContent={query?<SearchHighlight value={title} query={query}/>:undefined} subtitle={row.content} subtitleContent={query?<SearchHighlight value={row.content} query={query}/>:undefined} authorLabel={author} metaLabel={metaLabel} postMedia={media} metrics={[]}
-   onPress={()=>router.push(`/campus/${row.id}` as never)} postActions={<>
-    <Pressable testID={`campus-row-${row.id}-like`} accessibilityRole="button" accessibilityLabel={likeLabel} selected={like.liked} onPress={like.onToggleLike} style={{flexDirection:'row',gap:theme.space('space_1')}}>
-     <Icon source={Heart} size="inline" tint={like.liked?'brand':'secondary'}/><Text role="caption" colorToken="text-secondary">{likeLabel}</Text>
-    </Pressable>
-    <Pressable testID={`campus-row-${row.id}-reply`} accessibilityRole="button" accessibilityLabel={replyLabel} onPress={()=>router.push(`/campus/${row.id}` as never)} style={{flexDirection:'row',gap:theme.space('space_1')}}>
-     <Icon source={MessageCircle} size="inline" tint="secondary"/><Text role="caption" colorToken="text-secondary">{replyLabel}</Text>
-    </Pressable>
-   </>}/>
+  <Pressable testID={`campus-row-${row.id}`} accessibilityRole="button" accessibilityLabel={row.title||row.content} onPress={()=>router.push(`/campus/${row.id}` as never)}>
+   <TreeholePost post={{...toTreeholePostViewModel(row),liked:like.liked,likeCount:like.likeCount,commentCount:like.commentCount}}
+    variant="feed" actionTestIDPrefix={`campus-row-${row.id}`} media={<View testID={`campus-row-${row.id}-media`}><TreeholeMedia urls={images} mode="feed"/></View>}
+    metaLabel={row.created_at?formatPostTime(row.created_at,{locale}):undefined}
+    titleContent={query&&row.title?<SearchHighlight value={row.title} query={query}/>:undefined}
+    contentContent={query?<SearchHighlight value={row.content} query={query}/>:undefined}
+    onLike={like.onToggleLike} onReply={()=>router.push(`/campus/${row.id}` as never)}/>
+  </Pressable>
   {like.notice&&like.notice!=='login'?<Text testID={`campus-row-${row.id}-notice`} role="body">{t(like.notice==='denied'?'screen.campus.write.denied':'screen.campus.write.likeFailed')}</Text>:null}
   {like.notice==='login'?<Button testID={`campus-row-${row.id}-login`} label={t('screen.campus.write.login')} onPress={()=>router.push('/login')}/>:null}
  </>;

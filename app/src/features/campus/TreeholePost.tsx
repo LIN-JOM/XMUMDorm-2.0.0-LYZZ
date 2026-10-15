@@ -27,24 +27,25 @@ export function TreeholeTags({ tags }: { tags: readonly string[] }): React.React
   </View>;
 }
 
-export function TreeholeActions({ liked, likeCount, commentCount, onLike, onReply }: {
+export function TreeholeActions({ liked, likeCount, commentCount, onLike, onReply, testIDPrefix }: {
   liked: boolean;
   likeCount: number | null;
   commentCount: number | null;
   onLike?: () => void;
   onReply?: () => void;
+  testIDPrefix?: string;
 }): React.ReactElement {
   return <View testID="treehole-actions" style={{ flexDirection: 'row', gap: 8 }}>
-    <Button testID="treehole-like" size="sm" variant={liked ? 'secondary' : 'ghost'} onPress={onLike} accessibilityLabel={`点赞 ${likeCount ?? '—'}`}>
-      {`${liked ? '已赞' : '点赞'} ${likeCount ?? '—'}`}
+    <Button testID={testIDPrefix ? `${testIDPrefix}-like` : 'treehole-like'} size="sm" variant={liked ? 'secondary' : 'ghost'} onPress={onLike} accessibilityState={{ selected: liked }} accessibilityLabel={`赞 ${likeCount ?? '—'}`}>
+      {`${likeCount ?? '—'} 赞`}
     </Button>
-    <Button testID="treehole-reply" size="sm" variant="ghost" onPress={onReply} accessibilityLabel={`评论 ${commentCount ?? '—'}`}>
-      {`评论 ${commentCount ?? '—'}`}
+    <Button testID={testIDPrefix ? `${testIDPrefix}-reply` : 'treehole-reply'} size="sm" variant="ghost" onPress={onReply} accessibilityLabel={`评论 ${commentCount ?? '—'}`}>
+      {`${commentCount ?? '—'} 评论`}
     </Button>
   </View>;
 }
 
-export function TreeholePost({ post, variant, tags = [], media, onPress, onLike, onReply }: {
+export function TreeholePost({ post, variant, tags = [], media, onPress, onLike, onReply, actionTestIDPrefix, metaLabel, titleContent, contentContent }: {
   post: TreeholePostViewModel;
   variant: TreeholePostVariant;
   tags?: readonly string[];
@@ -52,16 +53,21 @@ export function TreeholePost({ post, variant, tags = [], media, onPress, onLike,
   onPress?: () => void;
   onLike?: () => void;
   onReply?: () => void;
+  actionTestIDPrefix?: string;
+  metaLabel?: string;
+  titleContent?: React.ReactNode;
+  contentContent?: React.ReactNode;
 }): React.ReactElement {
   return <Card testID={`treehole-post-${variant}`} variant={variant === 'feed' ? 'transparent' : 'default'} animation="disable-all">
     <Card.Header><TreeholeAuthor post={post} /></Card.Header>
     <Card.Body>
-      {post.title ? <Card.Title numberOfLines={variant === 'feed' ? 2 : undefined}>{post.title}</Card.Title> : null}
-      <Card.Description numberOfLines={variant === 'feed' ? 5 : undefined}>{post.content}</Card.Description>
+      {post.title ? <Card.Title numberOfLines={variant === 'feed' ? 2 : undefined}>{titleContent ?? post.title}</Card.Title> : null}
+      <Card.Description numberOfLines={variant === 'feed' ? 5 : undefined}>{contentContent ?? post.content}</Card.Description>
+      {metaLabel ? <Card.Description>{metaLabel}</Card.Description> : null}
       <TreeholeTags tags={tags} />
       {media}
     </Card.Body>
-    <Card.Footer><TreeholeActions liked={post.liked} likeCount={post.likeCount} commentCount={post.commentCount} onLike={onLike} onReply={onReply} /></Card.Footer>
+    <Card.Footer><TreeholeActions liked={post.liked} likeCount={post.likeCount} commentCount={post.commentCount} onLike={onLike} onReply={onReply} testIDPrefix={actionTestIDPrefix} /></Card.Footer>
     {onPress ? <Button testID={`treehole-open-${variant}`} variant="ghost" onPress={onPress} accessibilityLabel="查看帖子">查看帖子</Button> : null}
   </Card>;
 }

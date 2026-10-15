@@ -117,22 +117,22 @@ it('标签各自保留分页内容和位置，追加请求不串标签',async()=
   {page:1,pageSize:10,tagId:8},
  ]);
 });
-it('树洞列表复用媒体层：单图保持静态，多图提供横滑页码',async()=>{
+it('树洞列表复用媒体层：多图只提供静态预览与数量',async()=>{
  list.mockResolvedValue({list:[
   {id:7,title:'单图',content:'一张',images:[{url:'https://example.com/one.jpg'}]},
   {id:8,title:'多图',content:'两张',images:[{url:'https://example.com/two-a.jpg'},{url:'https://example.com/two-b.jpg'}]},
  ],hasMore:false});
  const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('campus-row-7-media-0',{includeHiddenElements:true})).toBeTruthy());
- expect(v.queryByTestId('campus-row-7-media-position')).toBeNull();
- expect(v.getByTestId('campus-row-8-media-position')).toHaveTextContent('第 1 张，共 2 张');
- await fireEvent.scroll(v.getByTestId('campus-row-8-media-scroll'),{nativeEvent:{contentOffset:{x:300,y:0},layoutMeasurement:{width:300,height:200}}});
- expect(v.getByTestId('campus-row-8-media-position')).toHaveTextContent('第 2 张，共 2 张');
+ await waitFor(()=>expect(v.getByTestId('campus-row-7-media')).toBeTruthy());
+ expect(v.getByTestId('campus-row-8-media')).toBeTruthy();
+ expect(v.queryByTestId('treehole-media-next')).toBeNull();
+ expect(v.queryByTestId('treehole-media-preview')).toBeNull();
+ expect(v.getAllByTestId('treehole-media-count')[0]).toHaveTextContent('2 张图片');
 });
 it('树洞帖子按身份、正文、媒体和指标的顺序组合',async()=>{
  list.mockResolvedValue({list:[{id:7,title:'晚间散步',content:'今晚有人想去湖边吗？',author:{nickname:'小林'},created_at:new Date().toISOString(),like_count:2,images:[{url:'https://example.com/one.jpg'}]}],hasMore:false});
  const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('campus-row-7-media-0',{includeHiddenElements:true})).toBeTruthy());
+ await waitFor(()=>expect(v.getByTestId('campus-row-7-media')).toBeTruthy());
  const sequence:string[]=[];
  const visit=(node:unknown):void=>{if(typeof node==='string'){sequence.push(node);return;}if(Array.isArray(node)){node.forEach(visit);return;}if(node&&typeof node==='object'){const value=node as {props?:{testID?:unknown};children?:unknown};if(typeof value.props?.testID==='string')sequence.push(value.props.testID);visit(value.children);}};
  visit(v.getByTestId('campus-row-7').parent);
