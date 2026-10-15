@@ -91,6 +91,12 @@ it('英文空态与详情404显示业务返回入口',async()=>{
  detail.mockRejectedValue({status:404});const v=await renderApp(<MarketDetailScreen itemId="999"/>,{locale:'en'});
  await waitFor(()=>expect(v.getByText('Item is unavailable or deleted')).toBeTruthy());expect(v.getByText('Back to listings')).toBeTruthy();
 });
+it('商品详情首屏显示媒体和交易摘要',async()=>{
+ detail.mockResolvedValue({...full,images:[{url:'https://example.com/book.jpg'}]});
+ const v=await renderApp(<MarketDetailScreen itemId="1"/>);await waitFor(()=>expect(v.getByText('Seller')).toBeTruthy());
+ expect(v.getByTestId('market-media')).toBeTruthy();expect(v.getByTestId('market-detail-summary')).toBeTruthy();
+ expect(v.getByText('RM 12.00')).toBeTruthy();expect(v.getByText('在售')).toBeTruthy();
+});
 it('想要响应缺少计数时重读详情，不重复切换',async()=>{
  detail.mockResolvedValueOnce(full).mockResolvedValue({...full,viewer:{want:true},wants_count:3});want.mockResolvedValue({want:true});
  const v=await renderApp(<MarketDetailScreen itemId="1"/>);await waitFor(()=>expect(v.getByText('Seller')).toBeTruthy());
