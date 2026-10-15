@@ -37,3 +37,13 @@
 
 .shop-store-admin-row{display:flex;align-items:center;justify-content:space-between;gap:16px}.shop-store-admin-row>div{flex:1;min-width:0}.shop-store-admin-row p{color:var(--color-text-secondary)}
 @media(max-width:600px){.shop-store-admin-row{align-items:flex-start;flex-direction:column}.shop-store-admin-row>a,.shop-store-admin-row>button{width:100%}}
+
+.shop-image-preview-trigger { cursor: zoom-in; }
+.shop-image-preview-trigger:focus-visible { outline: 3px solid var(--color-primary, #173874); outline-offset: 3px; }
+
+.shop-batch-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:16px; margin:16px 0; border:2px solid var(--color-border-default); border-radius:12px; background:var(--color-bg-surface); }
+.shop-batch-toolbar p { flex-basis:100%; margin:0; font-size:14px; }
+.shop-order-select { display:inline-flex; align-items:center; gap:8px; min-height:44px; cursor:pointer; }
+.shop-order-select input { width:20px; height:20px; accent-color:var(--color-brand-text); }
+.shop-batch-result { flex-direction:column; }
+.shop-batch-result ul { max-height:240px; overflow:auto; }
