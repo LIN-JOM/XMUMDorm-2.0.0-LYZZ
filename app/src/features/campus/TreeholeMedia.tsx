@@ -17,17 +17,18 @@ export function TreeholeMedia({ urls, mode }: { urls: readonly string[]; mode: T
   const { t } = useI18n();
   const [index, setIndex] = React.useState(0);
   const [previewOpen, setPreviewOpen] = React.useState(false);
-  if (!urls.length) return null;
   const current = urls[index] ?? urls[0];
-  const next = () => setIndex(value => (value + 1) % urls.length);
-  const previous = () => setIndex(value => (value - 1 + urls.length) % urls.length);
+  const next = React.useCallback(() => setIndex(value => (value + 1) % urls.length), [urls.length]);
+  const previous = React.useCallback(() => setIndex(value => (value - 1 + urls.length) % urls.length), [urls.length]);
   const panHandlers = React.useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, gesture) => mode === 'detail' && urls.length > 1 && Math.abs(gesture.dx) > 12,
     onPanResponderRelease: (_, gesture) => {
       if (resolveTreeholeSwipe(gesture.dx) === 'next') next();
       if (resolveTreeholeSwipe(gesture.dx) === 'previous') previous();
     },
-  }).panHandlers, [mode, urls.length]);
+  }).panHandlers, [mode, urls.length, next, previous]);
+
+  if (!urls.length) return null;
 
   if (mode === 'feed') return <Card testID="treehole-media-feed" variant="secondary" animation="disable-all">
     <Image testID="treehole-media-feed-image" source={{ uri: urls[0] }} accessibilityLabel={t('screen.campus.mediaPosition', { index: 1, total: urls.length })} style={{ width: '100%', aspectRatio: 1.6 }} />
