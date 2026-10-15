@@ -3,3 +3,68 @@
 @import 'heroui-native/styles';
 
 @source './node_modules/heroui-native/lib';
+
+/* Campus semantic bridge: HeroUI reads these variables through Uniwind.
+   Values mirror tokens/design-tokens.css; the RN ThemeProvider remains the
+   runtime authority for scheme and reduced-motion state. */
+@layer theme {
+  :root {
+    @variant light {
+      --background: #f7f8fa;
+      --foreground: #1b1f2c;
+      --surface: #ffffff;
+      --surface-foreground: #1b1f2c;
+      --surface-secondary: #f4f5f8;
+      --surface-secondary-foreground: #1b1f2c;
+      --surface-tertiary: #eceef4;
+      --surface-tertiary-foreground: #1b1f2c;
+      --overlay: #ffffff;
+      --overlay-foreground: #1b1f2c;
+      --muted: #6c7285;
+      --default: #f4f5f8;
+      --default-foreground: #1b1f2c;
+      --accent: #2452a6;
+      --accent-foreground: #ffffff;
+      --border: #e4e7ef;
+      --separator: #b9bfd0;
+      --focus: #3d6dc3;
+      --field-background: #f4f5f8;
+      --field-foreground: #1b1f2c;
+      --field-placeholder: #6c7285;
+      --field-border: #e4e7ef;
+      --warning: #af6226;
+      --warning-foreground: #ffffff;
+      --treehole-action-accent: #ffc300;
+      --treehole-action-accent-foreground: #201a00;
+    }
+
+    @variant dark {
+      --background: #12141a;
+      --foreground: #f2f4f9;
+      --surface: #1b1e26;
+      --surface-foreground: #f2f4f9;
+      --surface-secondary: #242833;
+      --surface-secondary-foreground: #f2f4f9;
+      --surface-tertiary: #242833;
+      --surface-tertiary-foreground: #f2f4f9;
+      --overlay: #242833;
+      --overlay-foreground: #f2f4f9;
+      --muted: #828a9e;
+      --default: #242833;
+      --default-foreground: #f2f4f9;
+      --accent: #2452a6;
+      --accent-foreground: #ffffff;
+      --border: #2c3140;
+      --separator: #343a4b;
+      --focus: #5e90ea;
+      --field-background: #0d0f13;
+      --field-foreground: #f2f4f9;
+      --field-placeholder: #828a9e;
+      --field-border: #2c3140;
+      --warning: #bb6a29;
+      --warning-foreground: #12141a;
+      --treehole-action-accent: #ffc300;
+      --treehole-action-accent-foreground: #12141a;
+    }
+  }
+}

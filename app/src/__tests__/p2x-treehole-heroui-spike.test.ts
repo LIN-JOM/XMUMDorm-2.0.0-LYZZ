@@ -51,4 +51,15 @@ describe('P2X 树洞 HeroUI Native spike', () => {
     expect(tracer).not.toContain('shared/api');
     expect(tracer).not.toContain('useCampusActions');
   });
+
+  it('将 HeroUI 亮暗语义色映射到 Campus token，且不把黄色情绪色当页面背景', () => {
+    const css = readAppFile('global.css');
+
+    expect(css).toContain('Campus semantic bridge');
+    expect(css).toContain('--accent: #2452a6');
+    expect(css).toContain('--treehole-action-accent: #ffc300');
+    expect(css).toContain('@variant light');
+    expect(css).toContain('@variant dark');
+    expect(css).not.toContain('--background: #ffc300');
+  });
 });
