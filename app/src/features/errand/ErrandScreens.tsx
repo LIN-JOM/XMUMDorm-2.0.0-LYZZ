@@ -151,14 +151,14 @@ export function ErrandDetailScreen({published=false,errandId}:{published?:boolea
  return <DetailScreen testID="errand-detail" title={item?.title??t('screen.errand.detail')} author={{kind:'named',name:item?.ownerName??t('screen.errand.owner')}} onReport={item&&report.state!=='success'?()=>setReportOpen(true):undefined} interactions={{}} onBack={back} onRetry={()=>void load()} state={loading?'loading':error?.kind==='content'?'empty':error?'error':item?'content':'empty'} error={error}
   empty={{kind:'noResult',title:t('screen.errand.unavailable'),actionLabel:t('screen.errand.back'),onAction:back}}
   body={item?<><View testID="errand-detail-summary"><Text role="headline" emphasis="strong">{`RM ${item.reward.toFixed(2)}`}</Text><Text role="label" colorToken="text-secondary">{t(statusKeys[item.status as 'open'|'taken'|'done'])}</Text>{item.location?<Text role="body">{item.location}</Text>:null}{formatErrandDeadline(item.deadline,locale)?<Text role="body">{formatErrandDeadline(item.deadline,locale)}</Text>:null}</View><Text role="body">{item.description}</Text>
-   <Text role="label">{t('screen.errand.contact')}</Text><Text role="body">{item.contactInfo}</Text>
+   <View testID="errand-contact-actions"><Text role="label">{t('screen.errand.contact')}</Text><Text role="body">{item.contactInfo}</Text>
    <ContactCopy value={item.contactInfo}/>{dialNumber?<Button testID="errand-dial" label={t('screen.errand.dial')} onPress={()=>void dial()}/>:null}
-   {contactError?<Text role="body">{t('screen.errand.dialFailed')}</Text>:null}
-   {canDelete?<Button testID="errand-delete" disabled={busy||uncertain.current} label={t('screen.errand.delete')} onPress={()=>setConfirm('delete')}/>:null}
+   {contactError?<Text role="body">{t('screen.errand.dialFailed')}</Text>:null}</View>
+   <View testID="errand-status-actions">{canDelete?<Button testID="errand-delete" disabled={busy||uncertain.current} label={t('screen.errand.delete')} onPress={()=>setConfirm('delete')}/>:null}
    {identityError?<Button label={t('screen.errand.identityFailed')} onPress={()=>void load()}/>:null}
    {canTake?<Button testID="errand-take" disabled={busy||uncertain.current} label={t(item.status==='taken'?'screen.errand.untake':'screen.errand.take')} onPress={()=>setConfirm('take')}/>:null}
    {canDone?<Button testID="errand-done" disabled={busy||uncertain.current} label={t(item.status==='done'?'screen.errand.undo':'screen.errand.complete')} onPress={()=>setConfirm('done')}/>:null}
-   {notice?<><Text role="body">{t(noticeKeys[notice])}</Text><Button label={t('screen.errand.refresh')} onPress={()=>void load()}/></>:null}
+   {notice?<><Text role="body">{t(noticeKeys[notice])}</Text><Button label={t('screen.errand.refresh')} onPress={()=>void load()}/></>:null}</View>
    <AlertDialog testID="errand-confirm" visible={confirm!==null} title={t('screen.errand.detail')} body={t(confirm==='delete'?'screen.errand.deleteConfirm':'screen.errand.confirmBody')} confirmLabel={t('screen.errand.confirm')} cancelLabel={t('action.cancel')} onCancel={()=>setConfirm(null)} onConfirm={()=>{if(confirm)void action(confirm);}}/>{reportPanel}
   </>:null}
   labels={{back:t('action.back'),like:t('screen.campus.read.like'),favorite:t('action.save'),comment:t('screen.campus.read.comments'),report:t('screen.campus.read.report'),countPlaceholder:'—',anonymous:t('screen.campus.read.anonymous'),comments:{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')},commentsEnd:t('screen.campus.read.end'),commentsRetry:t('action.retry')}}/>;

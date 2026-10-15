@@ -81,6 +81,11 @@ it('任务详情首屏显示报酬地点截止时间和状态摘要',async()=>{
  const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByText('test contact')).toBeTruthy());
  expect(v.getByTestId('errand-detail-summary')).toBeTruthy();expect(v.getByText('RM 5.00')).toBeTruthy();expect(v.getByText('Library')).toBeTruthy();expect(v.getByText('2026/10/16 20:00')).toBeTruthy();
 });
+it('任务详情将联系方式和状态动作分区',async()=>{
+ detail.mockResolvedValue({...full,contactInfo:'+60 12-345 6789'});me.mockResolvedValue({id:3,role:'student'});
+ const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByTestId('errand-take')).toBeTruthy());
+ expect(v.getByTestId('errand-contact-actions')).toBeTruthy();expect(v.getByTestId('errand-status-actions')).toBeTruthy();
+});
 it('发布者确认接单后重读详情，完成操作也二次确认',async()=>{
  detail.mockResolvedValueOnce(full).mockResolvedValueOnce({...full,status:'taken'}).mockResolvedValue({...full,status:'done'});me.mockResolvedValue({id:3,role:'student'});take.mockResolvedValue(undefined);done.mockResolvedValue(undefined);
  const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByTestId('errand-take')).toBeTruthy());
