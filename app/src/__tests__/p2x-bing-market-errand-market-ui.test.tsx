@@ -45,6 +45,18 @@ it('无效价格不请求，分类切换独立',async()=>{
  await fireEvent.press(v.getByTestId('filter-chip-books'));
  await waitFor(()=>expect(list).toHaveBeenCalledWith({page:1,pageSize:10,category:'books'}));
 });
+it('二手组合筛选显示已应用条件并可清除',async()=>{
+ list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('filter-chip-books'));
+ await fireEvent.press(v.getByTestId('market-status-on_sale'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,category:'books',status:'on_sale'}));
+ expect(v.getByTestId('market-filter-clear')).toBeTruthy();
+ expect(v.getByTestId('filter-chip-books').props.accessibilityState.selected).toBe(true);
+ expect(v.getByTestId('market-status-on_sale').props.accessibilityState.selected).toBe(true);
+ await fireEvent.press(v.getByTestId('market-filter-clear'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10}));
+});
 it('追加失败保留行，重试同页，返回分类恢复滚动与数据',async()=>{
  list.mockResolvedValueOnce({list:[row],hasMore:true}).mockRejectedValueOnce(new TypeError('private'))
  .mockResolvedValueOnce({list:[{...row,id:2}],hasMore:false}).mockResolvedValue({list:[],hasMore:false});

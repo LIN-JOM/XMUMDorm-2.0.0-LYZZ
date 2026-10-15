@@ -27,6 +27,8 @@ export type FilterChipsProps = {
   onToggle: (key: string) => void;
   /** 有选中项时才显示"清除"（10.5：动作类文字，≤6 汉字） */
   onClear?: () => void;
+  /** 可选的子项测试标识前缀，用于同一页面的多组筛选。 */
+  itemTestIDPrefix?: string;
   testID?: string;
 };
 
@@ -35,6 +37,7 @@ export function FilterChips({
   selected,
   onToggle,
   onClear,
+  itemTestIDPrefix,
   testID,
 }: FilterChipsProps): React.ReactElement | null {
   const theme = useTheme();
@@ -51,7 +54,7 @@ export function FilterChips({
           return (
             <Pressable
               key={option.key}
-              testID={`filter-chip-${option.key}`}
+              testID={itemTestIDPrefix ? `${itemTestIDPrefix}-${option.key}` : `filter-chip-${option.key}`}
               onPress={() => onToggle(option.key)}
               // R4：角色是 button + selected；⛔ 不是 tab，也**没有指示器**
               accessibilityRole="button"

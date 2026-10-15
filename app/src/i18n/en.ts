@@ -552,6 +552,8 @@ export const en: Record<MessageKey, string> = {
   'screen.market.dailyuse': "Daily use",
   'screen.market.books': "Books",
   'screen.market.others': "Others",
+  'screen.market.category': "Category",
+  'screen.market.status': "Status",
   'screen.market.query': "Search items",
   'screen.market.min': "Minimum price",
   'screen.market.max': "Maximum price",

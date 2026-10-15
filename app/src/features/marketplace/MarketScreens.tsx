@@ -4,7 +4,7 @@ import {View} from 'react-native';
 import {useRouter} from 'expo-router';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
-import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
+import {FilterChips} from '@/components/ui/FilterChips';
 import {Badge} from '@/components/ui/Badge';
 import {Input} from '@/components/ui/Input';
 import {SearchField} from '@/components/ui/SearchField';
@@ -44,10 +44,17 @@ export function MarketListScreen({ embedded = false }: { embedded?: boolean } = 
   if((priceMin!==undefined&&(!Number.isFinite(priceMin)||priceMin<0))||(priceMax!==undefined&&(!Number.isFinite(priceMax)||priceMax<0))||(priceMin!==undefined&&priceMax!==undefined&&priceMin>priceMax)){setInvalid(true);return;}
   setInvalid(false);select({...filters,q:q.trim()||undefined,priceMin,priceMax});
  };
+ const clearFilters=()=>{setInvalid(false);setQ('');setMin('');setMax('');client.removeQueries({queryKey:['bing-market','list',{}]});select({});};
+ const hasAppliedFilters=Object.values(filters).some(value=>value!==undefined&&value!=='');
  return <FeatureScreen embedded={embedded} titleKey="screen.market.title" showMailbox={false} testID="market-screen">
   <SearchField testID="market-search-field" appearance="full" value={q} onChangeText={setQ} onSubmit={apply} placeholder={t('screen.market.query')}/>
-  <UnderlineFilter testID="filter-chip" options={categories} selectedKey={filters.category??'all'} onSelect={key=>select({...filters,category:key==='all'?undefined:key})}/>
-  <UnderlineFilter testID="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
+  <View testID="market-filters">
+   <Text role="label">{t('screen.market.category')}</Text>
+   <FilterChips testID="filter-chip" options={categories} selected={[filters.category??'all']} onToggle={key=>select({...filters,category:key==='all'?undefined:key})}/>
+   <Text role="label">{t('screen.market.status')}</Text>
+   <FilterChips testID="market-status" itemTestIDPrefix="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selected={[filters.status??'all']} onToggle={status=>select({...filters,status:status==='all'?undefined:status})}/>
+   {hasAppliedFilters?<Button testID="market-filter-clear" label={t('action.clear')} variant="link" size="small" onPress={clearFilters}/>:null}
+  </View>
   <Input testID="market-min-input" value={min} onChangeText={setMin} label={t('screen.market.min')} kind="number"/>
   <Input testID="market-max-input" value={max} onChangeText={setMax} label={t('screen.market.max')} kind="number"/>
   {invalid?<Text role="body">{t('screen.market.priceInvalid')}</Text>:null}

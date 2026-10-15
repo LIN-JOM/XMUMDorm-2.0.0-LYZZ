@@ -560,6 +560,8 @@ export const zh = {
   'screen.market.dailyuse': "日用百货",
   'screen.market.books': "书籍资料",
   'screen.market.others': "其他",
+  'screen.market.category': "分类",
+  'screen.market.status': "状态",
   'screen.market.query': "搜索商品",
   'screen.market.min': "最低价",
   'screen.market.max': "最高价",
