@@ -28,6 +28,9 @@ return {
   specialSlots: () => request(`${base}/admin/special-slots`),
   saveSpecialSlot: p => request(`${base}/admin/special-slots/${p.id || 'new'}`, { method: 'PUT', body: p }),
   saveSettings: body => request(`${base}/admin/settings`, { method: 'PUT', body }),
+  deleteMyStore: () => request(`${base}/admin/store`, { method: 'DELETE' }),
+  adminStores: () => request('/api/shop/admin/stores'),
+  deleteStore: id => request(`/api/shop/admin/stores/${id}`, { method: 'DELETE' }),
   adminOrders: filters => request(`${base}/admin/orders?${new URLSearchParams(Object.entries(filters).filter(([,v]) => v))}`),
   status: (id, status) => request(`${base}/admin/orders/${id}/status`, { method: 'PATCH', body: { status } }),
 };

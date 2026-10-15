@@ -1,9 +1,25 @@
 import ShopProductImage from './ShopProductImage';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+
+const makeMethod = () => ({
+ id: globalThis.crypto?.randomUUID?.() || `payment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+ name_zh: '', name_en: '', qr_url: '',
+});
+
 export default function ShopSettingsFields({draft,setDraft,isZh,slug,onUploadStateChange,uploading}){
  const t=(a,b)=>isZh?a:b;
- const groups=[['payment_methods',t('收款方式和二维码','Payment methods & QR codes'),[['id','方式标识','Method ID'],['name_zh','中文名称','Chinese name'],['name_en','英文名称','English name'],['qr_url','二维码图片路径或 HTTPS 地址','QR image path or HTTPS URL'],['note_zh','中文付款提示','Chinese payment note'],['note_en','英文付款提示','English payment note']]],['delivery_zones',t('配送地区和费用','Delivery areas & fees'),[['id','地区标识','Area ID'],['name_zh','中文名称（与学生填写的宿舍楼一致）','Chinese name (must match the dorm building entered by students)'],['name_en','英文名称（与学生填写的宿舍楼一致）','English name (must match the dorm building entered by students)'],['fee_cents','配送费（MYR 分）','Delivery fee (MYR cents)']]]];
- const update=(key,index,field,value)=>setDraft({...draft,[key]:(draft[key]||[]).map((r,i)=>i===index?{...r,[field]:value}:r)});
- return groups.map(([key,title,fields])=><div key={key}><h3>{title}</h3>{key==='payment_methods'&&<p className="shop-preserve">{t('这里只检查上传文件是图片，不会判断二维码是否能扫码或收款。请上传真实收款码，并先用手机扫码核对收款人。','The upload checks only that the file is an image; it cannot verify that the QR code scans or accepts payment. Upload a real payment QR and verify the recipient with your phone.')}</p>}{key==='delivery_zones'&&<p className="shop-preserve">{t('学生填写宿舍楼和房间号。这里仅设置可配送楼栋和配送费，不设置配送日期或时段。','Students enter their building and room. Set only covered buildings and delivery fees here; delivery dates and times are configured separately.')}</p>}{(draft[key]||[]).map((row,index)=><fieldset className="shop-order" key={index}>{fields.map(([field,zh,en])=>field==='qr_url'?<ShopProductImage key={field} slug={slug} onUploadStateChange={onUploadStateChange} payment value={row.qr_url} isZh={isZh} onChange={value=>setDraft(current=>({...current,[key]:current[key].map((r,i)=>i===index?{...r,qr_url:value}:r)}))}/>:<Input key={field} id={`${key}-${index}-${field}`} required={!field.startsWith('note')} label={t(zh,en)} type={field==='fee_cents'?'number':'text'} min={0} step={1} value={row[field]??''} onChange={e=>update(key,index,field,field==='fee_cents'?Number(e.target.value):e.target.value)}/>)}<Button type="button" disabled={uploading} variant="outline" onClick={()=>setDraft({...draft,[key]:draft[key].filter((_,i)=>i!==index)})}>{t('移除','Remove')}</Button></fieldset>)}<Button type="button" variant="outline" onClick={()=>setDraft({...draft,[key]:[...(draft[key]||[]),Object.fromEntries(fields.map(([k])=>[k,k==='fee_cents'?0:'']))]})}>{t('新增','Add')} {title}</Button></div>);
+ const methods=draft.payment_methods||[];
+ const update=(index,field,value)=>setDraft(current=>({...current,payment_methods:(current.payment_methods||[]).map((row,i)=>i===index?{...row,[field]:value}:row)}));
+ return <section aria-label={t('收款方式','Payment methods')}>
+  <h3>{t('收款方式','Payment methods')}</h3>
+  <p className="shop-preserve">{t('每种收款方式只需填写中英文名称并上传对应二维码。上传的图片不会自动验证收款信息，请先自行扫码确认。','For each payment method, enter its Chinese and English names and upload the matching QR image. The image cannot verify payment details; scan it yourself before saving.')}</p>
+  {methods.map((row,index)=><fieldset className="shop-order" key={row.id||index}>
+   <Input id={`payment-${index}-name-zh`} label={t('中文名称','Chinese name')} required value={row.name_zh||''} onChange={e=>update(index,'name_zh',e.target.value)}/>
+   <Input id={`payment-${index}-name-en`} label={t('英文名称','English name')} required value={row.name_en||''} onChange={e=>update(index,'name_en',e.target.value)}/>
+   <ShopProductImage slug={slug} onUploadStateChange={onUploadStateChange} payment value={row.qr_url||''} isZh={isZh} onChange={value=>update(index,'qr_url',value)}/>
+   <Button type="button" disabled={uploading} variant="outline" onClick={()=>setDraft(current=>({...current,payment_methods:(current.payment_methods||[]).filter((_,i)=>i!==index)}))}>{t('移除','Remove')}</Button>
+  </fieldset>)}
+  <Button type="button" disabled={uploading} variant="outline" onClick={()=>setDraft(current=>({...current,payment_methods:[...(current.payment_methods||[]),makeMethod()]}))}>{t('添加付款方式','Add payment method')}</Button>
+ </section>;
 }
