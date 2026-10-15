@@ -96,7 +96,7 @@ function ErrandFeed({filters}:{filters:Filters}):React.ReactElement {
 type Detail=ReturnType<typeof readErrandDetail>;
 type Viewer={id:number;role:string};
 export function ErrandDetailScreen({published=false,errandId}:{published?:boolean;errandId:string}):React.ReactElement {
- const {t}=useI18n();const router=useRouter();const session=useSession();const toast=useToast();
+ const {t,locale}=useI18n();const router=useRouter();const session=useSession();const toast=useToast();
  const [item,setItem]=React.useState<Detail|null>(null),[viewer,setViewer]=React.useState<Viewer|null>(null),[identityError,setIdentityError]=React.useState(false);
  const [loading,setLoading]=React.useState(true),[error,setError]=React.useState<AppError|null>(null),[busy,setBusy]=React.useState(false),[confirm,setConfirm]=React.useState<'take'|'done'|'delete'|null>(null),[notice,setNotice]=React.useState<'failed'|'login'|'denied'|'conflict'|null>(null);
  const [reportOpen,setReportOpen]=React.useState(false),[reportReason,setReportReason]=React.useState<string|null>(null),[reportDetail,setReportDetail]=React.useState('');
@@ -150,8 +150,7 @@ export function ErrandDetailScreen({published=false,errandId}:{published?:boolea
   labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
  return <DetailScreen testID="errand-detail" title={item?.title??t('screen.errand.detail')} author={{kind:'named',name:item?.ownerName??t('screen.errand.owner')}} onReport={item&&report.state!=='success'?()=>setReportOpen(true):undefined} interactions={{}} onBack={back} onRetry={()=>void load()} state={loading?'loading':error?.kind==='content'?'empty':error?'error':item?'content':'empty'} error={error}
   empty={{kind:'noResult',title:t('screen.errand.unavailable'),actionLabel:t('screen.errand.back'),onAction:back}}
-  body={item?<><Text role="body">{item.description}</Text><Text role="body">{`RM ${item.reward.toFixed(2)} · ${t(statusKeys[item.status as 'open'|'taken'|'done'])}`}</Text>
-   <Text role="body">{item.location}</Text>{item.deadline?<Text role="body">{item.deadline}</Text>:null}
+  body={item?<><View testID="errand-detail-summary"><Text role="headline" emphasis="strong">{`RM ${item.reward.toFixed(2)}`}</Text><Text role="label" colorToken="text-secondary">{t(statusKeys[item.status as 'open'|'taken'|'done'])}</Text>{item.location?<Text role="body">{item.location}</Text>:null}{formatErrandDeadline(item.deadline,locale)?<Text role="body">{formatErrandDeadline(item.deadline,locale)}</Text>:null}</View><Text role="body">{item.description}</Text>
    <Text role="label">{t('screen.errand.contact')}</Text><Text role="body">{item.contactInfo}</Text>
    <ContactCopy value={item.contactInfo}/>{dialNumber?<Button testID="errand-dial" label={t('screen.errand.dial')} onPress={()=>void dial()}/>:null}
    {contactError?<Text role="body">{t('screen.errand.dialFailed')}</Text>:null}
