@@ -36,4 +36,19 @@ describe('P2X 树洞 HeroUI Native spike', () => {
     expect(css).toContain("@import 'uniwind'");
     expect(css).toContain("@import 'heroui-native/styles'");
   });
+
+  it('将真实树洞详情 tracer 限定在 HeroUI 呈现层', () => {
+    const tracer = readAppFile('src', 'features', 'campus', 'TreeholeHeroUITracer.tsx');
+
+    expect(tracer).toContain("from 'heroui-native'");
+    expect(tracer).toContain('Avatar');
+    expect(tracer).toContain('Button');
+    expect(tracer).toContain('TextArea');
+    expect(tracer).toContain('Dialog');
+    expect(tracer).toContain('useHeroUIToast');
+    expect(tracer).toContain('post.author');
+    expect(tracer).toContain('post.content');
+    expect(tracer).not.toContain('shared/api');
+    expect(tracer).not.toContain('useCampusActions');
+  });
 });

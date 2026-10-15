@@ -31,8 +31,9 @@ import { wallTemplateLabel, WallTemplateContent } from './wallTemplates';
 import {formatPostTime} from '../../../../shared/utils/formatTime';
 import Heart from 'lucide-react-native/icons/heart';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
+import {TreeholeHeroUITracer} from './TreeholeHeroUITracer';
 
-type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;created_at?:string;template_key?:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+export type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;created_at?:string;template_key?:string;author?:{avatar?:string;nickname?:string;username?:string}|null;images?:{url:string}[]};
 type PostTag={id:number;name_zh?:string;name_en?:string};
 function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
  return Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
@@ -248,7 +249,7 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
   onReport={post&&actions.report.state!=='success'?()=>setReportOpen(true):undefined} interactions={actions.interactions} onToggleLike={post?actions.onToggleLike:undefined} comments={post?actions.comments:undefined} state={loading?'loading':error?.kind==='content'?'empty':error?'error':post?'content':'empty'} error={error}
   empty={{kind:'noResult',title:t('screen.campus.read.unavailable'),actionLabel:t('screen.campus.read.backToList'),onAction:back}}
   onBack={back} onRetry={()=>error?.kind==='content'?back():void load()}
-  body={<>{kind==='wall'&&post?<WallTemplateContent templateKey={post.template_key} content={post.content}/>:<Text role="body">{post?.content}</Text>}{images.length>1?<MediaCarousel testID="campus-media" uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID="campus-media" uris={images} variant="hero"/>:null}{post?actions.body:null}{reportPanel}</>}
+  body={<>{kind==='wall'&&post?<WallTemplateContent templateKey={post.template_key} content={post.content}/>:<Text role="body">{post?.content}</Text>}{kind==='confession'&&post?<TreeholeHeroUITracer post={post}/>:null}{images.length>1?<MediaCarousel testID="campus-media" uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID="campus-media" uris={images} variant="hero"/>:null}{post?actions.body:null}{reportPanel}</>}
   labels={{back:t('action.back'),like:t('screen.campus.read.like'),favorite:t('action.save'),comment:t('screen.campus.read.comments'),report:t('screen.campus.read.report'),countPlaceholder:'—',anonymous:t('screen.campus.read.anonymous'),
    comments:{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')},commentsEnd:t('screen.campus.read.end'),commentsRetry:t('action.retry')}}/>;
 }

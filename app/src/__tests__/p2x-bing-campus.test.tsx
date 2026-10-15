@@ -4,6 +4,24 @@ import {act, fireEvent, waitFor} from '@testing-library/react-native';
 import {renderApp} from './helpers/renderApp';
 import {CampusListScreen, CampusDetailScreen} from '@/features/campus/CampusScreens';
 import {getPostList, getPostDetail, getPostTagsList} from '../../../shared/api/posts';
+const mockHeroToastShow=jest.fn();
+jest.mock('heroui-native',()=>{
+ const React=require('react');const {Image,Pressable,Text,TextInput,View}=require('react-native');
+ function Avatar(props:unknown){return React.createElement(View,props);}
+ Avatar.Image=function AvatarImage(props:unknown){return React.createElement(Image,props);};
+ Avatar.Fallback=function AvatarFallback(props:unknown){return React.createElement(Text,props);};
+ function Dialog(props:unknown){return React.createElement(View,props);}
+ Dialog.Portal=function DialogPortal(props:unknown){return React.createElement(View,props);};
+ Dialog.Overlay=function DialogOverlay(props:unknown){return React.createElement(Pressable,props);};
+ Dialog.Content=function DialogContent(props:unknown){return React.createElement(View,props);};
+ Dialog.Title=function DialogTitle(props:unknown){return React.createElement(Text,props);};
+ Dialog.Description=function DialogDescription(props:unknown){return React.createElement(Text,props);};
+ Dialog.Close=function DialogClose(props:unknown){return React.createElement(Pressable,props);};
+ function Button({children,...props}: {children?: unknown}){return React.createElement(Pressable,props,typeof children==='string'?React.createElement(Text,null,children):children);}
+ function HeroUINativeProvider({children}: {children:unknown}){return children;}
+ function TextArea(props:unknown){return React.createElement(TextInput,props);}
+ return {HeroUINativeProvider,Avatar,Button,Dialog,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
+});
 const mockPush=jest.fn(), mockBack=jest.fn(), mockReplace=jest.fn(), mockSetParams=jest.fn();
 jest.mock('expo-router',()=>({useRouter:()=>({setParams:mockSetParams,push:mockPush,back:mockBack,replace:mockReplace,canGoBack:()=>true})}));
 jest.mock('../../../shared/api/posts',()=>({getPostList:jest.fn(),getPostDetail:jest.fn(),getPostTagsList:jest.fn(),toggleLike:jest.fn(),getPostComments:jest.fn(),createComment:jest.fn()}));
@@ -122,6 +140,19 @@ it('详情显示正文作者和图片，返回原页',async()=>{
  expect(v.getByText('小林')).toBeTruthy();expect(v.getByTestId('campus-media-0', {includeHiddenElements:true})).toBeTruthy();
  expect(detail).toHaveBeenCalledWith(7);
  await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockBack).toHaveBeenCalled();
+});
+it('实名树洞详情的 HeroUI tracer 只读取真实帖子并提供本地反馈',async()=>{
+ detail.mockResolvedValue({id:7,content:'真实帖子正文',author:{nickname:'小林',avatar:'https://example.test/avatar.png'}});
+ const v=await renderApp(<CampusDetailScreen postId="7"/>);
+ await waitFor(()=>expect(v.getByTestId('treehole-heroui-avatar')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('treehole-heroui-open'));
+ await waitFor(()=>expect(v.getByTestId('treehole-heroui-dialog')).toBeTruthy());
+ await fireEvent.changeText(v.getByTestId('treehole-heroui-note'),'只在本地检查');
+ expect(v.getByTestId('treehole-heroui-note').props.value).toBe('只在本地检查');
+ await fireEvent.press(v.getByTestId('treehole-heroui-confirm'));
+ expect(mockHeroToastShow).toHaveBeenCalledWith({label:'HeroUI 详情检查完成',variant:'success'});
+ expect(v.queryByTestId('treehole-heroui-dialog')).toBeNull();
+ expect(createComment).not.toHaveBeenCalled();expect(toggleLike).not.toHaveBeenCalled();
 });
 it('树洞详情把正文放在媒体之前',async()=>{
  detail.mockResolvedValue({id:7,content:'正文优先',images:[{url:'https://example.com/one'}]});
