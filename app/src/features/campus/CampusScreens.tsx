@@ -15,7 +15,7 @@ import {getConfessionWindow,getConfession} from '../../../../shared/api/confessi
 import {Screen, type ScreenProps} from '@/components/ui/Screen';
 import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
 import {ListItem} from '@/components/ui/ListItem';
-import {FilterChips, type FilterChipOption} from '@/components/ui/FilterChips';
+import {TreeholeTagFilters} from './TreeholeTagFilters';
 import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
 import {View} from 'react-native';
@@ -137,8 +137,8 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
  const filterState=useListPagination({scope:scopedTreehole?{primaryTab:'square',secondaryTab:'confession'}:undefined});
  const tagId=selectedTagId(filterState.filters);
  const tags=useTreeholeTags(scopedTreehole);
- const options=React.useMemo<readonly FilterChipOption[]>(()=>tags.map(tag=>({key:String(tag.id),label:tagLabel(tag,locale)})).filter(option=>option.label),[locale,tags]);
- const filterChips=scopedTreehole?<FilterChips options={options} selected={tagId==null?[]:[String(tagId)]}
+ const options=React.useMemo(()=>tags.map(tag=>({key:String(tag.id),label:tagLabel(tag,locale)})).filter(option=>option.label),[locale,tags]);
+ const filterChips=scopedTreehole?<TreeholeTagFilters options={options} selected={tagId==null?[]:[String(tagId)]}
   onToggle={key=>filterState.setFilters({tag:key})} onClear={()=>filterState.setFilters({})} testID="campus-tag-filters"/>:undefined;
  return <CampusFeedData key={`${kind}:${query??'_'}:${tagId??'_all'}`} kind={kind} query={query} tagId={tagId} filterChips={filterChips}/>;
 }
