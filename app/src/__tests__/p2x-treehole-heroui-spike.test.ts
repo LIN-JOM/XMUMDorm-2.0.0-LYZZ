@@ -37,19 +37,14 @@ describe('P2X 树洞 HeroUI Native spike', () => {
     expect(css).toContain("@import 'heroui-native/styles'");
   });
 
-  it('将真实树洞详情 tracer 限定在 HeroUI 呈现层', () => {
-    const tracer = readAppFile('src', 'features', 'campus', 'TreeholeHeroUITracer.tsx');
+  it('由树洞业务组件取代 Phase 1 tracer', () => {
+    const screen = readAppFile('src', 'features', 'campus', 'CampusScreens.tsx');
 
-    expect(tracer).toContain("from 'heroui-native'");
-    expect(tracer).toContain('Avatar');
-    expect(tracer).toContain('Button');
-    expect(tracer).toContain('TextArea');
-    expect(tracer).toContain('Dialog');
-    expect(tracer).toContain('useHeroUIToast');
-    expect(tracer).toContain('post.author');
-    expect(tracer).toContain('post.content');
-    expect(tracer).not.toContain('shared/api');
-    expect(tracer).not.toContain('useCampusActions');
+    expect(screen).toContain('TreeholePost');
+    expect(screen).toContain('useCampusActions');
+    expect(screen).toContain('TreeholeCommentThread');
+    expect(screen).toContain('TreeholeReport');
+    expect(screen).not.toContain('TreeholeHeroUITracer');
   });
 
   it('将 HeroUI 亮暗语义色映射到 Campus token，且不把黄色情绪色当页面背景', () => {

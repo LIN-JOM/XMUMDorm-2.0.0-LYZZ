@@ -162,18 +162,11 @@ it('树洞详情从 HeroUI 帖子动作打开举报 BottomSheet',async()=>{
  await fireEvent.press(v.getByTestId('campus-detail-report'));
  expect(v.getByTestId('treehole-report-sheet')).toBeTruthy();
 });
-it('实名树洞详情的 HeroUI tracer 只读取真实帖子并提供本地反馈',async()=>{
+it('树洞详情不再渲染 Phase 1 tracer',async()=>{
  detail.mockResolvedValue({id:7,content:'真实帖子正文',author:{nickname:'小林',avatar:'https://example.test/avatar.png'}});
  const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('treehole-heroui-avatar')).toBeTruthy());
- await fireEvent.press(v.getByTestId('treehole-heroui-open'));
- await waitFor(()=>expect(v.getByTestId('treehole-heroui-dialog')).toBeTruthy());
- await fireEvent.changeText(v.getByTestId('treehole-heroui-note'),'只在本地检查');
- expect(v.getByTestId('treehole-heroui-note').props.value).toBe('只在本地检查');
- await fireEvent.press(v.getByTestId('treehole-heroui-confirm'));
- expect(mockHeroToastShow).toHaveBeenCalledWith({label:'HeroUI 详情检查完成',variant:'success'});
- expect(v.queryByTestId('treehole-heroui-dialog')).toBeNull();
- expect(createComment).not.toHaveBeenCalled();expect(toggleLike).not.toHaveBeenCalled();
+ await waitFor(()=>expect(v.getByTestId('treehole-post-detail')).toBeTruthy());
+ expect(v.queryByTestId('treehole-heroui-tracer')).toBeNull();
 });
 it('树洞详情把正文放在媒体之前',async()=>{
  detail.mockResolvedValue({id:7,content:'正文优先',images:[{url:'https://example.com/one'}]});
