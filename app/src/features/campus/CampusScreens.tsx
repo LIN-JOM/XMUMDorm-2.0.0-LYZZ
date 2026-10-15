@@ -1,7 +1,7 @@
 import {ReportSheet} from '@/components/ui/ReportSheet';
 import {useToast} from '@/components/ui/Toast';
 import type {CampusReportReason} from './useCampusReport';
-import {useCampusActions} from './useCampusActions';
+import {useCampusActions,useCampusLike} from './useCampusActions';
 import * as React from 'react';
 import {useRouter} from 'expo-router';
 import {Button} from '@/components/ui/Button';
@@ -13,6 +13,9 @@ import {getConfessionWindow,getConfession} from '../../../../shared/api/confessi
 import {Screen, type ScreenProps} from '@/components/ui/Screen';
 import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
 import {ListItem} from '@/components/ui/ListItem';
+import {FilterChips, type FilterChipOption} from '@/components/ui/FilterChips';
+import {EntityCard} from '@/components/ui/EntityCard';
+import {Icon} from '@/components/ui/Icon';
 import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
 import {View} from 'react-native';
@@ -22,10 +25,15 @@ import {MediaCarousel} from '@/components/ui/MediaCarousel';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
-import {getPostList, getPostDetail} from '../../../../shared/api/posts';
+import {useTheme} from '@/design-system/theme';
+import {getPostList, getPostDetail, getPostTagsList} from '../../../../shared/api/posts';
 import { wallTemplateLabel, WallTemplateContent } from './wallTemplates';
+import {formatPostTime} from '../../../../shared/utils/formatTime';
+import Heart from 'lucide-react-native/icons/heart';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 
-type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;template_key?:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;created_at?:string;template_key?:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+type PostTag={id:number;name_zh?:string;name_en?:string};
 function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
  return Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
 }
@@ -34,7 +42,39 @@ function asPost(value:unknown):Post {
  const row=value as Post & {hidden?:boolean;deleted_at?:unknown;hidden_by_admin?:boolean};
  if(!Number.isSafeInteger(row.id)||row.id<=0||typeof row.content!=='string'||row.hidden||row.deleted_at||row.hidden_by_admin) throw {kind:'content'};
  if(row.title!=null && typeof row.title!=='string') throw {kind:'content'};
+ if(row.created_at!=null && typeof row.created_at!=='string') throw {kind:'content'};
  return row;
+}
+function asPostTag(value:unknown):PostTag|null {
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const tag=value as PostTag;
+ if(!Number.isSafeInteger(tag.id)||tag.id<=0)return null;
+ if(typeof tag.name_zh!=='string'&&typeof tag.name_en!=='string')return null;
+ return tag;
+}
+function tagLabel(tag:PostTag,locale:'zh'|'en'):string {
+ return (locale==='en'?tag.name_en||tag.name_zh:tag.name_zh||tag.name_en)?.trim()||'';
+}
+function selectedTagId(filters:Readonly<Record<string,string|readonly string[]>>):number|null {
+ const value=filters.tag;
+ if(typeof value!=='string'||!/^[1-9]\d*$/.test(value))return null;
+ const id=Number(value);
+ return Number.isSafeInteger(id)?id:null;
+}
+function useTreeholeTags(enabled:boolean):readonly PostTag[] {
+ const [tags,setTags]=React.useState<readonly PostTag[]>([]);
+ React.useEffect(()=>{
+  if(!enabled){setTags([]);return;}
+  let active=true;
+  void getPostTagsList({limit:20}).then(value=>{
+   if(!active||!Array.isArray(value))return;
+   const unique=new Map<number,PostTag>();
+   for(const item of value){const tag=asPostTag(item);if(tag&&tagLabel(tag,'zh'))unique.set(tag.id,tag);}
+   setTags([...unique.values()]);
+  }).catch(()=>{if(active)setTags([]);});
+  return()=>{active=false;};
+ },[enabled]);
+ return tags;
 }
 function errorFor(failure:unknown):AppError {
  if(failure && typeof failure==='object') {
@@ -55,8 +95,8 @@ function asWall(value:unknown):Post {
  // Never retain raw identity, title or images from an anonymous response.
  return {id:row.id,content:row.content,template_key:row.template_key,liked:row.liked,like_count:row.like_count,comment_count:row.comment_count};
 }
-function snapshotKey(kind:CampusKind){
- return [...(kind==='wall'?QK.confessionWindow('_guest'):QK.postsInfinite('_guest',10)), 'campusReadSnapshot'];
+function snapshotKey(kind:CampusKind,tagId?:number|null){
+ return [...(kind==='wall'?QK.confessionWindow('_guest'):QK.postsInfinite('_guest',10,tagId==null?undefined:String(tagId))), 'campusReadSnapshot'];
 }
 
 export function CampusListScreen({initialTab='confession', beforeTabs, ...screenProps}:{initialTab?:CampusKind;beforeTabs?:React.ReactNode} & Omit<ScreenProps, 'children' | 'titleKey'>={}):React.ReactElement {
@@ -73,18 +113,54 @@ export function CampusListScreen({initialTab='confession', beforeTabs, ...screen
  </Screen>;
 }
 
-/** A keyed child owns one fixed scope; switching tabs unmounts its pending requests. */
+function TreeholeFeedRow({row,query}:{row:Post;query?:string}):React.ReactElement {
+ const {t,locale}=useI18n();const router=useRouter();const theme=useTheme();const like=useCampusLike(row,'confession');
+ const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;
+ const media=images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null;
+ const author=row.author?.nickname||row.author?.username;
+ const metaLabel=row.created_at?formatPostTime(row.created_at,{locale}):'';
+ const likeLabel=`${like.likeCount??'—'} ${t('screen.campus.read.like')}`;
+ const replyLabel=`${like.commentCount??'—'} ${t('screen.campus.read.comments')}`;
+ const title=row.title||t('screen.campus.read.post');
+ return <>
+  <EntityCard domain="post" testID={`campus-row-${row.id}`} title={title} titleContent={query?<SearchHighlight value={title} query={query}/>:undefined} subtitle={row.content} subtitleContent={query?<SearchHighlight value={row.content} query={query}/>:undefined} authorLabel={author} metaLabel={metaLabel} postMedia={media} metrics={[]}
+   onPress={()=>router.push(`/campus/${row.id}` as never)} postActions={<>
+    <Pressable testID={`campus-row-${row.id}-like`} accessibilityRole="button" accessibilityLabel={likeLabel} selected={like.liked} onPress={like.onToggleLike} style={{flexDirection:'row',gap:theme.space('space_1')}}>
+     <Icon source={Heart} size="inline" tint={like.liked?'brand':'secondary'}/><Text role="caption" colorToken="text-secondary">{likeLabel}</Text>
+    </Pressable>
+    <Pressable testID={`campus-row-${row.id}-reply`} accessibilityRole="button" accessibilityLabel={replyLabel} onPress={()=>router.push(`/campus/${row.id}` as never)} style={{flexDirection:'row',gap:theme.space('space_1')}}>
+     <Icon source={MessageCircle} size="inline" tint="secondary"/><Text role="caption" colorToken="text-secondary">{replyLabel}</Text>
+    </Pressable>
+   </>}/>
+  {like.notice&&like.notice!=='login'?<Text testID={`campus-row-${row.id}-notice`} role="body">{t(like.notice==='denied'?'screen.campus.write.denied':'screen.campus.write.likeFailed')}</Text>:null}
+  {like.notice==='login'?<Button testID={`campus-row-${row.id}-login`} label={t('screen.campus.write.login')} onPress={()=>router.push('/login')}/>:null}
+ </>;
+}
+
+/** A keyed child owns one fixed scope; switching filters unmounts its pending requests. */
 export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.ReactElement {
+ const {locale}=useI18n();
+ const scopedTreehole=kind==='confession'&&!query;
+ const filterState=useListPagination({scope:scopedTreehole?{primaryTab:'square',secondaryTab:'confession'}:undefined});
+ const tagId=selectedTagId(filterState.filters);
+ const tags=useTreeholeTags(scopedTreehole);
+ const options=React.useMemo<readonly FilterChipOption[]>(()=>tags.map(tag=>({key:String(tag.id),label:tagLabel(tag,locale)})).filter(option=>option.label),[locale,tags]);
+ const filterChips=scopedTreehole?<FilterChips options={options} selected={tagId==null?[]:[String(tagId)]}
+  onToggle={key=>filterState.setFilters({tag:key})} onClear={()=>filterState.setFilters({})} testID="campus-tag-filters"/>:undefined;
+ return <CampusFeedData key={`${kind}:${query??'_'}:${tagId??'_all'}`} kind={kind} query={query} tagId={tagId} filterChips={filterChips}/>;
+}
+
+function CampusFeedData({kind,query,tagId,filterChips}:{kind:CampusKind;query?:string;tagId?:number|null;filterChips?:React.ReactNode}):React.ReactElement {
  const {t}=useI18n();const router=useRouter();const client=getQueryClient();
- const key=React.useMemo(()=>query?[...snapshotKey(kind),'search',query]:snapshotKey(kind),[kind,query]);
+ const key=React.useMemo(()=>query?[...snapshotKey(kind),'search',query]:snapshotKey(kind,tagId),[kind,query,tagId]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,cursor:null,hasMore:true});
  const [rows,setRows]=React.useState(snapshot.current.rows),[revision,setRevision]=React.useState(0);
- const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query?undefined:{primaryTab:'square',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
+ const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query||tagId!=null?undefined:{primaryTab:'square',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
  const persistScrollOffset=React.useCallback((offset:number)=>{
-  if(query){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
+  if(query||tagId!=null){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
   else persistTabScrollOffset(offset);
- },[query,client,key,persistTabScrollOffset]);
+ },[query,tagId,client,key,persistTabScrollOffset]);
  const generation=React.useRef(0),pending=React.useRef<'refresh'|'append'|null>(null);
  const load=React.useCallback(async(mode:'refresh'|'append')=>{
   if(pending.current==='refresh'||(mode==='append'&&(pending.current||!snapshot.current.hasMore)))return;
@@ -100,7 +176,7 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
     cursor=typeof data.oldest_cursor==='number'&&Number.isSafeInteger(data.oldest_cursor)&&data.oldest_cursor>0?data.oldest_cursor:null;
     if(hasMore&&(!Number.isSafeInteger(cursor)||Number(cursor)<=0||cursor===snapshot.current.cursor&&mode==='append'))throw {kind:'content'};
    }else{
-    const data=await getPostList({page,pageSize:10,...(query?{q:query}:{})});
+    const data=await getPostList({page,pageSize:10,...(query?{q:query}:{}),...(tagId!=null?{tagId}:{})});
     if(request!==generation.current)return;
     if(!Array.isArray(data?.list)||typeof data.hasMore!=='boolean')throw {kind:'content'};
     incoming=data.list.map(asPost);hasMore=data.hasMore;
@@ -114,7 +190,7 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
    dispatch({type:mode==='refresh'?'refresh:success':'append:success',hasMore});
   }catch(error){if(request===generation.current)dispatch({type:mode==='refresh'?'refresh:failure':'append:failure',error:errorFor(error)});}
   finally{if(request===generation.current)pending.current=null;}
- },[kind,query,key,client,dispatch,setCursor,persistScrollOffset]);
+ },[kind,query,tagId,key,client,dispatch,setCursor,persistScrollOffset]);
  React.useEffect(()=>{if(!initial.current)void load('refresh');return()=>{generation.current++;pending.current=null;};},[load]);
  // Publishing removes snapshots; mounted feeds must also refresh, not only future mounts.
  React.useEffect(()=>{
@@ -129,19 +205,12 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
  return <>
   {rows.length>0&&pagination.errorScope==='refresh'?<Button label={t('screen.campus.read.refreshFailed')} onPress={refresh}/>:null}
   <ListScreen key={revision} testID="campus-list" data={rows} keyExtractor={row=>String(row.id)} pagination={pagination}
-   restoredScrollOffset={revision===0&&initial.current?(query?initial.current.scrollOffset??0:restoredScrollOffset):0} onScrollOffset={persistScrollOffset}
+   restoredScrollOffset={revision===0&&initial.current?(query||tagId!=null?initial.current.scrollOffset??0:restoredScrollOffset):0} onScrollOffset={persistScrollOffset}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
+   filterChips={filterChips}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.campus.read.listEnd'),empty:{kind:'noResult',title:t(query?'screen.campus.search.empty':'screen.campus.read.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={row=>query?<Pressable testID={`campus-row-${row.id}`} accessibilityRole="button"
-    accessibilityLabel={`${row.title||t('screen.campus.read.post')}: ${row.content}`}
-    onPress={()=>router.push(`/campus/${row.id}` as never)}>
-    <SearchHighlight value={row.title||t('screen.campus.read.post')} query={query}/>
-    <SearchHighlight value={row.content} query={query}/>
-   </Pressable>:(()=>{const images=postImageUrls(row);const mediaTestID=`campus-row-${row.id}-media`;return <View>
-    <ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?wallTemplateLabel(t,row.template_key):row.title||t('screen.campus.read.post')} subtitle={row.content} meta={kind==='wall'?t('screen.campus.read.anonymous'):undefined}
-     onPress={()=>router.push((kind==='wall'?`/campus/wall/${row.id}`:`/campus/${row.id}`) as never)}/>
-    {images.length>1?<MediaCarousel testID={mediaTestID} uris={images} pageLabel={(index,total)=>t('screen.campus.mediaPosition',{index,total})}/>:images.length===1?<MediaGrid testID={mediaTestID} uris={images} variant="hero"/>:null}
-   </View>})()}/>
+   renderItem={row=>kind==='wall'?<ListItem testID={`campus-row-${row.id}`} title={wallTemplateLabel(t,row.template_key)} subtitle={row.content} meta={t('screen.campus.read.anonymous')}
+     onPress={()=>router.push(`/campus/wall/${row.id}` as never)}/>:<TreeholeFeedRow row={row} query={query}/>}/>
  </>;
 }
 

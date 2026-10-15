@@ -19,8 +19,7 @@ import type { MessageKey } from '@/i18n';
 
 export type FilterChipOption = {
   key: string;
-  labelKey: MessageKey;
-};
+} & ({ labelKey: MessageKey; label?: never } | { label: string; labelKey?: never });
 
 export type FilterChipsProps = {
   options: readonly FilterChipOption[];
@@ -28,6 +27,8 @@ export type FilterChipsProps = {
   onToggle: (key: string) => void;
   /** 有选中项时才显示"清除"（10.5：动作类文字，≤6 汉字） */
   onClear?: () => void;
+  /** 可选的子项测试标识前缀，用于同一页面的多组筛选。 */
+  itemTestIDPrefix?: string;
   testID?: string;
 };
 
@@ -36,6 +37,7 @@ export function FilterChips({
   selected,
   onToggle,
   onClear,
+  itemTestIDPrefix,
   testID,
 }: FilterChipsProps): React.ReactElement | null {
   const theme = useTheme();
@@ -48,15 +50,16 @@ export function FilterChips({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: theme.space('space_4') }}>
         {options.map((option) => {
           const isSelected = selected.includes(option.key);
+          const label = option.label ?? t(option.labelKey!);
           return (
             <Pressable
               key={option.key}
-              testID={`filter-chip-${option.key}`}
+              testID={itemTestIDPrefix ? `${itemTestIDPrefix}-${option.key}` : `filter-chip-${option.key}`}
               onPress={() => onToggle(option.key)}
               // R4：角色是 button + selected；⛔ 不是 tab，也**没有指示器**
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={t(option.labelKey)}
+              accessibilityLabel={label}
               style={{
                 minHeight: theme.touchTarget,
                 justifyContent: 'center',
@@ -77,7 +80,7 @@ export function FilterChips({
                 emphasis={isSelected ? 'strong' : 'regular'}
                 colorToken={isSelected ? 'text-brand' : 'text-secondary'}
               >
-                {t(option.labelKey)}
+                {label}
               </Text>
             </Pressable>
           );

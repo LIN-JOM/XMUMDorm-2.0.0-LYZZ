@@ -7,6 +7,10 @@ import {getQueryClient} from '@/shared/queryClient';
 const mockPush=jest.fn();
 jest.mock('expo-router',()=>({useRouter:()=>({push:mockPush,back:jest.fn(),replace:jest.fn(),canGoBack:()=>true})}));
 jest.mock('../../../shared/api/posts',()=>({getPostList:jest.fn()}));
+jest.mock('@/features/campus/useCampusActions',()=>({
+ useCampusLike:()=>({liked:false,likeCount:null,commentCount:null,notice:null,onToggleLike:jest.fn()}),
+ useCampusActions:jest.fn(),
+}));
 import type {ListScreenProps} from '@/components/ui/ListScreen';
 let mockListProps:ListScreenProps<unknown>;
 jest.mock('@/components/ui/ListScreen',()=>{
@@ -16,14 +20,17 @@ jest.mock('@/components/ui/ListScreen',()=>{
 const list=getPostList as jest.Mock;
 beforeEach(()=>{getQueryClient().clear();list.mockReset();mockPush.mockClear();});
 afterEach(()=>getQueryClient().clear());
-it('空关键词不请求，提交修剪后的关键词并进入详情',async()=>{
- list.mockResolvedValue({list:[{id:7,title:'运动',content:'打球'}],hasMore:false});
+it('空关键词不请求，提交修剪后的关键词并以帖子层级进入详情',async()=>{
+ list.mockResolvedValue({list:[{id:7,title:'运动',content:'打球',author:{nickname:'小林'},like_count:4,comment_count:2}],hasMore:false});
  const v=await renderApp(<CampusSearchScreen/>);
  expect(list).not.toHaveBeenCalled();
  await fireEvent.changeText(v.getByPlaceholderText('搜索树洞'), '  运动  ');
  await fireEvent.press(v.getByTestId('campus-search-submit'));
  await waitFor(()=>expect(list).toHaveBeenCalledWith({page:1,pageSize:10,q:'运动'}));
  await waitFor(()=>expect(v.getByTestId('campus-row-7')).toBeTruthy());
+ expect(v.getByText('小林')).toBeTruthy();
+ expect(v.getByTestId('campus-row-7-like')).toBeTruthy();
+ expect(v.getByTestId('campus-row-7-reply')).toBeTruthy();
  await fireEvent.press(v.getByTestId('campus-row-7'));
  expect(mockPush).toHaveBeenCalledWith('/campus/7');
 });

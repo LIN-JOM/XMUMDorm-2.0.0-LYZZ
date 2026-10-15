@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {act,fireEvent,waitFor} from '@testing-library/react-native';
 import {renderApp} from './helpers/renderApp';
+import {within} from '@testing-library/react-native';
 import {MarketListScreen,MarketDetailScreen} from '@/features/marketplace/MarketScreens';
 import {listMarketplaceItems,getMarketplaceItemDetail,toggleMarketplaceWant} from '../../../shared/api/marketplace';
 import {getQueryClient} from '@/shared/queryClient';
@@ -11,13 +12,15 @@ jest.mock('@/features/auth/session',()=>({useSession:()=>mockSession}));
 jest.mock('../../../shared/api/marketplace',()=>({listMarketplaceItems:jest.fn(),getMarketplaceItemDetail:jest.fn(),toggleMarketplaceWant:jest.fn()}));
 jest.mock('@/components/ui/ListScreen',()=>{const actual=jest.requireActual('@/components/ui/ListScreen'),React=require('react');return {...actual,ListScreen:(p:ListScreenProps<unknown>)=>{mockListProps=p;return React.createElement(actual.ListScreen,{...p,onEndReached:()=>undefined});}};});
 const list=listMarketplaceItems as jest.Mock,detail=getMarketplaceItemDetail as jest.Mock,want=toggleMarketplaceWant as jest.Mock;
-const row={id:1,title:'Book',description:'Used',price:12,status:'on_sale'};
+const row={id:1,title:'Book',description:'Used',price:12,status:'on_sale',category:'books',sellerName:'Alice'};
 const full={...row,sellerInfo:{name:'Seller'},viewer:{want:false},actions:{want:true},images:[],wants_count:2};
 beforeEach(()=>{getQueryClient().clear();jest.clearAllMocks();list.mockReset();detail.mockReset();want.mockReset();mockSession.isSignedIn=true;});
 afterEach(()=>getQueryClient().clear());
 it('列表到详情，并带修剪查询及价格筛选',async()=>{
  list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
  await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ const rendered=mockListProps.renderItem(row,0) as React.ReactElement<{style?:unknown}>;
+ expect(rendered.props.style).toEqual(expect.objectContaining({marginBottom:12}));
  await fireEvent.press(v.getByTestId('market-row-1'));expect(mockPush).toHaveBeenCalledWith('/market/1');
  expect(v.getByTestId('market-search-field')).toBeTruthy();
  await fireEvent.changeText(v.getByTestId('market-search-field'),' Book ');
@@ -26,6 +29,14 @@ it('列表到详情，并带修剪查询及价格筛选',async()=>{
  await fireEvent.press(v.getByTestId('market-apply'));
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,q:'Book',priceMin:5,priceMax:15}));
 });
+it('商品卡显示分类卖家且价格作为主信息',async()=>{
+ list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ const card=within(v.getByTestId('market-row-1'));
+ expect(card.getByText('书籍资料')).toBeTruthy();
+ expect(card.getByText('Alice')).toBeTruthy();
+ expect(card.getByText('RM 12.00')).toBeTruthy();
+});
 it('无效价格不请求，分类切换独立',async()=>{
  list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
  await waitFor(()=>expect(list).toHaveBeenCalledTimes(1));
@@ -33,6 +44,37 @@ it('无效价格不请求，分类切换独立',async()=>{
  await fireEvent.press(v.getByTestId('market-apply'));expect(v.getByText('价格非负，最低不高于最高')).toBeTruthy();expect(list).toHaveBeenCalledTimes(1);
  await fireEvent.press(v.getByTestId('filter-chip-books'));
  await waitFor(()=>expect(list).toHaveBeenCalledWith({page:1,pageSize:10,category:'books'}));
+});
+it('二手组合筛选显示已应用条件并可清除',async()=>{
+ list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('filter-chip-books'));
+ await fireEvent.press(v.getByTestId('market-status-on_sale'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,category:'books',status:'on_sale'}));
+ expect(v.getByTestId('market-filter-clear')).toBeTruthy();
+ expect(v.getByTestId('filter-chip-books').props.accessibilityState.selected).toBe(true);
+ expect(v.getByTestId('market-status-on_sale').props.accessibilityState.selected).toBe(true);
+ await fireEvent.press(v.getByTestId('market-filter-clear'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10}));
+});
+it('价格输入收纳且未应用草稿不覆盖已应用摘要',async()=>{
+ list.mockResolvedValue({list:[row],hasMore:false});const v=await renderApp(<MarketListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ await fireEvent.changeText(v.getByTestId('market-min-input'),'5');
+ await fireEvent.changeText(v.getByTestId('market-max-input'),'15');
+ await fireEvent.press(v.getByTestId('market-apply'));
+ await waitFor(()=>expect(v.getByTestId('market-price-summary').props.children).toBe('RM 5.00 – RM 15.00'));
+ await fireEvent.changeText(v.getByTestId('market-max-input'),'20');
+ expect(v.getByTestId('market-price-summary').props.children).toBe('RM 5.00 – RM 15.00');
+});
+it('刷新失败保留二手行并可从提示重试',async()=>{
+ list.mockResolvedValueOnce({list:[row],hasMore:false}).mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce({list:[{...row,id:3}],hasMore:false});
+ const v=await renderApp(<MarketListScreen/>);await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ await act(async()=>mockListProps.onRefresh?.());
+ await waitFor(()=>expect(v.getByTestId('market-refresh-retry')).toBeTruthy());
+ expect(v.getByTestId('market-row-1')).toBeTruthy();
+ await fireEvent.press(v.getByTestId('market-refresh-retry'));
+ await waitFor(()=>expect(v.getByTestId('market-row-3')).toBeTruthy());
 });
 it('追加失败保留行，重试同页，返回分类恢复滚动与数据',async()=>{
  list.mockResolvedValueOnce({list:[row],hasMore:true}).mockRejectedValueOnce(new TypeError('private'))
@@ -48,6 +90,17 @@ it('追加失败保留行，重试同页，返回分类恢复滚动与数据',as
 it('英文空态与详情404显示业务返回入口',async()=>{
  detail.mockRejectedValue({status:404});const v=await renderApp(<MarketDetailScreen itemId="999"/>,{locale:'en'});
  await waitFor(()=>expect(v.getByText('Item is unavailable or deleted')).toBeTruthy());expect(v.getByText('Back to listings')).toBeTruthy();
+});
+it('商品详情首屏显示媒体和交易摘要',async()=>{
+ detail.mockResolvedValue({...full,images:[{url:'https://example.com/book.jpg'}]});
+ const v=await renderApp(<MarketDetailScreen itemId="1"/>);await waitFor(()=>expect(v.getByText('Seller')).toBeTruthy());
+ expect(v.getByTestId('market-media')).toBeTruthy();expect(v.getByTestId('market-detail-summary')).toBeTruthy();
+ expect(v.getByText('RM 12.00')).toBeTruthy();expect(v.getByText('在售')).toBeTruthy();
+});
+it('商品交易动作位于独立操作区',async()=>{
+ detail.mockResolvedValue(full);const v=await renderApp(<MarketDetailScreen itemId="1"/>);
+ await waitFor(()=>expect(v.getByTestId('market-want')).toBeTruthy());
+ expect(v.getByTestId('market-transaction-actions')).toBeTruthy();
 });
 it('想要响应缺少计数时重读详情，不重复切换',async()=>{
  detail.mockResolvedValueOnce(full).mockResolvedValue({...full,viewer:{want:true},wants_count:3});want.mockResolvedValue({want:true});

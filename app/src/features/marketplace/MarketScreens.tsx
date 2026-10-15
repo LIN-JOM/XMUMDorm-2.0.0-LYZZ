@@ -1,9 +1,11 @@
 import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import * as React from 'react';
+import {View} from 'react-native';
 import {useRouter} from 'expo-router';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
-import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
+import {FilterChips} from '@/components/ui/FilterChips';
+import {Badge} from '@/components/ui/Badge';
 import {Input} from '@/components/ui/Input';
 import {SearchField} from '@/components/ui/SearchField';
 import {Button} from '@/components/ui/Button';
@@ -13,6 +15,7 @@ import {ReportSheet} from '@/components/ui/ReportSheet';
 import {useToast} from '@/components/ui/Toast';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
+import {useTheme} from '@/design-system/theme';
 import type {AppError} from '@/i18n/errors';
 import {getQueryClient} from '@/shared/queryClient';
 import {useSession} from '@/features/auth/session';
@@ -41,19 +44,33 @@ export function MarketListScreen({ embedded = false }: { embedded?: boolean } = 
   if((priceMin!==undefined&&(!Number.isFinite(priceMin)||priceMin<0))||(priceMax!==undefined&&(!Number.isFinite(priceMax)||priceMax<0))||(priceMin!==undefined&&priceMax!==undefined&&priceMin>priceMax)){setInvalid(true);return;}
   setInvalid(false);select({...filters,q:q.trim()||undefined,priceMin,priceMax});
  };
+ const clearFilters=()=>{setInvalid(false);setQ('');setMin('');setMax('');client.removeQueries({queryKey:['bing-market','list',{}]});select({});};
+ const hasAppliedFilters=Object.values(filters).some(value=>value!==undefined&&value!=='');
+ const priceSummary=filters.priceMin==null&&filters.priceMax==null?t('screen.market.priceAny'):`${filters.priceMin==null?'—':`RM ${filters.priceMin.toFixed(2)}`} – ${filters.priceMax==null?'—':`RM ${filters.priceMax.toFixed(2)}`}`;
  return <FeatureScreen embedded={embedded} titleKey="screen.market.title" showMailbox={false} testID="market-screen">
   <SearchField testID="market-search-field" appearance="full" value={q} onChangeText={setQ} onSubmit={apply} placeholder={t('screen.market.query')}/>
-  <UnderlineFilter testID="filter-chip" options={categories} selectedKey={filters.category??'all'} onSelect={key=>select({...filters,category:key==='all'?undefined:key})}/>
-  <UnderlineFilter testID="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
-  <Input testID="market-min-input" value={min} onChangeText={setMin} label={t('screen.market.min')} kind="number"/>
-  <Input testID="market-max-input" value={max} onChangeText={setMax} label={t('screen.market.max')} kind="number"/>
+  <View testID="market-filters">
+   <Text role="label">{t('screen.market.category')}</Text>
+   <FilterChips testID="filter-chip" options={categories} selected={[filters.category??'all']} onToggle={key=>select({...filters,category:key==='all'?undefined:key})}/>
+   <Text role="label">{t('screen.market.status')}</Text>
+   <FilterChips testID="market-status" itemTestIDPrefix="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selected={[filters.status??'all']} onToggle={status=>select({...filters,status:status==='all'?undefined:status})}/>
+   {hasAppliedFilters?<Button testID="market-filter-clear" label={t('action.clear')} variant="link" size="small" onPress={clearFilters}/>:null}
+  </View>
+  <View testID="market-price-filter">
+   <Text role="label">{t('screen.market.price')}</Text>
+   <Text testID="market-price-summary" role="caption" colorToken="text-secondary">{priceSummary}</Text>
+   <View style={{flexDirection:'row',gap:8}}>
+    <Input testID="market-min-input" value={min} onChangeText={setMin} label={t('screen.market.min')} kind="number" style={{flex:1}}/>
+    <Input testID="market-max-input" value={max} onChangeText={setMax} label={t('screen.market.max')} kind="number" style={{flex:1}}/>
+   </View>
+  </View>
   {invalid?<Text role="body">{t('screen.market.priceInvalid')}</Text>:null}
   <Button testID="market-apply" label={t('screen.market.apply')} onPress={apply}/>
   <MarketFeed key={JSON.stringify(filters)} filters={filters}/>
  </FeatureScreen>;
 }
 function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
- const {t}=useI18n();const router=useRouter();const client=getQueryClient();
+ const {t}=useI18n();const theme=useTheme();const router=useRouter();const client=getQueryClient();
  const key=React.useMemo(()=>['bing-market','list',filters] as const,[filters]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,hasMore:true,scrollOffset:0});
@@ -84,11 +101,11 @@ function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
  },[client,key,load]);
  const refresh=()=>void load('refresh'),append=()=>void load('append');
  return <>
-  {rows.length>0&&pagination.errorScope==='refresh'?<Button label={t('screen.market.refreshFailed')} onPress={refresh}/>:null}
+  {rows.length>0&&pagination.errorScope==='refresh'?<Button testID="market-refresh-retry" label={t('screen.market.refreshFailed')} onPress={refresh}/>:null}
   <ListScreen key={revision} testID="market-list" data={rows} keyExtractor={r=>String(r.id)} pagination={pagination} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={saveScroll}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.market.end'),empty:{kind:'noResult',title:t('screen.market.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={r=><EntityCard domain="listing" testID={`market-row-${r.id}`} title={r.title} subtitle={r.description} mediaUri={r.cover} metrics={[`RM ${r.price.toFixed(2)}`, t(r.status==='sold'?'screen.market.sold':'screen.market.on_sale')]} onPress={()=>router.push(`/market/${r.id}` as never)}/>}/>
+   renderItem={r=><View style={{marginBottom:theme.space('space_3')}}><EntityCard domain="listing" testID={`market-row-${r.id}`} title={r.title} subtitle={r.description} mediaUri={r.cover} authorLabel={r.sellerName} badges={r.category?<Badge text={t(categories.find(option=>option.key===r.category)?.labelKey??'screen.market.all')} tone="neutral"/>:undefined} metrics={[`RM ${r.price.toFixed(2)}`, t(r.status==='sold'?'screen.market.sold':'screen.market.on_sale')]} onPress={()=>router.push(`/market/${r.id}` as never)}/></View>}/>
  </>;
 }
 type Detail=ReturnType<typeof readMarketDetail>;
@@ -123,9 +140,9 @@ export function MarketDetailScreen({published=false,itemId}:{published?:boolean;
   labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
  return <DetailScreen testID="market-detail" title={item?.title??t('screen.market.detail')} author={{kind:'named',name:item?.sellerName??t('screen.market.seller')}} onReport={item&&report.state!=='success'?()=>setReportOpen(true):undefined} interactions={{}} onBack={back} onRetry={()=>void load()} state={loading?'loading':error?.kind==='content'?'empty':error?'error':item?'content':'empty'} error={error}
   empty={{kind:'noResult',title:t('screen.market.unavailable'),actionLabel:t('screen.market.back'),onAction:back}}
-  hero={item&&item.images.length?<MediaGrid testID="market-media" variant="hero" uris={item.images}/>:undefined}
-  body={item?<><Text role="body">{item.description}</Text><Text role="body">{`RM ${item.price.toFixed(2)} · ${t(item.status==='sold'?'screen.market.sold':'screen.market.on_sale')}`}</Text>
-   <Button testID="market-want" disabled={busy} label={`${t(item.want?'screen.market.wanted':'screen.market.want')} · ${count??'—'}`} onPress={()=>void toggle()}/>
-   {notice==='login'?<Button label={t('screen.market.login')} onPress={()=>router.push('/login')}/>:notice?<Text role="body">{t(notice==='denied'?'screen.market.denied':'screen.market.failed')}</Text>:null}{reportPanel}</>:null}
+  hero={item&&item.images.length?<MediaGrid testID="market-media" variant="hero" uris={item.images} alt={item.images.map(()=>item.title)}/>:undefined}
+  body={item?<><View testID="market-detail-summary"><Text role="headline" emphasis="strong">{`RM ${item.price.toFixed(2)}`}</Text><Text role="label" colorToken="text-secondary">{t(item.status==='sold'?'screen.market.sold':'screen.market.on_sale')}</Text></View><Text role="body">{item.description}</Text>
+   <View testID="market-transaction-actions"><Button testID="market-want" disabled={busy} label={`${t(item.want?'screen.market.wanted':'screen.market.want')} · ${count??'—'}`} onPress={()=>void toggle()}/>
+   {notice==='login'?<Button label={t('screen.market.login')} onPress={()=>router.push('/login')}/>:notice?<Text role="body">{t(notice==='denied'?'screen.market.denied':'screen.market.failed')}</Text>:null}</View>{reportPanel}</>:null}
   labels={{back:t('action.back'),like:t('screen.campus.read.like'),favorite:t('action.save'),comment:t('screen.campus.read.comments'),report:t('screen.campus.read.report'),countPlaceholder:'—',anonymous:t('screen.campus.read.anonymous'),comments:{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')},commentsEnd:t('screen.campus.read.end'),commentsRetry:t('action.retry')}}/>;
 }
