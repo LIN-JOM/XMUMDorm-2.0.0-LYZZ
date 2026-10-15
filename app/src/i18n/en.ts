@@ -33,6 +33,10 @@ export const en: Record<MessageKey, string> = {
   'screen.campus.read.reply': 'Reply',
   'screen.campus.read.collapse': 'Collapse',
   'screen.campus.read.end': 'No more comments',
+  'screen.campus.mediaCount': '{count} images',
+  'screen.campus.mediaPrevious': 'Previous image',
+  'screen.campus.mediaNext': 'Next image',
+  'screen.campus.mediaPreview': 'Preview image',
 
   // 丙：万能墙投稿
   'publish.wall.template': 'Template',

@@ -26,4 +26,12 @@ describe('P2X TreeholeMedia', () => {
     expect(resolveTreeholeSwipe(50)).toBe('previous');
     expect(resolveTreeholeSwipe(47)).toBeNull();
   });
+
+  it('英文界面不会在媒体控件中混入中文', async () => {
+    const view = await renderApp(<TreeholeMedia urls={urls} mode="detail" />, { locale: 'en' });
+    expect(view.getByTestId('treehole-media-detail-image').props.accessibilityLabel).toBe('Image 1 of 3');
+    expect(view.getByTestId('treehole-media-previous')).toHaveTextContent('Previous image');
+    expect(view.getByTestId('treehole-media-next')).toHaveTextContent('Next image');
+    expect(view.getByTestId('treehole-media-preview')).toHaveTextContent('Preview image');
+  });
 });

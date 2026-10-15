@@ -34,6 +34,10 @@ export const zh = {
   'screen.campus.read.reply': '回复',
   'screen.campus.read.collapse': '收起',
   'screen.campus.read.end': '没有更多评论',
+  'screen.campus.mediaCount': '{count} 张图片',
+  'screen.campus.mediaPrevious': '上一张',
+  'screen.campus.mediaNext': '下一张',
+  'screen.campus.mediaPreview': '预览图片',
 
   // 丙：万能墙投稿
   'publish.wall.template': '版式',
