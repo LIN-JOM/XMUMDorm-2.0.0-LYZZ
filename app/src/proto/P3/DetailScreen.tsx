@@ -144,6 +144,8 @@ export type DetailScreenProps = {
   interactions: InteractionState;
   /** TreeholePost 已呈现动作栏时，保留详情壳而不重复渲染旧动作栏。 */
   hideActions?: boolean;
+  /** Treehole detail renders its own discussion thread inside the body. */
+  hideComments?: boolean;
   onToggleLike?: () => void;
   onToggleFavorite?: () => void;
   onReport?: () => void;
@@ -173,6 +175,7 @@ export function DetailScreen({
   metaLabel,
   interactions,
   hideActions = false,
+  hideComments = false,
   onToggleLike,
   onToggleFavorite,
   onReport,
@@ -346,7 +349,7 @@ export function DetailScreen({
         </View>
 
         {/* 评论区：只有给数据时才渲染（跑腿详情之类没有评论） */}
-        {comments ? (
+        {comments && !hideComments ? (
           <View style={{ paddingHorizontal: theme.space('space_4'), gap: theme.space('space_2') }}>
             <Text role="headline" emphasis="strong" colorToken="text-primary">
               {comments.title}
