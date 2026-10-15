@@ -67,6 +67,15 @@ it('价格输入收纳且未应用草稿不覆盖已应用摘要',async()=>{
  await fireEvent.changeText(v.getByTestId('market-max-input'),'20');
  expect(v.getByTestId('market-price-summary').props.children).toBe('RM 5.00 – RM 15.00');
 });
+it('刷新失败保留二手行并可从提示重试',async()=>{
+ list.mockResolvedValueOnce({list:[row],hasMore:false}).mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce({list:[{...row,id:3}],hasMore:false});
+ const v=await renderApp(<MarketListScreen/>);await waitFor(()=>expect(v.getByTestId('market-row-1')).toBeTruthy());
+ await act(async()=>mockListProps.onRefresh?.());
+ await waitFor(()=>expect(v.getByTestId('market-refresh-retry')).toBeTruthy());
+ expect(v.getByTestId('market-row-1')).toBeTruthy();
+ await fireEvent.press(v.getByTestId('market-refresh-retry'));
+ await waitFor(()=>expect(v.getByTestId('market-row-3')).toBeTruthy());
+});
 it('追加失败保留行，重试同页，返回分类恢复滚动与数据',async()=>{
  list.mockResolvedValueOnce({list:[row],hasMore:true}).mockRejectedValueOnce(new TypeError('private'))
  .mockResolvedValueOnce({list:[{...row,id:2}],hasMore:false}).mockResolvedValue({list:[],hasMore:false});

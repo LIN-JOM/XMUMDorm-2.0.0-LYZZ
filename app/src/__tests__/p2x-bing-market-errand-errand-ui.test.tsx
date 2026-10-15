@@ -53,6 +53,20 @@ it('跑腿类型和状态分组筛选并可独立清除',async()=>{
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,status:'open'}));
  expect(v.getByTestId('errand-status-open').props.accessibilityState.selected).toBe(true);
 });
+it('刷新失败保留跑腿行并可从提示重试',async()=>{
+ list.mockResolvedValueOnce({list:[row],page:1,pageSize:5,total:1}).mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce({list:[{...row,id:4}],page:1,pageSize:5,total:1});
+ const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ await act(async()=>mockListProps.onRefresh?.());
+ await waitFor(()=>expect(v.getByTestId('errand-refresh-retry')).toBeTruthy());
+ expect(v.getByTestId('errand-row-2')).toBeTruthy();
+ await fireEvent.press(v.getByTestId('errand-refresh-retry'));
+ await waitFor(()=>expect(v.getByTestId('errand-row-4')).toBeTruthy());
+});
+it('跑腿列表返回时恢复滚动位置与缓存行',async()=>{
+ getQueryClient().setQueryData(['bing-errand','list',{}],{rows:[row],page:1,hasMore:true,scrollOffset:360});
+ const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ expect(mockListProps.restoredScrollOffset).toBe(360);expect(list).not.toHaveBeenCalled();
+});
 it('列表泄漏联系方式作为错误，不展示内容',async()=>{
  list.mockResolvedValue({list:[{...row,contactInfo:'test contact'}],page:1,pageSize:5,total:1});
  const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-list-error')).toBeTruthy());expect(v.queryByText('test contact')).toBeNull();expect(v.queryByTestId('errand-row-2')).toBeNull();
