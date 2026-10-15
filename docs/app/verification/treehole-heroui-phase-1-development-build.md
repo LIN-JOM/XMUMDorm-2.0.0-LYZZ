@@ -11,10 +11,12 @@
 
 尚未生成可安装包：当前环境未登录 EAS，不能安全发起 internal distribution build。
 
-## iOS
+## 当前验证范围
 
-Windows 环境下运行 `npx expo prebuild --platform ios --no-install` 被 Expo 明确跳过：iOS 原生工程需要 macOS 或 Linux 环境生成。EAS CLI 当前也返回 `Not logged in`，因此不能发起云端 iOS development build。
+用户已明确当前只推进 Android；iOS 不再是本阶段继续 Android 迁移的前置条件。
+
+Android 本机安装验证仍有两个外部前置条件：当前环境没有 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT`，也找不到 `adb`，所以不能运行 `expo run:android` 或向模拟器/设备安装。EAS CLI 仍返回 `Not logged in`，所以也不能发起 Android internal development build。
 
 ## 结论
 
-Android 预构建通过；Android/iOS 可安装 development build 与真机 tracer 验证仍需要已登录的 EAS 账户，且 iOS 需要云构建权限或 macOS/Linux 环境。本记录不把预构建成功表述为双端 build 成功。
+Android 预构建通过；可安装 Android development build 与真机 tracer 验证仍需要 Android SDK/可用设备，或已登录的 EAS 账户。本记录不把预构建成功表述为 Android 安装包成功。
