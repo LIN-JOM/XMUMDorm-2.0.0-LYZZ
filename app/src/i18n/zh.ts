@@ -582,6 +582,8 @@ export const zh = {
   'screen.market.detail': "商品详情",
   'screen.market.seller': "卖家",
   'screen.errand.title': "跑腿",
+  'screen.errand.type': "任务类型",
+  'screen.errand.status': "任务状态",
   'screen.errand.all': "全部",
   'screen.errand.delivery': "取送",
   'screen.errand.purchase': "代购",

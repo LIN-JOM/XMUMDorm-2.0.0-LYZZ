@@ -7,7 +7,7 @@ import {useRouter} from 'expo-router';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
 import {Badge} from '@/components/ui/Badge';
-import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
+import {FilterChips} from '@/components/ui/FilterChips';
 import {Button} from '@/components/ui/Button';
 import {Text} from '@/components/ui/Text';
 import {ReportSheet} from '@/components/ui/ReportSheet';
@@ -40,9 +40,17 @@ export function ErrandListScreen({ embedded = false }: { embedded?: boolean } = 
  const {t}=useI18n();const client=getQueryClient();
  const [filters,setFilters]=React.useState<Filters>(()=>client.getQueryData<Filters>(['bing-errand','selected'])??{});
  const select=(next:Filters)=>{client.setQueryData(['bing-errand','selected'],next);setFilters(next);};
+ const clearType=()=>{const next={...filters,type:undefined};client.removeQueries({queryKey:['bing-errand','list',next]});select(next);};
+ const clearStatus=()=>{const next={...filters,status:undefined};client.removeQueries({queryKey:['bing-errand','list',next]});select(next);};
  return <FeatureScreen embedded={embedded} titleKey="screen.errand.title" showMailbox={false} testID="errand-screen">
-  <UnderlineFilter testID="errand-type" options={(['all','delivery','purchase','urgent'] as const).map(key=>({key,labelKey:typeKeys[key]}))} selectedKey={filters.type??'all'} onSelect={type=>select({...filters,type:type==='all'?undefined:type})}/>
-  <UnderlineFilter testID="errand-status" options={(['all','open','taken','done'] as const).map(key=>({key,labelKey:statusKeys[key]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
+  <View testID="errand-filters">
+   <Text role="label">{t('screen.errand.type')}</Text>
+   <FilterChips testID="errand-type" itemTestIDPrefix="errand-type" options={(['all','delivery','purchase','urgent'] as const).map(key=>({key,labelKey:typeKeys[key]}))} selected={[filters.type??'all']} onToggle={type=>select({...filters,type:type==='all'?undefined:type})}/>
+   {filters.type?<Button testID="errand-type-clear" label={t('action.clear')} variant="link" size="small" onPress={clearType}/>:null}
+   <Text role="label">{t('screen.errand.status')}</Text>
+   <FilterChips testID="errand-status" itemTestIDPrefix="errand-status" options={(['all','open','taken','done'] as const).map(key=>({key,labelKey:statusKeys[key]}))} selected={[filters.status??'all']} onToggle={status=>select({...filters,status:status==='all'?undefined:status})}/>
+   {filters.status?<Button testID="errand-status-clear" label={t('action.clear')} variant="link" size="small" onPress={clearStatus}/>:null}
+  </View>
   <ErrandFeed key={JSON.stringify(filters)} filters={filters}/>
  </FeatureScreen>;
 }

@@ -40,6 +40,19 @@ it('任务卡显示类型地点截止时间和报酬',async()=>{
  expect(cardView.getByText('RM 5.00')).toBeTruthy();
  expect(card.props.accessibilityLabel).toContain('2026/10/16 20:00');
 });
+it('跑腿类型和状态分组筛选并可独立清除',async()=>{
+ list.mockResolvedValue({list:[row],page:1,pageSize:5,total:1});const v=await renderApp(<ErrandListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('errand-type-delivery'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,type:'delivery'}));
+ await fireEvent.press(v.getByTestId('errand-status-open'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,type:'delivery',status:'open'}));
+ expect(v.getByText('任务类型')).toBeTruthy();expect(v.getByText('任务状态')).toBeTruthy();
+ expect(v.getByTestId('errand-type-delivery').props.accessibilityState.selected).toBe(true);
+ await fireEvent.press(v.getByTestId('errand-type-clear'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,status:'open'}));
+ expect(v.getByTestId('errand-status-open').props.accessibilityState.selected).toBe(true);
+});
 it('列表泄漏联系方式作为错误，不展示内容',async()=>{
  list.mockResolvedValue({list:[{...row,contactInfo:'test contact'}],page:1,pageSize:5,total:1});
  const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-list-error')).toBeTruthy());expect(v.queryByText('test contact')).toBeNull();expect(v.queryByTestId('errand-row-2')).toBeNull();

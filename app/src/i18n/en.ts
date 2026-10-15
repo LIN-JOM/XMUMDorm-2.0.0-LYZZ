@@ -574,6 +574,8 @@ export const en: Record<MessageKey, string> = {
   'screen.market.detail': "Item details",
   'screen.market.seller': "Seller",
   'screen.errand.title': "Errands",
+  'screen.errand.type': "Task type",
+  'screen.errand.status': "Task status",
   'screen.errand.all': "All",
   'screen.errand.delivery': "Delivery",
   'screen.errand.purchase': "Purchase",
