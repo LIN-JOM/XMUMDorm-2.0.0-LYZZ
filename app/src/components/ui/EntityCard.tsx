@@ -146,10 +146,11 @@ export function EntityCard({
   ) : null;
 
   return (
-    <Surface rounded="radius_medium" bordered="subtle" style={style}>
+    <Surface rounded="radius_medium" bordered="subtle">
       <Pressable
         testID={testID}
         onPress={onPress}
+        style={style}
         // §7.3：整卡可点时**卡片语义必须是一条**，不能把卡内每个元素都读出来
         accessibilityLabel={[isPost ? authorLabel : '', isPost ? metaLabel : '', title, subtitle, ...metrics].filter(Boolean).join('，')}
       >
