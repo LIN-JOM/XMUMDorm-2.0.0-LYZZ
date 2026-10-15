@@ -78,17 +78,10 @@ router.delete('/admin/store', wrap(async (req,res)=>{
   ok(res,{deleted:true});
 }));
 
-const productImageStorage=multer.diskStorage({
- destination:(req,file,cb)=>{const dir=path.join(process.env.SHOP_ASSET_DIR||path.join(__dirname,'../.local/shop-assets'),'products');require('fs').mkdirSync(dir,{recursive:true});cb(null,dir);},
- filename:(req,file,cb)=>{const ext={ 'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp' }[file.mimetype];if(!ext)return cb(new Error('Unsupported image'));cb(null,require('crypto').randomBytes(18).toString('hex')+ext);}
-});
-const productImageUpload=multer({storage:productImageStorage,limits:{fileSize:5*1024*1024,files:1},fileFilter:(req,file,cb)=>cb(null,['image/jpeg','image/png','image/webp'].includes(file.mimetype))});
+const productImageUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:1},fileFilter:(req,file,cb)=>cb(null,['image/jpeg','image/png','image/webp'].includes(file.mimetype))});
 router.post('/admin/product-images',(req,res,next)=>productImageUpload.single('image')(req,res,err=>err?res.status(400).json({status:-1,message:'请上传不超过5MB的 JPG、PNG 或 WebP 图片'}):next()),wrap(async(req,res)=>{
- const file=req.file;if(!file)s.fail('请选择 JPG、PNG 或 WebP 图片');
- const fs=require('fs');const b=fs.readFileSync(file.path);
- const valid=file.mimetype==='image/png'?b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])):file.mimetype==='image/jpeg'?b[0]===255&&b[1]===216&&b[2]===255:b.subarray(0,4).toString()==='RIFF'&&b.subarray(8,12).toString()==='WEBP';
- if(!valid){fs.unlinkSync(file.path);s.fail('图片格式与文件内容不匹配');}
- ok(res,{url:'/api/shop/assets/products/'+path.basename(file.filename)});
+ if(!req.file)s.fail('请选择 JPG、PNG 或 WebP 图片');
+ ok(res,{url:await require('../services/shopProductImage').saveProductImage(req.file,req.merchant.id)});
 }));
 router.post('/admin/payment-images', (req,res,next)=>proofUpload.single('image')(req,res,err=>err?res.status(400).json({status:-1,message:'图片不能超过 5MB / Maximum 5 MB'}):next()), wrap(async(req,res)=>{
   if(!req.file) s.fail('请选择收款码图片 / Choose a payment QR image');
@@ -346,7 +339,9 @@ entry.post('/merchant-accounts',auth,checkBan,wrap(async(req,res)=>{
  await logAudit({userId:req.user.id,role:'merchant',action:'SHOP_MERCHANT_ACCOUNT_CREATE',targetType:'shop',targetId:result.id,meta:{slug:result.slug}});
  ok(res,result);
 }));
-entry.use('/assets', express.static((process.env.SHOP_ASSET_DIR||path.join(__dirname,'../.local/shop-assets')),{dotfiles:'deny',index:false}));
+entry.use('/assets', express.static((process.env.SHOP_ASSET_DIR||path.join(__dirname,'../.local/shop-assets')),{dotfiles:'deny',index:false,
+ setHeaders:res=>res.setHeader('Cross-Origin-Resource-Policy','cross-origin'),
+}));
 entry.use('/stores/:slug',router);
 entry.use('/',router);
 module.exports = entry;
