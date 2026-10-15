@@ -347,7 +347,16 @@ it('点赞按响应状态更新，缺少计数不虚构新计数',async()=>{
  await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());
  await fireEvent.press(v.getByTestId('campus-detail-like'));
  await waitFor(()=>expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(true));
- expect(toggleLike).toHaveBeenCalledWith(7);expect(v.getByText('4')).toBeTruthy();
+ expect(toggleLike).toHaveBeenCalledWith(7);expect(v.getByText('4 赞')).toBeTruthy();
+});
+it('树洞详情的 HeroUI 帖子动作读取真实点赞状态',async()=>{
+ detail.mockResolvedValue({id:7,content:'正文',user_liked:false,like_count:4});
+ (toggleLike as jest.Mock).mockResolvedValue({post_id:7,liked:true,like_count:5});
+ const v=await renderApp(<CampusDetailScreen postId="7"/>);
+ await waitFor(()=>expect(v.getByTestId('campus-detail-like')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('campus-detail-like'));
+ await waitFor(()=>expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(true));
+ expect(v.getByText('5 赞')).toBeTruthy();
 });
 it('评论失败保留草稿，重试成功显示评论',async()=>{
  detail.mockResolvedValue({id:7,content:'正文'});
@@ -481,10 +490,10 @@ it('树洞点赞成功后重读服务端计数，重读失败不重复点赞',as
  const v=await renderApp(<CampusDetailScreen postId="7"/>);
  await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());
  await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(v.getByText('5')).toBeTruthy());
+ await waitFor(()=>expect(v.getByText('5 赞')).toBeTruthy());
  await fireEvent.press(v.getByTestId('campus-detail-like'));
  await waitFor(()=>expect(detail).toHaveBeenCalledTimes(3));
- expect(toggleLike).toHaveBeenCalledTimes(2);expect(v.queryByText('5')).toBeNull();
+ expect(toggleLike).toHaveBeenCalledTimes(2);expect(v.queryByText('5 赞')).toBeNull();
 });
 it('实名树洞回复显示被回复者昵称',async()=>{
  detail.mockResolvedValue({id:7,content:'正文'});
