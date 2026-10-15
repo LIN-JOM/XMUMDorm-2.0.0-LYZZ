@@ -1,5 +1,5 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import { TreeholeMedia } from '@/features/campus/TreeholeMedia';
+import { resolveTreeholeSwipe, TreeholeMedia } from '@/features/campus/TreeholeMedia';
 import { renderApp } from './helpers/renderApp';
 
 const urls = ['https://example.com/one.jpg', 'https://example.com/two.jpg', 'https://example.com/three.jpg'];
@@ -20,5 +20,11 @@ describe('P2X TreeholeMedia', () => {
     await waitFor(() => expect(view.getByTestId('treehole-media-detail-image').props.accessibilityLabel).toBe('第 1 张，共 3 张'));
     fireEvent.press(view.getByTestId('treehole-media-preview'));
     await waitFor(() => expect(view.getByTestId('treehole-media-preview-state')).toBeTruthy());
+  });
+
+  it('详情拖拽阈值决定循环方向', () => {
+    expect(resolveTreeholeSwipe(-50)).toBe('next');
+    expect(resolveTreeholeSwipe(50)).toBe('previous');
+    expect(resolveTreeholeSwipe(47)).toBeNull();
   });
 });

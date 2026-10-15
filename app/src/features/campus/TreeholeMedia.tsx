@@ -5,6 +5,12 @@ import { useTheme } from '@/design-system/theme';
 
 export type TreeholeMediaMode = 'feed' | 'detail';
 
+export function resolveTreeholeSwipe(dx: number): 'next' | 'previous' | null {
+  if (dx <= -48) return 'next';
+  if (dx >= 48) return 'previous';
+  return null;
+}
+
 export function TreeholeMedia({ urls, mode }: { urls: readonly string[]; mode: TreeholeMediaMode }): React.ReactElement | null {
   const theme = useTheme();
   const [index, setIndex] = React.useState(0);
@@ -16,8 +22,8 @@ export function TreeholeMedia({ urls, mode }: { urls: readonly string[]; mode: T
   const panHandlers = React.useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, gesture) => mode === 'detail' && urls.length > 1 && Math.abs(gesture.dx) > 12,
     onPanResponderRelease: (_, gesture) => {
-      if (gesture.dx <= -48) next();
-      if (gesture.dx >= 48) previous();
+      if (resolveTreeholeSwipe(gesture.dx) === 'next') next();
+      if (resolveTreeholeSwipe(gesture.dx) === 'previous') previous();
     },
   }).panHandlers, [mode, urls.length]);
 

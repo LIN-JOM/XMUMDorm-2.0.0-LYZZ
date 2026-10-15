@@ -18,8 +18,6 @@ import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
 import {View} from 'react-native';
 import {SearchHighlight} from './SearchHighlight';
-import {MediaGrid} from '@/components/ui/MediaGrid';
-import {MediaCarousel} from '@/components/ui/MediaCarousel';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
