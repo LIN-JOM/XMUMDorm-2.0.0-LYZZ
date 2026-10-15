@@ -1,5 +1,6 @@
 import {ReportSheet} from '@/components/ui/ReportSheet';
 import {TreeholeReport} from './TreeholeReport';
+import {useToast as useHeroUIToast} from 'heroui-native';
 import {useToast} from '@/components/ui/Toast';
 import type {CampusReportReason} from './useCampusReport';
 import {useCampusActions,useCampusLike} from './useCampusActions';
@@ -223,9 +224,10 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
  React.useEffect(()=>{void load();return()=>{generation.current++;};},[load]);
  const actions=useCampusActions(post,kind);
  const toast=useToast();
+ const {toast:heroToast}=useHeroUIToast();
  const [reportOpen,setReportOpen]=React.useState(false),[reportReason,setReportReason]=React.useState<string|null>(null),[reportDetail,setReportDetail]=React.useState('');
  React.useEffect(()=>{setReportOpen(false);setReportReason(null);setReportDetail('');},[postId,kind]);
- React.useEffect(()=>{if(actions.report.state==='success'){setReportOpen(false);toast.show({message:t('screen.campus.report.success'),tone:'success'});}},[actions.report.state,t,toast]);
+ React.useEffect(()=>{if(actions.report.state==='success'){setReportOpen(false);if(kind==='confession')heroToast.show({label:t('screen.campus.report.success'),variant:'success'});else toast.show({message:t('screen.campus.report.success'),tone:'success'});}},[actions.report.state,heroToast,kind,t,toast]);
  const reportReasons=['spam','fraud','abuse','nsfw','trolling','privacy','illegal_trade','other'] as const;
  const reportReasonKeys={spam:'screen.campus.report.spam',fraud:'screen.campus.report.fraud',abuse:'screen.campus.report.abuse',nsfw:'screen.campus.report.nsfw',trolling:'screen.campus.report.trolling',privacy:'screen.campus.report.privacy',illegal_trade:'screen.campus.report.illegal_trade',other:'screen.campus.report.other'} as const;
  const reportPanel=kind==='confession'?<TreeholeReport visible={reportOpen} reasons={reportReasons.map(value=>({value,label:t(reportReasonKeys[value])}))} reason={reportReason} detail={reportDetail} onReason={setReportReason} onDetail={setReportDetail}
