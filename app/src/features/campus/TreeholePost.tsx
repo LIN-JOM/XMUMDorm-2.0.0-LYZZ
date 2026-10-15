@@ -27,12 +27,13 @@ export function TreeholeTags({ tags }: { tags: readonly string[] }): React.React
   </View>;
 }
 
-export function TreeholeActions({ liked, likeCount, commentCount, onLike, onReply, testIDPrefix }: {
+export function TreeholeActions({ liked, likeCount, commentCount, onLike, onReply, onReport, testIDPrefix }: {
   liked: boolean;
   likeCount: number | null;
   commentCount: number | null;
   onLike?: () => void;
   onReply?: () => void;
+  onReport?: () => void;
   testIDPrefix?: string;
 }): React.ReactElement {
   return <View testID="treehole-actions" style={{ flexDirection: 'row', gap: 8 }}>
@@ -42,10 +43,11 @@ export function TreeholeActions({ liked, likeCount, commentCount, onLike, onRepl
     <Button testID={testIDPrefix ? `${testIDPrefix}-reply` : 'treehole-reply'} size="sm" variant="ghost" onPress={onReply} accessibilityLabel={`评论 ${commentCount ?? '—'}`}>
       {`${commentCount ?? '—'} 评论`}
     </Button>
+    {onReport?<Button testID={testIDPrefix ? `${testIDPrefix}-report` : 'treehole-report'} size="sm" variant="ghost" onPress={onReport} accessibilityLabel="举报">举报</Button>:null}
   </View>;
 }
 
-export function TreeholePost({ post, variant, tags = [], media, onPress, onLike, onReply, actionTestIDPrefix, metaLabel, titleContent, contentContent }: {
+export function TreeholePost({ post, variant, tags = [], media, onPress, onLike, onReply, onReport, actionTestIDPrefix, metaLabel, titleContent, contentContent }: {
   post: TreeholePostViewModel;
   variant: TreeholePostVariant;
   tags?: readonly string[];
@@ -53,6 +55,7 @@ export function TreeholePost({ post, variant, tags = [], media, onPress, onLike,
   onPress?: () => void;
   onLike?: () => void;
   onReply?: () => void;
+  onReport?: () => void;
   actionTestIDPrefix?: string;
   metaLabel?: string;
   titleContent?: React.ReactNode;
@@ -67,7 +70,7 @@ export function TreeholePost({ post, variant, tags = [], media, onPress, onLike,
       <TreeholeTags tags={tags} />
       {media}
     </Card.Body>
-    <Card.Footer><TreeholeActions liked={post.liked} likeCount={post.likeCount} commentCount={post.commentCount} onLike={onLike} onReply={onReply} testIDPrefix={actionTestIDPrefix} /></Card.Footer>
+    <Card.Footer><TreeholeActions liked={post.liked} likeCount={post.likeCount} commentCount={post.commentCount} onLike={onLike} onReply={onReply} onReport={onReport} testIDPrefix={actionTestIDPrefix} /></Card.Footer>
     {onPress ? <Button testID={`treehole-open-${variant}`} variant="ghost" onPress={onPress} accessibilityLabel="查看帖子">查看帖子</Button> : null}
   </Card>;
 }

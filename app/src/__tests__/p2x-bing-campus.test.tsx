@@ -17,6 +17,11 @@ jest.mock('heroui-native',()=>{
  Dialog.Title=function DialogTitle(props:unknown){return React.createElement(Text,props);};
  Dialog.Description=function DialogDescription(props:unknown){return React.createElement(Text,props);};
  Dialog.Close=function DialogClose(props:unknown){return React.createElement(Pressable,props);};
+ function BottomSheet(props:unknown){return React.createElement(View,props);}
+ BottomSheet.Portal=function BottomSheetPortal(props:unknown){return React.createElement(View,props);};
+ BottomSheet.Overlay=function BottomSheetOverlay(props:unknown){return React.createElement(Pressable,props);};
+ BottomSheet.Content=function BottomSheetContent(props:unknown){return React.createElement(View,props);};
+ BottomSheet.Title=function BottomSheetTitle(props:unknown){return React.createElement(Text,props);};
  function Button({children,...props}: {children?: unknown}){return React.createElement(Pressable,props,typeof children==='string'?React.createElement(Text,null,children):children);}
  function Card(props:unknown){return React.createElement(View,props);}
  Card.Header=function CardHeader(props:unknown){return React.createElement(View,props);};
@@ -28,7 +33,7 @@ jest.mock('heroui-native',()=>{
  Chip.Label=function ChipLabel(props:unknown){return React.createElement(Text,props);};
  function HeroUINativeProvider({children}: {children:unknown}){return children;}
  function TextArea(props:unknown){return React.createElement(TextInput,props);}
- return {HeroUINativeProvider,Avatar,Button,Card,Chip,Dialog,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
+ return {HeroUINativeProvider,Avatar,BottomSheet,Button,Card,Chip,Dialog,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
 });
 const mockPush=jest.fn(), mockBack=jest.fn(), mockReplace=jest.fn(), mockSetParams=jest.fn();
 jest.mock('expo-router',()=>({useRouter:()=>({setParams:mockSetParams,push:mockPush,back:mockBack,replace:mockReplace,canGoBack:()=>true})}));
@@ -148,6 +153,13 @@ it('详情显示正文作者和图片，返回原页',async()=>{
  expect(v.getByText('小林')).toBeTruthy();expect(v.getByTestId('campus-media-0', {includeHiddenElements:true})).toBeTruthy();
  expect(detail).toHaveBeenCalledWith(7);
  await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockBack).toHaveBeenCalled();
+});
+it('树洞详情从 HeroUI 帖子动作打开举报 BottomSheet',async()=>{
+ detail.mockResolvedValue({id:7,content:'正文'});
+ const v=await renderApp(<CampusDetailScreen postId="7"/>);
+ await waitFor(()=>expect(v.getByTestId('campus-detail-report')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('campus-detail-report'));
+ expect(v.getByTestId('treehole-report-sheet')).toBeTruthy();
 });
 it('实名树洞详情的 HeroUI tracer 只读取真实帖子并提供本地反馈',async()=>{
  detail.mockResolvedValue({id:7,content:'真实帖子正文',author:{nickname:'小林',avatar:'https://example.test/avatar.png'}});
