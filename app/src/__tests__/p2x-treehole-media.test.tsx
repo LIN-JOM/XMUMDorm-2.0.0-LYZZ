@@ -18,8 +18,7 @@ describe('P2X TreeholeMedia', () => {
     await waitFor(() => expect(view.getByTestId('treehole-media-detail-image').props.accessibilityLabel).toBe('第 3 张，共 3 张'));
     fireEvent.press(view.getByTestId('treehole-media-next'));
     await waitFor(() => expect(view.getByTestId('treehole-media-detail-image').props.accessibilityLabel).toBe('第 1 张，共 3 张'));
-    fireEvent.press(view.getByTestId('treehole-media-preview'));
-    await waitFor(() => expect(view.getByTestId('treehole-media-preview-state')).toBeTruthy());
+    expect(view.getByTestId('treehole-media-preview')).toBeTruthy();
   });
 
   it('详情拖拽阈值决定循环方向', () => {

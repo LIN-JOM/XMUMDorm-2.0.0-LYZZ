@@ -1,4 +1,4 @@
-import { Button, Card } from 'heroui-native';
+import { Button, Card, Dialog } from 'heroui-native';
 import * as React from 'react';
 import { Image, PanResponder, View } from 'react-native';
 import { useTheme } from '@/design-system/theme';
@@ -42,10 +42,19 @@ export function TreeholeMedia({ urls, mode }: { urls: readonly string[]; mode: T
         <Button testID="treehole-media-next" size="sm" variant="ghost" onPress={next}>下一张</Button>
       </> : null}
       <Button testID="treehole-media-preview" size="sm" variant="secondary" onPress={() => setPreviewOpen(value => !value)}>
-        {previewOpen ? '关闭预览' : '预览图片'}
+        预览图片
       </Button>
     </View>
-    {previewOpen ? <Card.Description testID="treehole-media-preview-state">正在预览第 {index + 1} 张</Card.Description> : null}
+    <Dialog isOpen={previewOpen} onOpenChange={setPreviewOpen}>
+      {previewOpen ? <Dialog.Portal>
+        <Dialog.Overlay isCloseOnPress />
+        <Dialog.Content testID="treehole-media-preview-dialog">
+          <Dialog.Title>图片预览</Dialog.Title>
+          <Image testID="treehole-media-preview-image" source={{ uri: current }} accessibilityLabel={`预览第 ${index + 1} 张，共 ${urls.length} 张`} style={{ width: '100%', aspectRatio: 1 }} />
+          <Dialog.Close accessibilityLabel="关闭图片预览" />
+        </Dialog.Content>
+      </Dialog.Portal> : null}
+    </Dialog>
   </Card>;
 }
 

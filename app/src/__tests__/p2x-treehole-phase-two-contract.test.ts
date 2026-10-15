@@ -18,6 +18,7 @@ describe('P2X Treehole Phase 2 contract', () => {
     expect(media).toContain('treehole-media-next');
     expect(media).toContain('PanResponder');
     expect(media).toContain('theme.reduceMotion');
+    expect(media).toContain('Dialog.Portal');
   });
 
   it('万能墙继续走匿名模板，不接入树洞帖子', () => {
