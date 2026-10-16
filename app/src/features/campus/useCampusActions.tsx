@@ -9,26 +9,28 @@ import {useListPagination} from '@/components/ui/ListScreen';
 import {useSession} from '@/features/auth/session';
 import {classifyAuthFailure,isSessionInvalid} from '@/features/auth/authFailure';
 import {useI18n} from '@/i18n';
+import {levelNameKey} from '@/features/me/profile';
 import {toggleLike,getPostComments,createComment,getPostDetail} from '../../../../shared/api/posts';
 import {toggleConfessionLike,getConfessionComments,createConfessionComment} from '../../../../shared/api/confessions';
 
 export type CampusInteractionPost={id:number;user_liked?:boolean;liked?:boolean;like_count?:number;comment_count?:number};
 export type CampusKind='confession'|'wall';
 function count(value:unknown):number|null {return typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null;}
-function comment(value:unknown,kind:CampusKind,parentId:number|null):CommentNode {
+function comment(value:unknown,kind:CampusKind,parentId:number|null,t:(key:ReturnType<typeof levelNameKey>)=>string):CommentNode {
  if(!value||typeof value!=='object')throw new Error('Invalid comment');
- const row=value as {id:number;content:string;author?:{nickname?:string;username?:string};created_at?:string};
+ const row=value as {id:number;content:string;author?:{nickname?:string;username?:string;avatar?:string;level?:number;badge?:string};created_at?:string};
  if(!Number.isSafeInteger(row.id)||row.id<=0||typeof row.content!=='string')throw new Error('Invalid comment');
+ const level=typeof row.author?.level==='number'&&Number.isSafeInteger(row.author.level)&&row.author.level>=1&&row.author.level<=6?row.author.level:null;
  return {id:String(row.id),parentId:parentId===null?null:String(parentId),depth:parentId===null?0:1,
   content:row.content,createdAtLabel:typeof row.created_at==='string'?row.created_at:'',
-  author:kind==='wall'?{kind:'anonymous'}:{kind:'named',name:row.author?.nickname||row.author?.username||'—'}};
+  author:kind==='wall'?{kind:'anonymous'}:{kind:'named',name:row.author?.nickname||row.author?.username||'—',avatarUri:typeof row.author?.avatar==='string'&&row.author.avatar.trim()?row.author.avatar:undefined,levelLabel:level===null?undefined:t(levelNameKey(level))}};
 }
-function comments(value:unknown,kind:CampusKind):CommentNode[] {
+function comments(value:unknown,kind:CampusKind,t:(key:ReturnType<typeof levelNameKey>)=>string):CommentNode[] {
  if(!Array.isArray(value))throw new Error('Invalid comments');
  const result:CommentNode[]=[];
- for(const row of value){const root=comment(row,kind,null);result.push(root);
+ for(const row of value){const root=comment(row,kind,null,t);result.push(root);
   if(row.replies!=null&&!Array.isArray(row.replies))throw new Error('Invalid replies');
-  for(const reply of row.replies??[])result.push(comment(reply,kind,Number(root.id)));
+  for(const reply of row.replies??[])result.push(comment(reply,kind,Number(root.id),t));
  }
  return Array.from(new Map(result.map(node=>[node.id,node])).values());
 }
@@ -92,10 +94,10 @@ export function useCampusActions(post:CampusInteractionPost|null,kind:CampusKind
   dispatch({type:'append:start'});
   try{const data=kind==='wall'?await getConfessionComments(post.id):await getPostComments(post.id);
    if(request!==epoch.current)return;
-   setNodes(comments(data,kind));dispatch({type:'append:success',hasMore:false});
+   setNodes(comments(data,kind,t));dispatch({type:'append:success',hasMore:false});
   }catch{if(request===epoch.current)dispatch({type:'append:failure',error:{kind:'unknown'}});}
   finally{if(request===epoch.current)locks.current.read=false;}
- },[post,kind,dispatch]);
+ },[post,kind,dispatch,t]);
  React.useEffect(()=>{
   ++epoch.current;locks.current={send:false,read:false};setNodes([]);setDraft('');setReply(null);setSending(false);setNotice(null);
   dispatch({type:'append:success',hasMore:false});void loadComments();
@@ -109,7 +111,7 @@ export function useCampusActions(post:CampusInteractionPost|null,kind:CampusKind
   try{const payload=parent?{content,parent_id:Number(parent.id)}:{content};
    const data=kind==='wall'?await createConfessionComment(post.id,payload):await createComment(post.id,payload);
    if(request!==epoch.current)return;
-   const node=comment(data,kind,parent?Number(parent.id):null);
+   const node=comment(data,kind,parent?Number(parent.id):null,t);
    setNodes(current=>current.some(item=>item.id===node.id)?current:[...current,node]);
    like.incrementCommentCount();
    if(draftRef.current===original&&replyRef.current?.id===parent?.id){setDraft('');setReply(null);}

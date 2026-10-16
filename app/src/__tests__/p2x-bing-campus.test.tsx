@@ -524,6 +524,15 @@ it('实名树洞回复显示被回复者昵称',async()=>{
  await fireEvent.press(v.getByText('回复'));
  expect(v.getByText('正在回复 @小林')).toBeTruthy();
 });
+
+it('实名树洞评论展示服务端头像和等级，万能墙仍不展示身份',async()=>{
+ detail.mockResolvedValue({id:7,content:'正文'});
+ (getPostComments as jest.Mock).mockResolvedValue([{id:60,content:'带等级评论',author:{nickname:'小蓝',avatar:'https://example.test/avatar.png',level:3,badge:'contributor'}}]);
+ const v=await renderApp(<CampusDetailScreen postId="7"/>);
+ await waitFor(()=>expect(v.getByText('带等级评论')).toBeTruthy());
+ expect(v.getByText('小蓝')).toBeTruthy();
+ expect(v.getByText('贡献者')).toBeTruthy();
+});
 it('已删除帖子显示内容不可用并返回列表',async()=>{
  detail.mockRejectedValue({status:404});
  const v=await renderApp(<CampusDetailScreen postId="7"/>);
