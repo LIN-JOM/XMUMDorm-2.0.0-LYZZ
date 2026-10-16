@@ -40,6 +40,8 @@ export const zh = {
   'screen.campus.mediaNext': '下一张',
   'screen.campus.mediaPreview': '预览图片',
   'screen.campus.mediaFailed': '图片不可用',
+  'screen.campus.mediaOpenPost': '共 {count} 张图片，打开帖子查看',
+  'screen.campus.read.replyThread': '{count} 条回复',
 
   // 丙：万能墙投稿
   'publish.wall.template': '版式',

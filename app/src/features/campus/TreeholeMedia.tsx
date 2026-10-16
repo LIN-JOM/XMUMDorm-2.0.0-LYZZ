@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability -- Reanimated shared values intentionally mutate outside React state. */
 import { Button, Card, Dialog } from 'heroui-native';
 import * as React from 'react';
 import { PanResponder, View } from 'react-native';
@@ -34,7 +35,7 @@ export function TreeholeMedia({ postId, urls, mode }: { postId: number; urls: re
   React.useEffect(() => { setIndex(0); setPreviewOpen(false); setFailed(false); offsetX.value = 0; }, [key, offsetX]);
   const finishSwipe = React.useCallback((direction: 'next' | 'previous' | null) => {
     if (!direction) { offsetX.value = theme.reduceMotion ? 0 : withSpring(0); return; }
-    if (theme.reduceMotion) { direction === 'next' ? next() : previous(); offsetX.value = 0; return; }
+    if (theme.reduceMotion) { if (direction === 'next') next(); else previous(); offsetX.value = 0; return; }
     const leaveTo = direction === 'next' ? -140 : 140;
     offsetX.value = withTiming(leaveTo, { duration: 160 }, done => {
       if (done) { offsetX.value = 0; runOnJS(direction === 'next' ? next : previous)(); }
@@ -55,7 +56,7 @@ export function TreeholeMedia({ postId, urls, mode }: { postId: number; urls: re
     <View style={{ position: 'relative', aspectRatio: 4 / 5 }}>
       {urls.length > 2 ? <MediaImage uri={urls[2]} style={{ position: 'absolute', inset: 0, transform: [{ translateX: 24 }, { translateY: -12 }, { scale: 0.88 }], opacity: 0.3 }} /> : null}
       {urls.length > 1 ? <MediaImage uri={urls[1]} style={{ position: 'absolute', inset: 0, transform: [{ translateX: 12 }, { translateY: -6 }, { scale: 0.94 }], opacity: 0.6 }} /> : null}
-      <MediaImage testID="treehole-media-feed-image" uri={urls[0]} accessibilityLabel={t('screen.campus.mediaPosition', { index: 1, total: urls.length })} />
+      <MediaImage testID="treehole-media-feed-image" uri={urls[0]} accessibilityLabel={t('screen.campus.mediaOpenPost', { count: urls.length })} />
     </View>
     {urls.length > 1 ? <ChipLabel label={t('screen.campus.mediaCount', { count: urls.length })} /> : null}
   </Card>;

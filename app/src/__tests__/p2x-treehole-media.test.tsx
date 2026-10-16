@@ -8,6 +8,7 @@ describe('P2X TreeholeMedia', () => {
   it('列表三图只显示首图和数量，不暴露切换控件', async () => {
     const view = await renderApp(<TreeholeMedia postId={7} urls={urls} mode="feed" />);
     expect(view.getByTestId('treehole-media-count').props.children).toBe('3 张图片');
+    expect(view.getByTestId('treehole-media-feed-image').props.accessibilityLabel).toBe('共 3 张图片，打开帖子查看');
     expect(view.queryByTestId('treehole-media-next')).toBeNull();
     expect(view.queryByTestId('treehole-media-preview')).toBeNull();
   });

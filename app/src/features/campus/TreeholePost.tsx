@@ -47,7 +47,7 @@ export function TreeholeActions({ liked, likeCount, commentCount, onLike, onRepl
   onReport?: () => void;
   testIDPrefix?: string;
 }): React.ReactElement {
-  const {t}=useI18n();const likeLabel=t('screen.campus.read.like'),commentLabel=t('screen.campus.read.comments'),reportLabel=t('screen.campus.read.report');
+  const {t}=useI18n();const likeLabel=t('screen.campus.read.like'),commentLabel=t('screen.campus.read.comments');
   return <View testID="treehole-actions" style={{ flexDirection: 'row', gap: 8 }}>
     <Button testID={testIDPrefix ? `${testIDPrefix}-like` : 'treehole-like'} size="sm" variant={liked ? 'secondary' : 'ghost'} onPress={onLike} accessibilityState={{ selected: liked }} accessibilityLabel={`${likeLabel} ${likeCount ?? '—'}`}>
       {`${likeCount ?? '—'} ${likeLabel}`}

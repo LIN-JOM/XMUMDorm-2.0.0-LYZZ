@@ -39,6 +39,8 @@ export const en: Record<MessageKey, string> = {
   'screen.campus.mediaNext': 'Next image',
   'screen.campus.mediaPreview': 'Preview image',
   'screen.campus.mediaFailed': 'Image unavailable',
+  'screen.campus.mediaOpenPost': '{count} images, open post to view',
+  'screen.campus.read.replyThread': '{count} replies',
 
   // 丙：万能墙投稿
   'publish.wall.template': 'Template',
