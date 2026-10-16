@@ -33,6 +33,7 @@ export const zh = {
   'screen.campus.read.delete': '删除',
   'screen.campus.read.reply': '回复',
   'screen.campus.read.collapse': '收起',
+  'screen.campus.read.more': '阅读全文',
   'screen.campus.read.end': '没有更多评论',
   'screen.campus.mediaCount': '{count} 张图片',
   'screen.campus.mediaPrevious': '上一张',

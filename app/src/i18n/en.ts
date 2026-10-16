@@ -32,6 +32,7 @@ export const en: Record<MessageKey, string> = {
   'screen.campus.read.delete': 'Delete',
   'screen.campus.read.reply': 'Reply',
   'screen.campus.read.collapse': 'Collapse',
+  'screen.campus.read.more': 'Read more',
   'screen.campus.read.end': 'No more comments',
   'screen.campus.mediaCount': '{count} images',
   'screen.campus.mediaPrevious': 'Previous image',

@@ -218,7 +218,7 @@ function TreeholeDetailShell({state,error,backLabel,retryLabel,emptyActionLabel,
 }
 
 export function CampusDetailScreen({published=false,postId,kind='confession'}:{published?:boolean;postId:string;kind?:CampusKind}):React.ReactElement {
- const {t}=useI18n();const router=useRouter();
+ const {t,locale}=useI18n();const router=useRouter();
  const [post,setPost]=React.useState<Post|null>(null),[error,setError]=React.useState<AppError|null>(null);
  const [loading,setLoading]=React.useState(true);const generation=React.useRef(0);
  const load=React.useCallback(async()=>{
@@ -253,7 +253,7 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
  const images=postImageUrls(post);
  const treeholePost=post?{...toTreeholePostViewModel(post),liked:actions.interactions.liked,likeCount:actions.interactions.likeCount,commentCount:actions.interactions.commentCount}:null;
  const state=loading?'loading':error?.kind==='content'?'empty':error?'error':post?'content':'empty';
- const treeholeBody=<>{treeholePost?<TreeholePost post={treeholePost} variant="detail" actionTestIDPrefix="campus-detail" media={<View testID="campus-media-0"><TreeholeMedia urls={images} mode="detail"/></View>} onLike={actions.onToggleLike} onReport={actions.report.state!=='success'?()=>setReportOpen(true):undefined}/>:null}{post?actions.body:null}<TreeholeCommentThread testID="campus-detail-comments" nodes={actions.comments.nodes} labels={{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')}} onReply={actions.comments.onReply} onRetry={actions.comments.onRetry} retryLabel={t('action.retry')} showRetry={actions.comments.pagination.append==='error'}/>{reportPanel}</>;
+ const treeholeBody=<>{treeholePost?<TreeholePost post={treeholePost} variant="detail" actionTestIDPrefix="campus-detail" media={<View testID="campus-media-0"><TreeholeMedia urls={images} mode="detail"/></View>} metaLabel={post?.created_at?formatPostTime(post.created_at,{locale,absolute:true}):undefined} onLike={actions.onToggleLike} onReport={actions.report.state!=='success'?()=>setReportOpen(true):undefined}/>:null}{post?actions.body:null}<TreeholeCommentThread testID="campus-detail-comments" nodes={actions.comments.nodes} labels={{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')}} onReply={actions.comments.onReply} onRetry={actions.comments.onRetry} retryLabel={t('action.retry')} showRetry={actions.comments.pagination.append==='error'}/>{reportPanel}</>;
  if(kind==='confession')return <TreeholeDetailShell state={state} error={error} backLabel={t('action.back')} retryLabel={t('action.retry')} emptyActionLabel={t('screen.campus.read.backToList')} onBack={back} onRetry={()=>error?.kind==='content'?back():void load()} emptyTitle={t('screen.campus.read.unavailable')}>{treeholeBody}</TreeholeDetailShell>;
  return <DetailScreen testID="campus-detail" title={wallTemplateLabel(t,post?.template_key)}
   author={post?.author ? {kind:'named',name:post.author.nickname||post.author.username||t('screen.campus.read.author')} : {kind:'anonymous'}}

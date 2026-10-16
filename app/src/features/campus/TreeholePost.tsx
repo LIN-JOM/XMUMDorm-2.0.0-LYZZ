@@ -1,11 +1,17 @@
 import { Avatar, Button, Card, Chip } from 'heroui-native';
 import * as React from 'react';
-import { View } from 'react-native';
+import { PixelRatio, View } from 'react-native';
 import {useI18n} from '@/i18n';
 import {levelNameKey} from '@/features/me/profile';
+import {useTheme} from '@/design-system/theme';
 import type { TreeholePostViewModel } from './treeholePostViewModel';
 
 export type TreeholePostVariant = 'feed' | 'detail';
+
+/** ponytail: large text keeps the complete post visible; no measuring or per-row layout state is needed. */
+export function treeholeFeedContentLines(fontScale: number, expanded: boolean): number | undefined {
+  return !expanded && fontScale < 2 ? 8 : undefined;
+}
 
 function initials(name: string | null, fallback: string): string {
   return Array.from(name || fallback).slice(0, 1).join('').toUpperCase();
@@ -66,11 +72,15 @@ export function TreeholePost({ post, variant, media, onPress, onLike, onReply, o
   contentContent?: React.ReactNode;
 }): React.ReactElement {
   const {t}=useI18n();
-  return <Card testID={`treehole-post-${variant}`} variant={variant === 'feed' ? 'transparent' : 'default'} animation="disable-all">
+  const theme=useTheme();const [expanded,setExpanded]=React.useState(false);
+  const canExpand=variant==='feed'&&post.content.length>240;
+  const feedStyle=variant==='feed'?{borderRadius:0,borderBottomWidth:1,borderBottomColor:theme.color['border-subtle'].value}:undefined;
+  return <Card testID={`treehole-post-${variant}`} variant={variant === 'feed' ? 'transparent' : 'default'} animation="disable-all" style={feedStyle}>
     <Card.Header><TreeholeAuthor post={post} /></Card.Header>
     <Card.Body>
       {post.title ? <Card.Title numberOfLines={variant === 'feed' ? 2 : undefined}>{titleContent ?? post.title}</Card.Title> : null}
-      <Card.Description numberOfLines={variant === 'feed' ? 5 : undefined}>{contentContent ?? post.content}</Card.Description>
+      <Card.Description numberOfLines={variant === 'feed'?treeholeFeedContentLines(PixelRatio.getFontScale(),expanded):undefined}>{contentContent ?? post.content}</Card.Description>
+      {canExpand&&!expanded?<Button testID="treehole-read-more" size="sm" variant="ghost" onPress={()=>setExpanded(true)} accessibilityLabel={t('screen.campus.read.more')}>{t('screen.campus.read.more')}</Button>:null}
       {metaLabel ? <Card.Description>{metaLabel}</Card.Description> : null}
       <TreeholeTags tags={post.tags} />
       {media}
