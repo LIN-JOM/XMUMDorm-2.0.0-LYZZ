@@ -13,9 +13,10 @@
 | C-2 | 帖子改为连续流、长文展开与详情完整时间 | `TreeholePost.tsx` | 已改变 | 已完成 | 树洞更像连续讨论，而非独立商品卡片 |
 | C-3 | 多图改为静态 Feed 叠卡与详情 Reanimated 叠卡 | `TreeholeMedia.tsx` | 已改变 | 已完成 | 列表保持扫读，详情才具备循环切图与预览 |
 | C-4 | 搜索、更多菜单和评论关系线成为树洞业务组件 | `TreeholeSearchEntry.tsx` 等 | 新增 | 已完成 | 页面继续复用现有数据状态，但视觉职责已收拢 |
-| C-5 | 设备与运行时验收本期不执行 | `verification/treehole-heroui-phase-6.md` | 已改变 | 进行中 | 不把未执行的双端、读屏和性能检查误报为通过 |
+| C-5 | 评论作者投影和页面控件对齐 HeroUI | `useCampusActions.tsx`、页面组合层 | 已改变 | 已完成 | 评论保留真实头像和等级，目标页不再直接使用旧通用按钮 |
+| C-6 | 设备与运行时验收本期不执行 | `verification/treehole-heroui-phase-6.md` | 已改变 | 进行中 | 不把未执行的双端、读屏和性能检查误报为通过 |
 
-例行工作：专项测试串行通过 7 个套件、106 个用例；类型检查通过；lint 为 0 errors、98 个既有 warnings。
+例行工作：专项测试串行通过 7 个套件、107 个用例；类型检查通过；lint 为 0 errors、98 个既有 warnings。
 
 ## 2. 这意味着什么
 
