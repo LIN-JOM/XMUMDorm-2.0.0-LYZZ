@@ -1,11 +1,11 @@
 import * as React from 'react';
 import {useRouter} from 'expo-router';
 import {Screen} from '@/components/ui/Screen';
-import {SearchField} from '@/components/ui/SearchField';
 import {Button} from '@/components/ui/Button';
 import {Text} from '@/components/ui/Text';
 import {useI18n} from '@/i18n';
 import {CampusFeed} from './CampusScreens';
+import {TreeholeSearchEntry} from './TreeholeSearchEntry';
 
 /** Business composition of P14; search never writes either browsing tab's state. */
 export function CampusSearchScreen():React.ReactElement {
@@ -25,7 +25,7 @@ export function CampusSearchScreen():React.ReactElement {
  const change=(value:string)=>{setDraft(value);setQuery('');};
  return <Screen titleKey="screen.campus.search.title" showMailbox={false} testID="campus-search">
   <Button label={t('action.back')} onPress={()=>router.canGoBack()?router.back():router.replace('/campus' as never)}/>
-  <SearchField value={draft} onChangeText={change} onSubmit={()=>submit(draft)} appearance="full"
+  <TreeholeSearchEntry value={draft} onChangeText={change} onSubmit={()=>submit(draft)}
    placeholder={t('screen.campus.search.placeholder')} clearLabel={t('screen.campus.search.clear')} testID="campus-search-field"/>
   <Button label={t('screen.campus.search.submit')} testID="campus-search-submit" onPress={()=>submit(draft)}/>
   {query?<><Text role="label">{t('screen.campus.search.results')}</Text>

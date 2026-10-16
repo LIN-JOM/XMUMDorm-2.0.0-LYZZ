@@ -34,7 +34,14 @@ jest.mock('heroui-native',()=>{
  function Skeleton(props:unknown){return React.createElement(View,props);}
  function HeroUINativeProvider({children}: {children:unknown}){return children;}
  function TextArea(props:unknown){return React.createElement(TextInput,props);}
- return {HeroUINativeProvider,Avatar,BottomSheet,Button,Card,Chip,Dialog,Skeleton,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
+ function Menu(props:unknown){return React.createElement(View,props);}
+ Menu.Trigger=function MenuTrigger(props:unknown){return React.createElement(View,props);};
+ Menu.Portal=function MenuPortal(props:unknown){return React.createElement(View,props);};
+ Menu.Overlay=function MenuOverlay(props:unknown){return React.createElement(Pressable,props);};
+ Menu.Content=function MenuContent(props:unknown){return React.createElement(View,props);};
+ Menu.Item=function MenuItem(props:unknown){return React.createElement(Pressable,props);};
+ Menu.ItemTitle=function MenuItemTitle(props:unknown){return React.createElement(Text,props);};
+ return {HeroUINativeProvider,Avatar,BottomSheet,Button,Card,Chip,Dialog,Menu,Skeleton,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
 });
 const mockPush=jest.fn(), mockBack=jest.fn(), mockReplace=jest.fn(), mockSetParams=jest.fn();
 jest.mock('expo-router',()=>({useRouter:()=>({setParams:mockSetParams,push:mockPush,back:mockBack,replace:mockReplace,canGoBack:()=>true})}));
@@ -155,10 +162,11 @@ it('详情显示正文作者和图片，返回原页',async()=>{
  expect(detail).toHaveBeenCalledWith(7);
  await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockBack).toHaveBeenCalled();
 });
-it('树洞详情从 HeroUI 帖子动作打开举报 BottomSheet',async()=>{
+it('树洞详情从 HeroUI 更多菜单打开举报 BottomSheet',async()=>{
  detail.mockResolvedValue({id:7,content:'正文'});
  const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('campus-detail-report')).toBeTruthy());
+ await waitFor(()=>expect(v.getByTestId('campus-detail-more')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('campus-detail-more'));
  await fireEvent.press(v.getByTestId('campus-detail-report'));
  expect(v.getByTestId('treehole-report-sheet')).toBeTruthy();
 });

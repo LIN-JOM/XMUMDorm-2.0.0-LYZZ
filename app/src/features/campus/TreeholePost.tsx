@@ -5,6 +5,7 @@ import {useI18n} from '@/i18n';
 import {levelNameKey} from '@/features/me/profile';
 import {useTheme} from '@/design-system/theme';
 import type { TreeholePostViewModel } from './treeholePostViewModel';
+import {TreeholePostMenu} from './TreeholePostMenu';
 
 export type TreeholePostVariant = 'feed' | 'detail';
 
@@ -54,7 +55,7 @@ export function TreeholeActions({ liked, likeCount, commentCount, onLike, onRepl
     <Button testID={testIDPrefix ? `${testIDPrefix}-reply` : 'treehole-reply'} size="sm" variant="ghost" onPress={onReply} accessibilityLabel={`${commentLabel} ${commentCount ?? '—'}`}>
       {`${commentCount ?? '—'} ${commentLabel}`}
     </Button>
-    {onReport?<Button testID={testIDPrefix ? `${testIDPrefix}-report` : 'treehole-report'} size="sm" variant="ghost" onPress={onReport} accessibilityLabel={reportLabel}>{reportLabel}</Button>:null}
+    {onReport?<TreeholePostMenu onReport={onReport} testIDPrefix={testIDPrefix} />:null}
   </View>;
 }
 
