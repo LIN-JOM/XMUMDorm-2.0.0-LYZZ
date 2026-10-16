@@ -2,6 +2,7 @@ import { Avatar, Button, Card, Chip } from 'heroui-native';
 import * as React from 'react';
 import { View } from 'react-native';
 import {useI18n} from '@/i18n';
+import {levelNameKey} from '@/features/me/profile';
 import type { TreeholePostViewModel } from './treeholePostViewModel';
 
 export type TreeholePostVariant = 'feed' | 'detail';
@@ -10,7 +11,7 @@ function initials(name: string | null, fallback: string): string {
   return Array.from(name || fallback).slice(0, 1).join('').toUpperCase();
 }
 
-export function TreeholeAuthor({ post }: { post: Pick<TreeholePostViewModel, 'authorName' | 'avatarUrl'> }): React.ReactElement {
+export function TreeholeAuthor({ post }: { post: Pick<TreeholePostViewModel, 'authorName' | 'avatarUrl' | 'authorLevel'> }): React.ReactElement {
   const {t}=useI18n();const name = post.authorName || t('screen.campus.read.anonymous');
   return <View testID="treehole-author" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
     <Avatar size="sm" color="accent" accessibilityLabel={name}>
@@ -18,13 +19,15 @@ export function TreeholeAuthor({ post }: { post: Pick<TreeholePostViewModel, 'au
       <Avatar.Fallback>{initials(name,t('screen.campus.read.anonymous'))}</Avatar.Fallback>
     </Avatar>
     <Card.Title numberOfLines={1}>{name}</Card.Title>
+    {post.authorLevel !== null ? <Chip testID="treehole-author-level" size="sm" variant="soft" color="accent"><Chip.Label>{t(levelNameKey(post.authorLevel))}</Chip.Label></Chip> : null}
   </View>;
 }
 
-export function TreeholeTags({ tags }: { tags: readonly string[] }): React.ReactElement | null {
+export function TreeholeTags({ tags }: { tags: TreeholePostViewModel['tags'] }): React.ReactElement | null {
+  const {locale}=useI18n();
   if (!tags.length) return null;
   return <View testID="treehole-tags" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-    {tags.map(tag => <Chip key={tag} size="sm" variant="soft" color="accent"><Chip.Label>{tag}</Chip.Label></Chip>)}
+    {tags.map(tag => <Chip key={tag.id} size="sm" variant="soft" color="accent"><Chip.Label>{locale==='en'?tag.nameEn||tag.nameZh:tag.nameZh||tag.nameEn}</Chip.Label></Chip>)}
   </View>;
 }
 
@@ -49,10 +52,9 @@ export function TreeholeActions({ liked, likeCount, commentCount, onLike, onRepl
   </View>;
 }
 
-export function TreeholePost({ post, variant, tags = [], media, onPress, onLike, onReply, onReport, actionTestIDPrefix, metaLabel, titleContent, contentContent }: {
+export function TreeholePost({ post, variant, media, onPress, onLike, onReply, onReport, actionTestIDPrefix, metaLabel, titleContent, contentContent }: {
   post: TreeholePostViewModel;
   variant: TreeholePostVariant;
-  tags?: readonly string[];
   media?: React.ReactNode;
   onPress?: () => void;
   onLike?: () => void;
@@ -70,7 +72,7 @@ export function TreeholePost({ post, variant, tags = [], media, onPress, onLike,
       {post.title ? <Card.Title numberOfLines={variant === 'feed' ? 2 : undefined}>{titleContent ?? post.title}</Card.Title> : null}
       <Card.Description numberOfLines={variant === 'feed' ? 5 : undefined}>{contentContent ?? post.content}</Card.Description>
       {metaLabel ? <Card.Description>{metaLabel}</Card.Description> : null}
-      <TreeholeTags tags={tags} />
+      <TreeholeTags tags={post.tags} />
       {media}
     </Card.Body>
     <Card.Footer><TreeholeActions liked={post.liked} likeCount={post.likeCount} commentCount={post.commentCount} onLike={onLike} onReply={onReply} onReport={onReport} testIDPrefix={actionTestIDPrefix} /></Card.Footer>

@@ -20,4 +20,35 @@ describe('P2X Treehole post view model', () => {
     expect(toTreeholePostViewModel({ ...base, user_liked: true }).liked).toBe(true);
     expect(toTreeholePostViewModel({ ...base, liked: true }).liked).toBe(true);
   });
+
+  it('只投影服务端的有效等级、徽章和前三个标签', () => {
+    const post = toTreeholePostViewModel({
+      ...base,
+      author: { id: 9, nickname: '小蓝', level: 3, badge: 'contributor' },
+      tags: [
+        { id: 1, slug: 'study', name_zh: '自习', name_en: 'Study' },
+        { id: 2, slug: 'help', name_zh: '求助' },
+        { id: 3, slug: 'lost', name_en: 'Lost' },
+        { id: 4, slug: 'ignored', name_zh: '不显示' },
+        { id: 5, slug: '', name_zh: '无效' },
+      ],
+    });
+
+    expect(post).toMatchObject({ authorId: 9, authorLevel: 3, authorBadge: 'contributor' });
+    expect(post.tags).toEqual([
+      { id: 1, slug: 'study', nameZh: '自习', nameEn: 'Study' },
+      { id: 2, slug: 'help', nameZh: '求助', nameEn: null },
+      { id: 3, slug: 'lost', nameZh: null, nameEn: 'Lost' },
+    ]);
+  });
+
+  it('省略不可信的作者等级与标签', () => {
+    const post = toTreeholePostViewModel({
+      ...base,
+      author: { id: 0, level: 7, badge: '' },
+      tags: [{ id: 1, slug: 'valid-but-unlabelled' }, { id: 0, slug: 'invalid-id', name_zh: '无效' }],
+    });
+
+    expect(post).toMatchObject({ authorId: null, authorLevel: null, authorBadge: null, tags: [] });
+  });
 });

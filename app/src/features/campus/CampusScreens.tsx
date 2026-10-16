@@ -32,7 +32,7 @@ import {TreeholeMedia} from './TreeholeMedia';
 import {TreeholeCommentThread} from './TreeholeCommentThread';
 import {toTreeholePostViewModel} from './treeholePostViewModel';
 
-export type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;created_at?:string;template_key?:string;author?:{avatar?:string;nickname?:string;username?:string}|null;images?:{url:string}[]};
+export type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;created_at?:string;template_key?:string;author?:{id?:number;avatar?:string;nickname?:string;username?:string;level?:number;badge?:string}|null;tags?:{id?:number;slug?:string;name_zh?:string;name_en?:string}[];images?:{url:string}[]};
 type PostTag={id:number;name_zh?:string;name_en?:string};
 function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
  return Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
