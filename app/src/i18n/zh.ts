@@ -39,6 +39,7 @@ export const zh = {
   'screen.campus.mediaPrevious': '上一张',
   'screen.campus.mediaNext': '下一张',
   'screen.campus.mediaPreview': '预览图片',
+  'screen.campus.mediaFailed': '图片不可用',
 
   // 丙：万能墙投稿
   'publish.wall.template': '版式',
