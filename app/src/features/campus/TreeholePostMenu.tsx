@@ -6,7 +6,7 @@ import { useI18n } from '@/i18n';
 export function TreeholePostMenu({ onReport, testIDPrefix }: { onReport: () => void; testIDPrefix?: string }): React.ReactElement {
   const { t } = useI18n();
   return <Menu presentation="bottom-sheet" animation="disable-all">
-    <Menu.Trigger><Button testID={testIDPrefix ? `${testIDPrefix}-more` : 'treehole-more'} size="sm" variant="ghost" accessibilityLabel={t('square.guides.more')}>{t('square.guides.more')}</Button></Menu.Trigger>
+    <Menu.Trigger asChild><Button testID={testIDPrefix ? `${testIDPrefix}-more` : 'treehole-more'} size="sm" variant="ghost" accessibilityLabel={t('square.guides.more')}>{t('square.guides.more')}</Button></Menu.Trigger>
     <Menu.Portal>
       <Menu.Overlay />
       <Menu.Content presentation="bottom-sheet">
