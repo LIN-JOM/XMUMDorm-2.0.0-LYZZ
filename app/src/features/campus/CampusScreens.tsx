@@ -6,7 +6,6 @@ import type {CampusReportReason} from './useCampusReport';
 import {useCampusActions,useCampusLike} from './useCampusActions';
 import * as React from 'react';
 import {useRouter} from 'expo-router';
-import {Button} from '@/components/ui/Button';
 import {TopTabStrip} from '@/components/ui/TopTabStrip';
 import {getSecondaryTabs} from '@/features/navigation/secondaryTabs';
 import {getQueryClient} from '@/shared/queryClient';
@@ -108,7 +107,7 @@ export function CampusListScreen({initialTab='confession', beforeTabs, ...screen
    if(key!=='confession'&&key!=='wall')return;
    setSelected(key);router.setParams({tab:key});
   }}/>
-  {selected==='confession'?<Button label={t('screen.campus.search.title')} onPress={()=>router.push('/campus/search' as never)}/>:null}
+  {selected==='confession'?<HeroButton size="sm" variant="ghost" onPress={()=>router.push('/campus/search' as never)}>{t('screen.campus.search.title')}</HeroButton>:null}
   <CampusFeed key={selected} kind={selected}/>
  </Screen>;
 }
@@ -126,7 +125,7 @@ function TreeholeFeedRow({row,query}:{row:Post;query?:string}):React.ReactElemen
     onLike={like.onToggleLike} onReply={()=>router.push(`/campus/${row.id}` as never)}/>
   </Pressable>
   {like.notice&&like.notice!=='login'?<Text testID={`campus-row-${row.id}-notice`} role="body">{t(like.notice==='denied'?'screen.campus.write.denied':'screen.campus.write.likeFailed')}</Text>:null}
-  {like.notice==='login'?<Button testID={`campus-row-${row.id}-login`} label={t('screen.campus.write.login')} onPress={()=>router.push('/login')}/>:null}
+  {like.notice==='login'?<HeroButton testID={`campus-row-${row.id}-login`} size="sm" onPress={()=>router.push('/login')}>{t('screen.campus.write.login')}</HeroButton>:null}
  </>;
 }
 
@@ -198,7 +197,7 @@ function CampusFeedData({kind,query,tagId,filterChips}:{kind:CampusKind;query?:s
  const treeholeState=kind==='confession'?resolveListState({pagination,itemCount:rows.length}):'data';
  if(treeholeState!=='data')return <>{filterChips}<TreeholeFeedState testID={`campus-list-${treeholeState}`} state={treeholeState} error={pagination.error} title={t(query?'screen.campus.search.empty':'screen.campus.read.empty')} actionLabel={t('action.retry')} onAction={refresh}/></>;
  return <>
-  {rows.length>0&&pagination.errorScope==='refresh'?<Button label={t('screen.campus.read.refreshFailed')} onPress={refresh}/>:null}
+  {rows.length>0&&pagination.errorScope==='refresh'?<HeroButton size="sm" variant="outline" onPress={refresh}>{t('screen.campus.read.refreshFailed')}</HeroButton>:null}
   <ListScreen key={revision} testID="campus-list" data={rows} keyExtractor={row=>String(row.id)} pagination={pagination}
    restoredScrollOffset={revision===0&&initial.current?(query||tagId!=null?initial.current.scrollOffset??0:restoredScrollOffset):0} onScrollOffset={persistScrollOffset}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}

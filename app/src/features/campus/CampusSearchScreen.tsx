@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {useRouter} from 'expo-router';
 import {Screen} from '@/components/ui/Screen';
-import {Button} from '@/components/ui/Button';
+import {Button} from 'heroui-native';
 import {Text} from '@/components/ui/Text';
 import {useI18n} from '@/i18n';
 import {CampusFeed} from './CampusScreens';
@@ -24,17 +24,17 @@ export function CampusSearchScreen():React.ReactElement {
  },[draft,submit]);
  const change=(value:string)=>{setDraft(value);setQuery('');};
  return <Screen titleKey="screen.campus.search.title" showMailbox={false} testID="campus-search">
-  <Button label={t('action.back')} onPress={()=>router.canGoBack()?router.back():router.replace('/campus' as never)}/>
+  <Button size="sm" variant="ghost" onPress={()=>router.canGoBack()?router.back():router.replace('/campus' as never)}>{t('action.back')}</Button>
   <TreeholeSearchEntry value={draft} onChangeText={change} onSubmit={()=>submit(draft)}
    placeholder={t('screen.campus.search.placeholder')} clearLabel={t('screen.campus.search.clear')} testID="campus-search-field"/>
-  <Button label={t('screen.campus.search.submit')} testID="campus-search-submit" onPress={()=>submit(draft)}/>
+  <Button testID="campus-search-submit" size="sm" onPress={()=>submit(draft)}>{t('screen.campus.search.submit')}</Button>
   {query?<><Text role="label">{t('screen.campus.search.results')}</Text>
-   <Button label={t('screen.campus.search.change')} onPress={()=>change('')}/>
+   <Button size="sm" variant="ghost" onPress={()=>change('')}>{t('screen.campus.search.change')}</Button>
    <CampusFeed key={query} kind="confession" query={query}/></>:<>
    <Text>{t('screen.campus.search.hint')}</Text>
    {history.length>0?<><Text role="label">{t('screen.campus.search.history')}</Text>
-    {history.map(item=><Button key={item} label={item} onPress={()=>{setDraft(item);submit(item);}}/>) }
-    <Button label={t('screen.campus.search.clearHistory')} onPress={()=>setHistory([])}/></>:null}
+    {history.map(item=><Button key={item} size="sm" variant="ghost" onPress={()=>{setDraft(item);submit(item);}}>{item}</Button>) }
+    <Button size="sm" variant="ghost" onPress={()=>setHistory([])}>{t('screen.campus.search.clearHistory')}</Button></>:null}
   </>}
  </Screen>;
 }
