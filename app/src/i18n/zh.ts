@@ -33,7 +33,15 @@ export const zh = {
   'screen.campus.read.delete': '删除',
   'screen.campus.read.reply': '回复',
   'screen.campus.read.collapse': '收起',
+  'screen.campus.read.more': '阅读全文',
   'screen.campus.read.end': '没有更多评论',
+  'screen.campus.mediaCount': '{count} 张图片',
+  'screen.campus.mediaPrevious': '上一张',
+  'screen.campus.mediaNext': '下一张',
+  'screen.campus.mediaPreview': '预览图片',
+  'screen.campus.mediaFailed': '图片不可用',
+  'screen.campus.mediaOpenPost': '共 {count} 张图片，打开帖子查看',
+  'screen.campus.read.replyThread': '{count} 条回复',
 
   // 丙：万能墙投稿
   'publish.wall.template': '版式',
