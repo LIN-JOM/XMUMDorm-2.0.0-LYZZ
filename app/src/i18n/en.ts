@@ -265,6 +265,23 @@ export const en: Record<MessageKey, string> = {
   'screen.tools': 'Tools',
   'screen.campus': 'Campus',
   'screen.me': 'Me',
+  // Square brand header and module entries (owner ruling, 2026-10-18)
+  'square.brand': 'XMUM Dorm',
+  'square.brand.emblem': 'Xiamen University emblem',
+  'square.module.schedule': 'Schedule',
+  'square.module.guides': 'Campus guide',
+  'square.module.market': 'Marketplace',
+  'square.module.clubs': 'Clubs',
+  // Square "Today" tab (2026-10-18)
+  'square.today.courses': 'Today classes',
+  'square.today.noCourses': 'No classes today',
+  'square.today.deadlines': 'Moodle due',
+  'square.today.noDeadlines': 'Nothing due right now',
+  'square.today.moodleUnsynced': 'Moodle deadlines not synced',
+  'square.today.moodleSync': 'Open Moodle to sync',
+  'square.today.deadlineToday': 'Due today {clock}',
+  'square.today.deadlineTomorrow': 'Due tomorrow {clock}',
+  'square.today.deadlineLater': 'Due {date} {clock}',
   // Me / dashboard (M-01; from P2C-03)
   'me.level.1': 'Freshman',
   'me.level.2': 'Explorer',
@@ -379,6 +396,7 @@ export const en: Record<MessageKey, string> = {
   'mailbox.chat.read': 'Read',
 
   // ── Secondary tabs ───────────────────────────────────────────
+  'secondary.today': 'Today',
   'secondary.confession': 'Confessions',
   'secondary.wall': 'Wall',
 

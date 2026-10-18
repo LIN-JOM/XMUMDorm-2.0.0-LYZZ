@@ -5,21 +5,27 @@ import { Screen } from '@/components/ui/Screen';
 import { TopTabStrip } from '@/components/ui/TopTabStrip';
 import { SQUARE_TABS } from '@/features/navigation/secondaryTabs';
 import { CampusFeed } from '@/features/campus/CampusScreens';
-import { MarketListScreen } from '@/features/marketplace/MarketScreens';
 import { ErrandListScreen } from '@/features/errand/ErrandScreens';
-import { GuidesListScreen } from '@/features/guides/GuidesScreens';
-import { ClubDiscoveryScreen } from '@/features/clubs/ClubScreens';
 import { CanteenHome } from './CanteenHome';
+import { SquareBrandHeader } from './SquareBrandHeader';
+import { SquareModuleEntries } from './SquareModuleEntries';
+import { TodayPane } from './TodayPane';
 
 /**
  * ⚠️ 集合来自 `secondaryTabs.ts` 的**唯一真源**（`SQUARE_TABS`），⛔ 不在这里再写一份。
  * 旧实现把 7 个模块硬编码在本文件里，与注册表的 2 项形成"两份定义"（P0-1）。
+ *
+ * 2026-10-18 所有者裁决：Tab 集合收敛为「今日 / 树洞 / 万能墙 / 食堂 / 跑腿」；
+ * 校园攻略 / 二手 / 社团改由品牌头下方的 4 个模块入口直达独立页面（不再占 Tab）。
  */
 const TABS = SQUARE_TABS;
 type HomeTab = (typeof SQUARE_TABS)[number]['key'];
 
+/** 打开 App（无 `?tab=` 参数）固定落到「今日」（所有者 2026-10-18 指令）。 */
+const DEFAULT_TAB: HomeTab = 'today';
+
 function readTab(value: unknown): HomeTab {
-  return TABS.find(tab => tab.key === value)?.key ?? 'confession';
+  return TABS.find(tab => tab.key === value)?.key ?? DEFAULT_TAB;
 }
 
 /** 所有者 2026-10-12 指定：首页模块同页切换，并允许内容横滑。 */
@@ -69,7 +75,14 @@ export function SquareHome({ tabBarHeight }: { tabBarHeight: number }): React.Re
   };
 
   return (
-    <Screen testID="screen-square" titleKey="screen.square" bottomMode="tabbar" tabBarHeight={tabBarHeight}>
+    <Screen
+      testID="screen-square"
+      header={<SquareBrandHeader />}
+      bottomMode="tabbar"
+      tabBarHeight={tabBarHeight}
+    >
+      {/* 常驻入口（所有者 2026-10-18：所有 Tab 都可见，不属于任何一个 pane） */}
+      <SquareModuleEntries />
       <TopTabStrip testID="square-module-tabs" tabs={TABS} selectedKey={selected} onSelect={key => {
         dragging.current = false;
         select(readTab(key));
@@ -130,11 +143,9 @@ export function SquareHome({ tabBarHeight }: { tabBarHeight: number }): React.Re
 
 function ModuleContent({ tab }: { tab: HomeTab }): React.ReactElement {
   switch (tab) {
+    case 'today': return <TodayPane />;
     case 'canteen': return <CanteenHome embedded />;
-    case 'market': return <MarketListScreen embedded />;
     case 'errand': return <ErrandListScreen embedded />;
-    case 'guides': return <GuidesListScreen embedded />;
-    case 'clubs': return <ClubDiscoveryScreen embedded />;
     // 树洞 / 万能墙：模块入口统一由 `CampusFeed` 决定（⛔ 不再有第二个搜索入口/发布入口）
     default: return <CampusFeed kind={tab} />;
   }

@@ -92,6 +92,15 @@ export type ScreenProps = {
    * 覆盖层只提供 UI，⛔ 不自己读 insets。典型用法：发布中心的关闭行。
    */
   headerOverlay?: React.ReactNode;
+  /**
+   * **自定义顶栏**（2026-10-18 所有者裁决：广场首页去掉 `广场` 面包屑，换成品牌头）。
+   *
+   * 给了它以后：
+   *   - 仍由本容器施加 `headerPaddingTop`（S1/S2：insets 只有本文件算），背景铺到屏幕顶边；
+   *   - 不再渲染默认 `TopBar`；`titleKey` 被忽略（⛔ 不要同时给两个头）。
+   * 这不是"顶栏第二套实现"：视觉由传入的页面级组件提供，安全区仍只有这一处。
+   */
+  header?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
   testID?: string;
@@ -106,12 +115,13 @@ export function resolveFooterBottomPadding(keyboardHeight: number, bottomInset: 
 
 export function Screen({
   titleKey,
-  topMode = titleKey ? 'topbar' : 'none',
+  topMode,
   bottomMode = 'none',
   showMailbox = false,
   unreadCount = 0,
   onMailboxPress,
   topBarActions,
+  header,
   tabBarHeight,
   scroll = false,
   footer,
@@ -125,10 +135,13 @@ export function Screen({
   const keyboardHeight = useKeyboardHeight();
   const theme = useTheme();
   const hasFooter = footer !== undefined && footer !== null;
+  const hasHeader = header !== undefined && header !== null;
+  // 「要顶栏」的两种来源：有标题（默认 TopBar）或有自定义头；显式 topMode 仍然优先
+  const resolvedTopMode: TopMode = topMode ?? (titleKey || hasHeader ? 'topbar' : 'none');
 
   const resolved = resolveInsets({
     insets,
-    topMode,
+    topMode: resolvedTopMode,
     // footer 自己承担底部留白 → 内容区不再按 bottomMode/键盘留白（避免双倍底部空白）
     bottomMode: hasFooter ? 'none' : bottomMode,
     keyboardHeight: hasFooter ? 0 : keyboardHeight,
@@ -164,7 +177,18 @@ export function Screen({
         testID={testID}
         style={[{ flex: 1, minHeight: 0, backgroundColor: theme.color['bg-canvas'].value }, style]}
       >
-      {topMode === 'topbar' && titleKey ? (
+      {resolvedTopMode === 'topbar' && hasHeader ? (
+        // 自定义头：背景同样铺到屏幕顶边，内容从真实 inset 之下开始（S1 / 17.2-1）
+        <View
+          testID="screen-header"
+          style={{
+            paddingTop: resolved.headerPaddingTop,
+            backgroundColor: theme.color['bg-canvas'].value,
+          }}
+        >
+          {header}
+        </View>
+      ) : resolvedTopMode === 'topbar' && titleKey ? (
         <TopBar
           titleKey={titleKey}
           headerPaddingTop={resolved.headerPaddingTop}
