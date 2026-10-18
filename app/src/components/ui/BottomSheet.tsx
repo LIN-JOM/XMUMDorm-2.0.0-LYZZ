@@ -64,8 +64,6 @@ export function BottomSheet({
       : BOTTOM_SHEET_DEFAULT_RATIO;
   const sheetHeight = Math.round(window.height * ratio);
   const safeBottom = Number.isFinite(bottomInset) && bottomInset > 0 ? bottomInset : 0;
-  // 亮色遮罩用深墨、暗色遮罩用最暗底：都来自令牌（⛔ 不用 rgba/hex）
-  const scrim = theme.color[theme.scheme === 'dark' ? 'bg-sunken' : 'text-primary'].value;
 
   if (!visible) return null;
 
@@ -79,7 +77,8 @@ export function BottomSheet({
           onPress={onClose}
           style={{
             ...StyleSheetAbsoluteFill,
-            backgroundColor: scrim,
+            // 亮色遮罩用深墨、暗色遮罩用最暗底：都来自令牌（⛔ 不用 rgba/hex）
+            backgroundColor: theme.color[theme.scheme === 'dark' ? 'bg-sunken' : 'text-primary'].value,
             opacity: 0.55,
           }}
         />

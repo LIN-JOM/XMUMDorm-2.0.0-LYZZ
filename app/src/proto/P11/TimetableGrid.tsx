@@ -67,7 +67,7 @@ export function TimetableGrid({
   const theme = useTheme();
   const { t } = useI18n();
   const rows = buildTimetableRows(week.days);
-  const timeColumnWidth = theme.space('space_8');
+  const timeColumnWidth = theme.space('space_12');
   const resolveAccent = getCourseAccent ?? (() => FALLBACK_COURSE_ACCENT);
 
   return (
@@ -151,7 +151,7 @@ export function TimetableGrid({
                         <Text role="caption" emphasis="strong" colorToken={accent.text} numberOfLines={2}>
                           {name}
                         </Text>
-                        <Text role="caption" colorToken="text-secondary" numberOfLines={1}>
+                        <Text role="caption" colorToken={accent.secondary} numberOfLines={1}>
                           {venue}
                         </Text>
                       </Pressable>

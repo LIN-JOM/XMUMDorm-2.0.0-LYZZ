@@ -25,16 +25,19 @@ export type CourseAccent = {
   fill: DarkColorTokenName;
   /** 卡片标题文字色令牌（与 `fill` 成对，已实测 ≥4.5:1） */
   text: DarkColorTokenName;
+  /** 卡片次要文字色（地点）：soft 底用次要字，实心底只能用反白字 */
+  secondary: DarkColorTokenName;
 };
 
 /** 6 个课程色（顺序即分配顺序；⛔ 改动要同时重跑对比度核验） */
 export const COURSE_ACCENTS: readonly CourseAccent[] = [
-  { fill: 'bg-brand-soft', text: 'text-brand' },
-  { fill: 'bg-accent-soft', text: 'accent-text' },
-  { fill: 'bg-success-soft', text: 'text-success' },
-  { fill: 'bg-warning-soft', text: 'text-warning' },
-  { fill: 'bg-danger-soft', text: 'text-danger' },
-  { fill: 'bg-sunken', text: 'text-brand' },
+  { fill: 'bg-brand-soft', text: 'text-brand', secondary: 'text-secondary' },
+  { fill: 'bg-accent-soft', text: 'accent-text', secondary: 'text-secondary' },
+  { fill: 'bg-success-soft', text: 'text-success', secondary: 'text-secondary' },
+  { fill: 'bg-warning-soft', text: 'text-warning', secondary: 'text-secondary' },
+  { fill: 'bg-danger-soft', text: 'text-danger', secondary: 'text-secondary' },
+  // 第 6 色用**品牌实心**：soft 底只有 5 个，中性底又太像"无颜色"，实心蓝在小卡片上最易区分
+  { fill: 'action-primary', text: 'text-on-fill', secondary: 'text-on-fill' },
 ];
 
 /** 课程身份键：代码优先，没有代码时才退到名称（两侧去空白） */

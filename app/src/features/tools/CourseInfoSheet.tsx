@@ -40,7 +40,7 @@ function InfoRow({ label, value, testID }: { label: string; value: string; testI
   const theme = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.space('space_3') }}>
-      <View style={{ width: theme.space('space_12') }}>
+      <View style={{ width: theme.space('space_12') + theme.space('space_3') }}>
         <Text role="caption" colorToken="text-muted" numberOfLines={1}>
           {label}
         </Text>
@@ -110,7 +110,7 @@ export function CourseInfoSheet({
             backgroundColor: theme.color[accent.fill].value,
           }}
         />
-        <Text role="body" colorToken={accent.text} testID={`${testID}-code`}>
+        <Text role="body" colorToken="text-brand" testID={`${testID}-code`}>
           {code}
         </Text>
       </View>
