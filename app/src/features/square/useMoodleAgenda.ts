@@ -5,6 +5,10 @@
  * （`features/tools/moodle/cache.ts`）。学生从系统页返回广场时，今日页必须自己变新，
  * ⛔ 不能靠"重新进页面"才刷新。
  *
+ * 实现口径：**缓存代数 + 当前时间**是重新投影的两个输入 ——
+ *   缓存变化（订阅触发 `generation++`）或每分钟走表都会重算，渲染期不写 state
+ *   （避免 react-hooks/set-state-in-effect 的级联渲染）。
+ *
  * ⚠️ 冷启动缓存为空是**设计**（Y0 隐私口径：磁盘恢复要求当前页面已确认校方账号），
  *    所以 `synced:false` 是合法状态，UI 显示"打开 Moodle 同步"入口即可。
  */
@@ -29,14 +33,13 @@ function snapshot(nowMs: number): MoodleAgenda {
 }
 
 export function useMoodleAgenda(nowMs: number): MoodleAgenda {
-  const read = React.useCallback(() => snapshot(nowMs), [nowMs]);
-  const [agenda, setAgenda] = React.useState<MoodleAgenda>(read);
+  const [generation, setGeneration] = React.useState(0);
 
-  React.useEffect(() => {
-    // 先读一次：缓存在本组件挂载前就已写入（如同步后立刻回到广场）时不会漏。
-    setAgenda(read());
-    return subscribeMoodleInvalidation(() => setAgenda(read()));
-  }, [read]);
+  React.useEffect(
+    () => subscribeMoodleInvalidation(() => setGeneration((current) => current + 1)),
+    []
+  );
 
-  return agenda;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `generation` 是缓存变化的版本号，必须进依赖
+  return React.useMemo(() => snapshot(nowMs), [nowMs, generation]);
 }
