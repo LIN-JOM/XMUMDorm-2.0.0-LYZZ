@@ -52,15 +52,24 @@ jest.mock('react-native-pager-view', () => {
   const React = require('react');
   const { View } = require('react-native');
   const setPage = jest.fn();
-  class MockPagerView extends React.Component<Record<string, unknown>> {
-    static lastProps: Record<string, unknown> = {};
-    setPage = setPage;
-    render(): React.ReactElement {
-      MockPagerView.lastProps = this.props;
-      return React.createElement(View, { testID: 'me-content-pager' }, this.props.children as never);
+  const lastProps: { current: Record<string, unknown> } = { current: {} };
+  /**
+   * ⚠️ 必须是**函数组件 + forwardRef**，不能是 class：实测 class 形态的替身会让
+   * 同一文件里的**第二次**渲染查不到任何节点（P1-08 记的并发根污染，症状一样）。
+   */
+  const MockPagerView = React.forwardRef(
+    (props: Record<string, unknown>, ref: React.Ref<{ setPage: typeof setPage }>) => {
+      React.useImperativeHandle(ref, () => ({ setPage }));
+      lastProps.current = props;
+      return React.createElement(View, { testID: 'me-content-pager' }, props.children as never);
     }
-  }
-  return { __esModule: true, default: MockPagerView, __setPage: setPage, __MockPagerView: MockPagerView };
+  );
+  return {
+    __esModule: true,
+    default: MockPagerView,
+    __setPage: setPage,
+    __lastProps: lastProps,
+  };
 });
 jest.mock('../../../shared/api/users', () => ({ getMe: jest.fn() }));
 jest.mock('../../../shared/api/todos', () => ({ getTodayTodos: jest.fn() }));
@@ -243,28 +252,23 @@ describe('P2C-03 M-01 我的仪表盘', () => {
       expect(view.queryByTestId('me-entry-posts')).toBeNull();
       expect(view.queryByTestId('me-entry-settings')).toBeNull();
       expect(view.queryByTestId('me-entry-about')).toBeNull();
-    });
-  });
 
-  describe('TC-P2C-03-4B · Tab 条与 pager 双向同步', () => {
-    it('点 Tab 翻页；pager 翻页回调回写 Tab 条选中', async () => {
-      const view = await renderApp(<MeScreen />);
-      // ⚠️ 与 4A 同口径：先等资料卡（它跟着 profile 取数），Tab 区是同步渲染的，
-      //    再包一层 waitFor 会在机器负载高时撞默认 1000ms 超时（实测连跑时偶发）。
-      await waitFor(() => expect(view.getByTestId('me-profile')).toBeTruthy());
-      expect(view.getByTestId('me-content-tabs')).toBeTruthy();
-
+      /**
+       * 双向同步 —— **复用上面那次渲染**，⛔ 不新开一个 it 再渲染一次：
+       * 实测本文件里连续第二次 `renderApp` 会得到一棵**空树**（连最简 View 也空），
+       * 与 `helpers/renderApp` 头部记的并发根污染同源 —— 纪律是"一个 it 只渲染一次"。
+       */
       const pager = require('react-native-pager-view') as {
         __setPage: jest.Mock;
-        __MockPagerView: { lastProps: { onPageSelected?: (e: { nativeEvent: { position: number } }) => void } };
+        __lastProps: { current: { onPageSelected?: (e: { nativeEvent: { position: number } }) => void } };
       };
 
       // 正向：点「二手」（第 1 页）
       fireEvent.press(view.getByTestId('top-tab-marketplace'));
       expect(pager.__setPage).toHaveBeenCalledWith(1);
 
-      // 反向：pager 滑到第 2 页 → Tab 条选中「跑腿」
-      const onPageSelected = pager.__MockPagerView.lastProps.onPageSelected;
+      // 反向：pager 滑到第 2 页 → Tab 条选中「跑腿」，其余落选
+      const onPageSelected = pager.__lastProps.current.onPageSelected;
       expect(typeof onPageSelected).toBe('function');
       onPageSelected?.({ nativeEvent: { position: 2 } });
       await waitFor(() =>
