@@ -46,7 +46,6 @@ export const en: Record<MessageKey, string> = {
   'screen.campus.mediaNext': 'Next image',
   'screen.campus.mediaPreview': 'Preview image',
   'screen.campus.mediaFailed': 'Image unavailable',
-  'screen.campus.mediaOpenPost': '{count} images, open post to view',
   'screen.campus.read.replyThread': '{count} replies',
 
   // 丙：万能墙投稿
@@ -502,6 +501,7 @@ export const en: Record<MessageKey, string> = {
   'action.clear': 'Clear',
   'action.all': 'All',
   'action.refresh': 'Refresh',
+  'action.backToTop': 'Top',
   'action.openInBrowser': 'Open browser',
   'action.save': 'Save',
   'publish.viewDetail': 'View details',
@@ -555,6 +555,7 @@ export const en: Record<MessageKey, string> = {
   'screen.campus.search.hint': 'Enter a keyword to search posts',
   'screen.campus.search.empty': 'No matching posts. Try another keyword.',
   'screen.campus.search.results': 'Post results',
+  'screen.campus.filter.tags': 'Filter by tag',
   'screen.campus.search.history': 'Recent searches',
   'screen.campus.search.clearHistory': 'Clear search history',
   'screen.campus.write.namedReply': 'Replying to @{name}',

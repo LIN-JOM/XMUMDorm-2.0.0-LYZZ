@@ -15,6 +15,8 @@ export type SearchHighlightProps = {
   role?: TextProps['role'];
   colorToken?: TextColorToken;
   numberOfLines?: number;
+  /** 字号放大上限；`0` = 不设上限（见 `A02 Text`） */
+  maxFontSizeMultiplier?: number;
   testID?: string;
 };
 
@@ -24,6 +26,7 @@ export function SearchHighlight({
   role,
   colorToken,
   numberOfLines,
+  maxFontSizeMultiplier,
   testID,
 }: SearchHighlightProps): React.ReactElement {
   const pieces: React.ReactNode[] = [];
@@ -34,7 +37,13 @@ export function SearchHighlight({
   while (index >= 0) {
     pieces.push(value.slice(cursor, index));
     pieces.push(
-      <Text key={`${index}-${needle}`} role={role} emphasis="strong" testID="campus-search-match">
+      <Text
+        key={`${index}-${needle}`}
+        role={role}
+        emphasis="strong"
+        maxFontSizeMultiplier={maxFontSizeMultiplier}
+        testID="campus-search-match"
+      >
         {value.slice(index, index + query.length)}
       </Text>
     );
@@ -43,7 +52,13 @@ export function SearchHighlight({
   }
   pieces.push(value.slice(cursor));
   return (
-    <Text testID={testID} role={role} colorToken={colorToken} numberOfLines={numberOfLines}>
+    <Text
+      testID={testID}
+      role={role}
+      colorToken={colorToken}
+      numberOfLines={numberOfLines}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
+    >
       {pieces}
     </Text>
   );

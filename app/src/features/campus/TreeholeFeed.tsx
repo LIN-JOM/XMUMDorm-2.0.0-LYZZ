@@ -29,7 +29,7 @@ import { formatPostTime } from '../../../../shared/utils/formatTime';
 import { useCampusLike } from './useCampusActions';
 import { TreeholePostRow } from './TreeholePostRow';
 import { TreeholeSearchBar } from './TreeholeSearchBar';
-import { TreeholeTagBar } from './TreeholeTagBar';
+import { TreeholeTagFilter } from './TreeholeTagFilter';
 import { toTreeholePostViewModel } from './treeholePostViewModel';
 import {
   asPost,
@@ -180,8 +180,8 @@ function TreeholeFeedBody({
   });
   const tagId = selectedTagId(filterState.filters);
   const clearTagFilter = React.useCallback(() => filterState.setFilters({}), [filterState]);
-  const tagBar = !scoped ? undefined : (
-    <TreeholeTagBar
+  const tagFilter = !scoped ? undefined : (
+    <TreeholeTagFilter
       tags={tags}
       selectedTagId={tagId}
       onSelect={(id) => filterState.setFilters(id === null ? {} : { tag: String(id) })}
@@ -192,7 +192,7 @@ function TreeholeFeedBody({
       key={`${query}:${tagId ?? 'all'}`}
       query={query}
       tagId={tagId}
-      tagBar={tagBar}
+      tagFilter={tagFilter}
       onClearSearch={onClearSearch}
       onClearTagFilter={clearTagFilter}
     />
@@ -202,13 +202,13 @@ function TreeholeFeedBody({
 function TreeholeFeedData({
   query,
   tagId,
-  tagBar,
+  tagFilter,
   onClearSearch,
   onClearTagFilter,
 }: {
   query: string;
   tagId: number | null;
-  tagBar?: React.ReactNode;
+  tagFilter?: React.ReactNode;
   onClearSearch: () => void;
   onClearTagFilter: () => void;
 }): React.ReactElement {
@@ -233,7 +233,6 @@ function TreeholeFeedData({
   const initial = React.useRef(client.getQueryData<Snapshot>(key));
   const snapshot = React.useRef<Snapshot>(initial.current ?? { rows: [], page: 0, hasMore: true });
   const [rows, setRows] = React.useState(snapshot.current.rows);
-  const [expandedIds, setExpandedIds] = React.useState<ReadonlySet<number>>(new Set());
   const {
     pagination,
     dispatch,
@@ -326,14 +325,6 @@ function TreeholeFeedData({
 
   const refresh = () => void load('refresh');
   const append = () => void load('append');
-  const toggleExpanded = React.useCallback((id: number) => {
-    setExpandedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
 
   const emptyAction =
     query.length > 0
@@ -344,7 +335,7 @@ function TreeholeFeedData({
 
   const listHeader = (
     <View>
-      {tagBar}
+      {tagFilter}
       {pagination.errorScope === 'refresh' && rows.length > 0 ? (
         <View
           style={{
@@ -391,8 +382,6 @@ function TreeholeFeedData({
         <TreeholeFeedRow
           row={row}
           query={query || undefined}
-          expanded={expandedIds.has(row.id)}
-          onToggleExpand={() => toggleExpanded(row.id)}
           onOpen={() => router.push(`/campus/${row.id}` as never)}
           timeLabel={row.created_at ? formatPostTime(row.created_at, { locale }) : ''}
         />
@@ -405,15 +394,11 @@ function TreeholeFeedData({
 function TreeholeFeedRow({
   row,
   query,
-  expanded,
-  onToggleExpand,
   onOpen,
   timeLabel,
 }: {
   row: Post;
   query?: string;
-  expanded: boolean;
-  onToggleExpand: () => void;
   onOpen: () => void;
   timeLabel: string;
 }): React.ReactElement {
@@ -445,8 +430,6 @@ function TreeholeFeedRow({
       liked={like.liked}
       likeCount={like.likeCount}
       commentCount={like.commentCount}
-      expanded={expanded}
-      onToggleExpand={onToggleExpand}
       onOpen={onOpen}
       onLike={like.onToggleLike}
       likeNotice={notice}

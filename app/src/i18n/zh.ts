@@ -47,7 +47,6 @@ export const zh = {
   'screen.campus.mediaNext': '下一张',
   'screen.campus.mediaPreview': '预览图片',
   'screen.campus.mediaFailed': '图片不可用',
-  'screen.campus.mediaOpenPost': '共 {count} 张图片，打开帖子查看',
   'screen.campus.read.replyThread': '{count} 条回复',
 
   // 丙：万能墙投稿
@@ -510,6 +509,7 @@ export const zh = {
   'action.clear': '清除',
   'action.all': '全部',
   'action.refresh': '刷新',
+  'action.backToTop': '回到顶部',
   'action.openInBrowser': '浏览器打开',
   'action.save': '保存',
   'publish.viewDetail': '查看详情',
@@ -563,6 +563,7 @@ export const zh = {
   'screen.campus.search.hint': '输入关键词搜索帖子',
   'screen.campus.search.empty': '无匹配帖子，试试其他词',
   'screen.campus.search.results': '帖子结果',
+  'screen.campus.filter.tags': '标签筛选',
   'screen.campus.search.history': '最近搜索',
   'screen.campus.search.clearHistory': '清除搜索记录',
   'screen.campus.write.namedReply': '正在回复 @{name}',

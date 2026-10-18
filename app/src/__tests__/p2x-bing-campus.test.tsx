@@ -178,29 +178,54 @@ describe('树洞列表', () => {
     expect(view.getByTestId('campus-row-7-comment-count')).toHaveTextContent('3');
   });
 
-  it('标签筛选写回 store；「全部」回到无筛选', async () => {
+  it('内容块与媒体块是拉伸容器（文字左对齐、图片有宽度）', async () => {
+    list.mockResolvedValue({
+      list: [
+        {
+          id: 7,
+          title: '校内交流',
+          content: '周末运动',
+          images: [{ url: 'https://example.com/a.webp' }],
+        },
+      ],
+      hasMore: false,
+    });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByTestId('campus-row-7')).toBeTruthy());
+    // 2026-10-18 实测缺陷：内容塞进居中容器 → 标题/正文居中、媒体框塌成 0 宽（图片不可见）
+    expect(view.getByTestId('campus-row-7')).toHaveStyle({ alignItems: 'stretch' });
+    expect(view.getByTestId('campus-row-7-media')).toHaveStyle({ alignItems: 'stretch' });
+    expect(view.getByTestId('treehole-media-feed')).toBeTruthy();
+  });
+
+  it('标签筛选是下拉列表：选中写回 store，「全部」回到无筛选', async () => {
     tags.mockResolvedValue([{ id: 7, name_zh: '组队自习', name_en: 'Study group' }]);
     list.mockResolvedValue({ list: [{ id: 7, content: '找自习搭子' }], hasMore: false });
     const view = await renderApp(<TreeholeFeed />);
-    await waitFor(() => expect(view.getByTestId('filter-chip-7')).toBeTruthy());
-    expect(view.getByTestId('filter-chip-all').props.accessibilityState.selected).toBe(true);
-    await fireEvent.press(view.getByTestId('filter-chip-7'));
+    const trigger = await waitFor(() => view.getByTestId('campus-tag-filter'));
+    // 折叠态只有一行：当前值 = 全部（不再是摊开的一排圆角 Tab）
+    expect(within(trigger).getByText(/全部|All/)).toBeTruthy();
+
+    await fireEvent.press(trigger);
+    // 2026-10-18 实测缺陷：字段名错位曾让每个选项都是空字符串
+    const option = await waitFor(() => view.getByLabelText(/组队自习|Study group/));
+    await fireEvent.press(option);
     await waitFor(() =>
       expect(list).toHaveBeenLastCalledWith({ page: 1, pageSize: 10, tagId: 7 })
     );
-    expect(view.getByTestId('filter-chip-7').props.accessibilityState.selected).toBe(true);
     expect(secondaryTabStore.get('square', 'confession').filters).toEqual({ tag: '7' });
-    await fireEvent.press(view.getByTestId('filter-chip-all'));
+
+    await fireEvent.press(view.getByTestId('campus-tag-filter'));
+    await fireEvent.press(await waitFor(() => view.getByLabelText(/^全部$|^All$/)));
     await waitFor(() => expect(secondaryTabStore.get('square', 'confession').filters).toEqual({}));
-    expect(view.getByTestId('filter-chip-all').props.accessibilityState.selected).toBe(true);
   });
 
-  it('标签目录失败不阻断阅读（筛选条隐藏）', async () => {
+  it('标签目录失败不阻断阅读（筛选入口隐藏）', async () => {
     tags.mockRejectedValue(new TypeError('tags unavailable'));
     list.mockResolvedValue({ list: [{ id: 7, content: '仍可阅读' }], hasMore: false });
     const view = await renderApp(<TreeholeFeed />);
     await waitFor(() => expect(view.getByText('仍可阅读')).toBeTruthy());
-    expect(view.queryByTestId('campus-tag-filters')).toBeNull();
+    expect(view.queryByTestId('campus-tag-filter')).toBeNull();
   });
 
   it('分页失败重试同一页、去重并在末页停止', async () => {
@@ -426,6 +451,20 @@ describe('树洞详情（原生 Header + 粘性底栏）', () => {
     const footer = view.getByTestId('screen-footer');
     expect(within(footer).getByLabelText('写评论')).toBeTruthy();
     expect(view.queryByTestId('campus-detail-back')).toBeNull();
+  });
+
+  it('绝对时间在动作行右端，作者行只留身份（2026-10-18 详情版式）', async () => {
+    detail.mockResolvedValue({
+      id: 7,
+      content: '一起打球',
+      author: { nickname: '小林' },
+      created_at: '2026-10-15T02:42:00.000Z',
+    });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('一起打球')).toBeTruthy());
+    // 作者行不放时间：昵称 + 等级 + 339px 的英文绝对时间会挤爆一行
+    expect(view.queryByTestId('treehole-author-time')).toBeNull();
+    expect(view.getByTestId('campus-detail-time')).toBeTruthy();
   });
 
   it('右上 ⋯ 打开动作表，举报表单可达（唯一举报入口）', async () => {

@@ -158,6 +158,30 @@ describe('TC-P1-04-3A · A12 Pressable：命中区 ≥ 平台下限（7.1）', (
     const { getByTestId } = await wrap(<Pressable testID="p2" disabled />);
     expect(getByTestId('p2').props.accessibilityState).toMatchObject({ disabled: true });
   });
+
+  // 2026-10-18 模拟器实测：内容塞进默认的居中容器后，Text 被压成居中、aspectRatio 媒体框塌成 0 宽
+  // （树洞信息流的图片因此不可见、标题居中）。下面两条守的是"两种职责"的分工。
+  it('contentAlign="stretch"：内容块撑满父宽、从左开始排', async () => {
+    const { getByTestId } = await wrap(
+      <Pressable testID="content-block" contentAlign="stretch">
+        {null}
+      </Pressable>
+    );
+    expect(getByTestId('content-block')).toHaveStyle({
+      alignItems: 'stretch',
+      justifyContent: 'flex-start',
+    });
+  });
+
+  it('默认内容对齐仍是图标按钮语义：命中区 + 子元素居中', async () => {
+    const { getByTestId } = await wrap(<Pressable testID="icon-button">{null}</Pressable>);
+    expect(getByTestId('icon-button')).toHaveStyle({
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: 48,
+      minHeight: 48,
+    });
+  });
 });
 
 describe('TC-P1-04-4A · A06 Icon：尺寸只走档位 + a11y 二选一（16.5-3/4）', () => {

@@ -150,6 +150,8 @@ export function EntityCard({
       <Pressable
         testID={testID}
         onPress={onPress}
+        // 内容块语义：标题/副标题/指标必须左对齐撑满卡片（默认的图标按钮语义会把它们压成居中）
+        contentAlign="stretch"
         style={style}
         // §7.3：整卡可点时**卡片语义必须是一条**，不能把卡内每个元素都读出来
         accessibilityLabel={[isPost ? authorLabel : '', isPost ? metaLabel : '', title, subtitle, ...metrics].filter(Boolean).join('，')}

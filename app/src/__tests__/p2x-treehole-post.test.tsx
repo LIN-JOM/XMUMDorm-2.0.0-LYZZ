@@ -9,6 +9,7 @@
  */
 
 import * as React from 'react';
+import { PixelRatio } from 'react-native';
 import { fireEvent } from '@testing-library/react-native';
 
 import { TreeholePostRow } from '@/features/campus/TreeholePostRow';
@@ -47,8 +48,6 @@ function row(overrides: Partial<React.ComponentProps<typeof TreeholePostRow>> = 
       liked={false}
       likeCount={2}
       commentCount={3}
-      expanded={false}
-      onToggleExpand={() => undefined}
       onOpen={() => undefined}
       onLike={() => undefined}
       {...overrides}
@@ -85,15 +84,25 @@ describe('P2X TreeholePreview（折叠判定）', () => {
 });
 
 describe('P2X TreeholePostRow', () => {
-  it('渲染身份、标题、正文、标签与服务端计数（图标 + 数字）', async () => {
+  it('信息流只有标题：身份 + 标签（日期右边）+ 计数，⛔ 不展示正文', async () => {
     const view = await renderApp(row());
     expect(view.getByTestId('treehole-author-name')).toHaveTextContent('小蓝');
     expect(view.getByTestId('treehole-author-time')).toHaveTextContent('2 小时前');
     expect(view.getByText('晚自习搭子')).toBeTruthy();
-    expect(view.getByTestId('treehole-content-7')).toHaveTextContent('今晚有人想去图书馆吗？');
-    expect(view.getByTestId('treehole-tag-1')).toHaveTextContent('求助');
+    // 2026-10-18 所有者裁决：正文只出现在详情页
+    expect(view.queryByTestId('treehole-content-7')).toBeNull();
+    expect(view.queryByText('今晚有人想去图书馆吗？')).toBeNull();
+    // 标签排在日期右边，不单独占一行
+    expect(view.getByTestId('treehole-row-tags')).toHaveTextContent('求助');
+    const tree = JSON.stringify(view.toJSON());
+    expect(tree.indexOf('treehole-author-time')).toBeLessThan(tree.indexOf('treehole-row-tags'));
     expect(view.getByTestId('campus-row-7-like-count')).toHaveTextContent('2');
     expect(view.getByTestId('campus-row-7-comment-count')).toHaveTextContent('3');
+  });
+
+  it('没有标题的帖子用正文首行兜底，不留空白行', async () => {
+    const view = await renderApp(row({ post: { ...post, title: '', content: '只有正文的帖子' } }));
+    expect(view.getByText('只有正文的帖子')).toBeTruthy();
   });
 
   it('内容区与动作区是兄弟节点：点内容进详情，点动作只触发动作', async () => {
@@ -131,6 +140,43 @@ describe('P2X TreeholePostRow', () => {
     expect(tree.indexOf('晚自习搭子')).toBeLessThan(tree.indexOf('今晚有人想去图书馆吗？'));
     expect(tree.indexOf('今晚有人想去图书馆吗？')).toBeLessThan(tree.indexOf('treehole-tags'));
     expect(tree.indexOf('treehole-tags')).toBeLessThan(tree.indexOf('treehole-media-detail'));
+  });
+
+  it('短正文直接完整显示，不给"阅读全文"', async () => {
+    const view = await renderApp(
+      <TreeholePostDetail
+        post={{ ...post, content: '短正文' }}
+        timeLabel="2026-10-18 10:00"
+        liked={false}
+        likeCount={2}
+        commentCount={3}
+        onLike={() => undefined}
+        onComment={() => undefined}
+      />
+    );
+    expect(view.queryByTestId('treehole-detail-read-more')).toBeNull();
+    expect(view.getByTestId('treehole-post-content')).toHaveTextContent('短正文');
+  });
+
+  it('长正文给"阅读全文"（与列表/搜索同一把尺子）', async () => {
+    // RN 的 Jest 预设把字号缩放固定成 2，而 ≥2 的设计是"不截断"；这里显式回到 1 才测得到折叠
+    const spy = jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(1);
+    try {
+      const view = await renderApp(
+        <TreeholePostDetail
+          post={{ ...post, content: '中'.repeat(200) }}
+          timeLabel="2026-10-18 10:00"
+          liked={false}
+          likeCount={2}
+          commentCount={3}
+          onLike={() => undefined}
+          onComment={() => undefined}
+        />
+      );
+      expect(view.getByTestId('treehole-detail-read-more')).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('万能墙详情匿名：没有昵称、没有等级、没有标题', async () => {

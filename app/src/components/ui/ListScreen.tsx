@@ -303,6 +303,11 @@ export type ListScreenProps<T> = {
   restoredScrollOffset?: number;
   /** 滚动回写（`useListPagination().persistScrollOffset`） */
   onScrollOffset?: (offset: number) => void;
+  /**
+   * 外部「回到顶部」信号：**数值变化**即把列表滚回顶端（animated）。
+   * 与 `FloatingBackToTop` 配套；⛔ 不用 `ref` 暴露 FlashList（那会把虚拟化实现漏给页面）。
+   */
+  scrollToTopSignal?: number;
   /** 首屏骨架行数 */
   skeletonRows?: number;
   style?: StyleProp<ViewStyle>;
@@ -326,6 +331,7 @@ export function ListScreen<T>({
   numColumns = 1,
   restoredScrollOffset = 0,
   onScrollOffset,
+  scrollToTopSignal,
   skeletonRows,
   style,
   testID,
@@ -352,6 +358,12 @@ export function ListScreen<T>({
     restoredRef.current = true;
     listRef.current?.scrollToOffset?.({ offset: restoredScrollOffset, animated: false });
   }, [screenState, restoredScrollOffset]);
+
+  // 外部「回到顶部」：数值变化就把列表滚回顶端（0 是初始值，不触发）
+  React.useEffect(() => {
+    if (!scrollToTopSignal) return;
+    listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
+  }, [scrollToTopSignal]);
 
   if (screenState === 'loading') {
     return (

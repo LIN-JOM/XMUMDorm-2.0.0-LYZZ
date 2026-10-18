@@ -28,12 +28,16 @@ export function TreeholeAuthorLine({
   avatarUrl,
   level,
   timeLabel,
+  tags,
   anonymous = false,
 }: {
   name: string | null;
   avatarUrl: string | null;
   level: number | null;
-  timeLabel: string;
+  /** 列表行给相对时间；详情**不给**（绝对时间移交给动作行右侧，作者行只留身份） */
+  timeLabel?: string;
+  /** 列表行：标签跟在日期右边（所有者 2026-10-18 裁决） */
+  tags?: readonly TreeholePostTag[];
   anonymous?: boolean;
 }): React.ReactElement {
   const theme = useTheme();
@@ -54,11 +58,12 @@ export function TreeholeAuthorLine({
           fallbackText={shownName}
         />
       )}
+      {/* 昵称：14sp 常规体 + 次色；标题：16sp 粗体 + 主色 —— 字号、字重、颜色三层都不一样
+          （所有者 2026-10-18 第二轮「标题和用户名不要同一种字体」，第五轮再压小标题后仍保持层级） */}
       <Text
         testID="treehole-author-name"
-        role="label"
-        emphasis="strong"
-        colorToken="text-primary"
+        role="body"
+        colorToken="text-secondary"
         numberOfLines={1}
         style={{ flexShrink: 1 }}
       >
@@ -67,10 +72,42 @@ export function TreeholeAuthorLine({
       {anonymous || level === null ? null : (
         <LevelBadge testID="treehole-author-level" level={level} variant="icon" />
       )}
-      <Text testID="treehole-author-time" role="caption" colorToken="text-muted" numberOfLines={1}>
-        {timeLabel}
-      </Text>
+      {timeLabel === undefined ? null : (
+        <Text testID="treehole-author-time" role="caption" colorToken="text-muted" numberOfLines={1}>
+          {timeLabel}
+        </Text>
+      )}
+      {tags === undefined || tags.length === 0 ? null : <TreeholeInlineTags tags={tags} />}
     </View>
+  );
+}
+
+/**
+ * 身份行里的紧凑标签：**并成一行淡色文字**跟在日期右边。
+ *
+ * 为什么不用 `Chip`：身份行已经有头像 + 昵称 + 等级 + 时间，再塞 1–3 个 32dp 芯片，
+ * 在 360dp 宽上必定换行或把昵称挤没；这里用单行文本，超长直接截断。
+ */
+export function TreeholeInlineTags({
+  tags,
+}: {
+  tags: readonly TreeholePostTag[];
+}): React.ReactElement | null {
+  const { locale } = useI18n();
+  const labels = tags
+    .map((tag) => ((locale === 'en' ? tag.nameEn || tag.nameZh : tag.nameZh || tag.nameEn) ?? '').trim())
+    .filter((label) => label.length > 0);
+  if (labels.length === 0) return null;
+  return (
+    <Text
+      testID="treehole-row-tags"
+      role="caption"
+      colorToken="text-brand"
+      numberOfLines={1}
+      style={{ flexShrink: 1 }}
+    >
+      {labels.join('  ')}
+    </Text>
   );
 }
 
@@ -111,6 +148,7 @@ export function TreeholeActionBar({
   onComment,
   testIDPrefix,
   likeNotice,
+  timeLabel,
 }: {
   liked: boolean;
   likeCount: number | null;
@@ -119,6 +157,8 @@ export function TreeholeActionBar({
   onComment?: () => void;
   testIDPrefix?: string;
   likeNotice?: React.ReactNode;
+  /** 详情：绝对时间放动作行右端（作者行只留身份，避免昵称 + 等级 + 长时间挤成一行） */
+  timeLabel?: string;
 }): React.ReactElement {
   const theme = useTheme();
   const { t } = useI18n();
@@ -160,6 +200,21 @@ export function TreeholeActionBar({
             {likeCount === null ? '—' : String(likeCount)}
           </Text>
         </Pressable>
+
+        {timeLabel === undefined ? null : (
+          <>
+            <View style={{ flex: 1 }} />
+            <Text
+              role="caption"
+              colorToken="text-muted"
+              numberOfLines={1}
+              testID={`${prefix}-time`}
+              style={{ flexShrink: 1 }}
+            >
+              {timeLabel}
+            </Text>
+          </>
+        )}
       </View>
       {likeNotice}
     </View>

@@ -3,10 +3,10 @@ import * as React from 'react';
 import {View} from 'react-native';
 import {useRouter} from 'expo-router';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
-import {EntityCard} from '@/components/ui/EntityCard';
-import {FilterChips} from '@/components/ui/FilterChips';
+import {GridCard} from '@/components/ui/GridCard';
+import {FloatingBackToTop} from '@/components/ui/FloatingBackToTop';
+import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
 import {Badge} from '@/components/ui/Badge';
-import {Input} from '@/components/ui/Input';
 import {SearchField} from '@/components/ui/SearchField';
 import {Button} from '@/components/ui/Button';
 import {Text} from '@/components/ui/Text';
@@ -23,7 +23,7 @@ import {classifyAuthFailure,isSessionInvalid} from '@/features/auth/authFailure'
 import {useReport,type ReportReason} from '@/features/reports/useReport';
 import {listMarketplaceItems,getMarketplaceItemDetail,toggleMarketplaceWant} from '../../../../shared/api/marketplace';
 import {readMarketPage,readMarketDetail,type MarketItem} from './model';
-type Filters={category?:string;status?:string;q?:string;priceMin?:number;priceMax?:number};
+type Filters={category?:string;status?:string;q?:string};
 type Snapshot={rows:readonly MarketItem[];page:number;hasMore:boolean;scrollOffset:number};
 function errorFor(error:unknown):AppError {
  const e=error as {status?:number;name?:string}|null;
@@ -35,41 +35,30 @@ function errorFor(error:unknown):AppError {
 const categories=[{key:'all',labelKey:'screen.market.all'},{key:'electronics',labelKey:'screen.market.electronics'},{key:'transport',labelKey:'screen.market.transport'},{key:'dailyuse',labelKey:'screen.market.dailyuse'},{key:'books',labelKey:'screen.market.books'},{key:'others',labelKey:'screen.market.others'}] as const;
 const statusKeys={all:'screen.market.all',on_sale:'screen.market.on_sale',sold:'screen.market.sold'} as const;
 export function MarketListScreen({ embedded = false }: { embedded?: boolean } = {}):React.ReactElement {
- const {t}=useI18n();const client=getQueryClient();
+ const {t}=useI18n();const client=getQueryClient();const theme=useTheme();
  const [filters,setFilters]=React.useState<Filters>(()=>client.getQueryData<Filters>(['bing-market','selected'])??{});
- const [q,setQ]=React.useState(filters.q??''),[min,setMin]=React.useState(filters.priceMin==null?'':String(filters.priceMin)),[max,setMax]=React.useState(filters.priceMax==null?'':String(filters.priceMax));
- const [invalid,setInvalid]=React.useState(false);
+ const [q,setQ]=React.useState(filters.q??'');
  const select=(next:Filters)=>{client.setQueryData(['bing-market','selected'],next);setFilters(next);};
- const apply=()=>{const priceMin=min.trim()===''?undefined:Number(min),priceMax=max.trim()===''?undefined:Number(max);
-  if((priceMin!==undefined&&(!Number.isFinite(priceMin)||priceMin<0))||(priceMax!==undefined&&(!Number.isFinite(priceMax)||priceMax<0))||(priceMin!==undefined&&priceMax!==undefined&&priceMin>priceMax)){setInvalid(true);return;}
-  setInvalid(false);select({...filters,q:q.trim()||undefined,priceMin,priceMax});
- };
- const clearFilters=()=>{setInvalid(false);setQ('');setMin('');setMax('');client.removeQueries({queryKey:['bing-market','list',{}]});select({});};
+ const applyQuery=React.useCallback(()=>{const next=q.trim();select({...filters,q:next===''?undefined:next});},[filters,q]);
+ const clearFilters=()=>{setQ('');client.removeQueries({queryKey:['bing-market','list',{}]});select({});};
  const hasAppliedFilters=Object.values(filters).some(value=>value!==undefined&&value!=='');
- const priceSummary=filters.priceMin==null&&filters.priceMax==null?t('screen.market.priceAny'):`${filters.priceMin==null?'—':`RM ${filters.priceMin.toFixed(2)}`} – ${filters.priceMax==null?'—':`RM ${filters.priceMax.toFixed(2)}`}`;
+ // 2026-10-18 所有者裁决：搜索与两行筛选**随内容滚走**（放进 ListScreen 的 listHeader），
+ // ⛔ 不再固定在顶部吃掉半屏；价格筛选整块删除；分区标题文字也不要了。
+ // 第五轮：列表改成**双列瀑布流**，所以头部左右内边距与网格首列对齐（space_4）。
+ const header=<View testID="market-filters" style={{paddingTop:theme.space('space_2'),paddingBottom:theme.space('space_3'),gap:theme.space('space_2')}}>
+  <View style={{paddingHorizontal:theme.space('space_4')}}>
+   <SearchField testID="market-search-field" appearance="full" value={q} onChangeText={setQ} onSubmit={applyQuery} placeholder={t('screen.market.query')}/>
+  </View>
+  {/* 分类 / 状态：下划线式筛选（⛔ 不用圆角按钮冒充 Tab，也不再加分区标题） */}
+  <UnderlineFilter testID="market-category" options={categories} selectedKey={filters.category??'all'} onSelect={key=>select({...filters,category:key==='all'?undefined:key})}/>
+  <UnderlineFilter testID="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
+  {hasAppliedFilters?<View style={{paddingHorizontal:theme.space('space_4')}}><Button testID="market-filter-clear" label={t('action.clear')} variant="link" size="small" onPress={clearFilters}/></View>:null}
+ </View>;
  return <FeatureScreen embedded={embedded} titleKey="screen.market.title" showMailbox={false} testID="market-screen">
-  <SearchField testID="market-search-field" appearance="full" value={q} onChangeText={setQ} onSubmit={apply} placeholder={t('screen.market.query')}/>
-  <View testID="market-filters">
-   <Text role="label">{t('screen.market.category')}</Text>
-   <FilterChips testID="filter-chip" options={categories} selected={[filters.category??'all']} onToggle={key=>select({...filters,category:key==='all'?undefined:key})}/>
-   <Text role="label">{t('screen.market.status')}</Text>
-   <FilterChips testID="market-status" itemTestIDPrefix="market-status" options={['all','on_sale','sold'].map(key=>({key,labelKey:statusKeys[key as keyof typeof statusKeys]}))} selected={[filters.status??'all']} onToggle={status=>select({...filters,status:status==='all'?undefined:status})}/>
-   {hasAppliedFilters?<Button testID="market-filter-clear" label={t('action.clear')} variant="link" size="small" onPress={clearFilters}/>:null}
-  </View>
-  <View testID="market-price-filter">
-   <Text role="label">{t('screen.market.price')}</Text>
-   <Text testID="market-price-summary" role="caption" colorToken="text-secondary">{priceSummary}</Text>
-   <View style={{flexDirection:'row',gap:8}}>
-    <Input testID="market-min-input" value={min} onChangeText={setMin} label={t('screen.market.min')} kind="number" style={{flex:1}}/>
-    <Input testID="market-max-input" value={max} onChangeText={setMax} label={t('screen.market.max')} kind="number" style={{flex:1}}/>
-   </View>
-  </View>
-  {invalid?<Text role="body">{t('screen.market.priceInvalid')}</Text>:null}
-  <Button testID="market-apply" label={t('screen.market.apply')} onPress={apply}/>
-  <MarketFeed key={JSON.stringify(filters)} filters={filters}/>
+  <MarketFeed key={JSON.stringify(filters)} filters={filters} header={header}/>
  </FeatureScreen>;
 }
-function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
+function MarketFeed({filters,header}:{filters:Filters;header:React.ReactNode}):React.ReactElement {
  const {t}=useI18n();const theme=useTheme();const router=useRouter();const client=getQueryClient();
  const key=React.useMemo(()=>['bing-market','list',filters] as const,[filters]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
@@ -100,13 +89,24 @@ function MarketFeed({filters}:{filters:Filters}):React.ReactElement {
   return unsubscribe;
  },[client,key,load]);
  const refresh=()=>void load('refresh'),append=()=>void load('append');
- return <>
+ const [offset,setOffset]=React.useState(0);
+ const [scrollTopSignal,setScrollTopSignal]=React.useState(0);
+ const onScroll=(value:number)=>{saveScroll(value);setOffset(value);};
+ // 2026-10-18 第五轮：**双列瀑布流**（所有者：一页商品不能太少，卡片不能太大）。
+ // 卡片信息只留「图 / 标题 / 分类（左下）/ 价格（右下）」；卖家与描述只在详情页出现。
+ const categoryLabel=(category?:string)=>category?t(categories.find(option=>option.key===category)?.labelKey??'screen.market.all'):undefined;
+ return <View style={{flex:1,minHeight:0}}>
   {rows.length>0&&pagination.errorScope==='refresh'?<Button testID="market-refresh-retry" label={t('screen.market.refreshFailed')} onPress={refresh}/>:null}
-  <ListScreen key={revision} testID="market-list" data={rows} keyExtractor={r=>String(r.id)} pagination={pagination} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={saveScroll}
+  <ListScreen key={revision} testID="market-list" data={rows} keyExtractor={r=>String(r.id)} numColumns={2} pagination={pagination} listHeader={header} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={onScroll} scrollToTopSignal={scrollTopSignal}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.market.end'),empty:{kind:'noResult',title:t('screen.market.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={r=><View style={{marginBottom:theme.space('space_3')}}><EntityCard domain="listing" testID={`market-row-${r.id}`} title={r.title} subtitle={r.description} mediaUri={r.cover} authorLabel={r.sellerName} badges={r.category?<Badge text={t(categories.find(option=>option.key===r.category)?.labelKey??'screen.market.all')} tone="neutral"/>:undefined} metrics={[`RM ${r.price.toFixed(2)}`, t(r.status==='sold'?'screen.market.sold':'screen.market.on_sale')]} onPress={()=>router.push(`/market/${r.id}` as never)}/></View>}/>
- </>;
+   renderItem={(r,index)=><View testID={`market-cell-${r.id}`} style={{marginBottom:theme.space('space_3'),paddingLeft:index%2===0?theme.space('space_4'):theme.space('space_2'),paddingRight:index%2===0?theme.space('space_2'):theme.space('space_4')}}>
+    <GridCard testID={`market-row-${r.id}`} title={r.title} mediaUri={r.cover} meta={categoryLabel(r.category)} highlight={`RM ${r.price.toFixed(2)}`}
+     badge={r.status==='sold'?<Badge text={t('screen.market.sold')} tone="neutral"/>:undefined}
+     onPress={()=>router.push(`/market/${r.id}` as never)}/>
+   </View>}/>
+  <FloatingBackToTop visible={offset>480} onPress={()=>setScrollTopSignal(value=>value+1)} label={t('action.backToTop')} testID="market-back-to-top"/>
+ </View>;
 }
 type Detail=ReturnType<typeof readMarketDetail>;
 function safeCount(value:unknown):number|null{return typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:null;}

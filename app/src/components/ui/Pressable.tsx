@@ -59,6 +59,24 @@ export type PressableProps = {
   importantForAccessibility?: 'auto' | 'yes' | 'no' | 'no-hide-descendants';
   /** iOS 的子树隐藏（与 `importantForAccessibility` 配对） */
   accessibilityElementsHidden?: boolean;
+  /**
+   * 读屏可执行的自定义动作（如"上一张 / 下一张"）。
+   * ⚠️ 用途：**视觉上没有按钮、但操作仍然存在**的交互（拖拽切图、滑动行）。
+   *   ⛔ 不得用它替代可见控件来掩盖"控件缺失"—— 只在手势是唯一视觉入口时补无障碍通道。
+   */
+  accessibilityActions?: React.ComponentProps<typeof RNPressable>['accessibilityActions'];
+  onAccessibilityAction?: React.ComponentProps<typeof RNPressable>['onAccessibilityAction'];
+  /**
+   * 子元素对齐方式（**决定这个可点区域是"图标按钮"还是"内容块"**）。
+   *
+   * - `center`（默认）：图标按钮 —— 命中区垫到 44/48，子元素居中；
+   * - `stretch`：内容块 —— 子元素撑满父宽、从左边开始排（标题 / 正文 / 媒体）。
+   *
+   * ⚠️ 为什么必须有这个 prop（2026-10-18 模拟器实测）：内容块套在默认的居中容器里时，
+   *   `Text` 会被**压成内容宽度并居中**，`aspectRatio` 的媒体框会被压成 **0 宽**（图片直接看不见）。
+   *   两者都是"拿图标按钮当内容容器用"的后果，靠调用方逐个写 `alignItems` 修不干净。
+   */
+  contentAlign?: 'center' | 'stretch';
   /** 额外扩大命中区（在 `touchTarget` 下限之外的补充） */
   hitSlop?: number;
   style?: StyleProp<ViewStyle>;
@@ -79,6 +97,9 @@ export function Pressable({
   accessibilityLiveRegion,
   importantForAccessibility,
   accessibilityElementsHidden,
+  accessibilityActions,
+  onAccessibilityAction,
+  contentAlign = 'center',
   hitSlop,
   style,
   children,
@@ -94,8 +115,9 @@ export function Pressable({
       // 命中区下限（⛔ 不可用"放大图标"来满足这条）
       minWidth: theme.touchTarget,
       minHeight: theme.touchTarget,
-      alignItems: 'center',
-      justifyContent: 'center',
+      // 内容块要撑满并从左边排；图标按钮才居中（见 contentAlign 的说明）
+      alignItems: contentAlign === 'stretch' ? 'stretch' : 'center',
+      justifyContent: contentAlign === 'stretch' ? 'flex-start' : 'center',
       opacity: disabled ? 0.5 : 1,
     },
     style,
@@ -123,6 +145,8 @@ export function Pressable({
       accessibilityLiveRegion={accessibilityLiveRegion}
       importantForAccessibility={importantForAccessibility}
       accessibilityElementsHidden={accessibilityElementsHidden}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
       hitSlop={hitSlop ?? theme.space('space_2')}
       style={({ pressed }) => [
         box,

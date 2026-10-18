@@ -11,14 +11,17 @@
  */
 
 import * as React from 'react';
-import { View } from 'react-native';
+import { PixelRatio, View } from 'react-native';
 
 import { Divider } from '@/components/ui/Divider';
+import { Pressable } from '@/components/ui/Pressable';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
+import { useI18n } from '@/i18n';
 import { TreeholeMedia } from './TreeholeMedia';
 import { TreeholeActionBar, TreeholeAuthorLine, TreeholeTagList } from './TreeholePostParts';
 import type { TreeholePostViewModel } from './treeholePostViewModel';
+import { treeholeCanExpand, treeholePreviewLines } from './treeholePreview';
 
 export type TreeholePostDetailProps = {
   post: TreeholePostViewModel;
@@ -51,6 +54,13 @@ export function TreeholePostDetail({
   testID = 'treehole-post-detail',
 }: TreeholePostDetailProps): React.ReactElement {
   const theme = useTheme();
+  const { t } = useI18n();
+  const fontScale = PixelRatio.getFontScale();
+  // 长正文折叠：与列表/搜索共用同一把尺子（`treeholePreview`），换帖时回到收起态
+  const [expanded, setExpanded] = React.useState(false);
+  React.useEffect(() => setExpanded(false), [post.id]);
+  const canExpand = treeholeCanExpand(post.content, fontScale);
+  const bodyLines = treeholePreviewLines(post.content, fontScale, expanded);
   const hasMedia = !anonymous && post.mediaUrls.length > 0;
   return (
     <View
@@ -65,10 +75,11 @@ export function TreeholePostDetail({
         name={post.authorName}
         avatarUrl={post.avatarUrl}
         level={post.authorLevel}
-        timeLabel={timeLabel}
         anonymous={anonymous}
       />
 
+      {/* 详情标题是**页面级标题**（24sp），比列表标题大一档、比昵称(14sp)大两档：
+          所有者 2026-10-18 第五轮「标题字体小一点」后，标题不再用 32sp 把整屏压成两行字。 */}
       {!anonymous && post.title.trim().length > 0 ? (
         <Text role="headline" emphasis="strong" colorToken="text-primary">
           {post.title}
@@ -76,9 +87,31 @@ export function TreeholePostDetail({
       ) : null}
 
       {wallContent ?? (
-        <Text role="body" colorToken="text-primary" testID="treehole-post-content">
-          {post.content}
-        </Text>
+        <>
+          <Text
+            role="body"
+            colorToken="text-primary"
+            testID="treehole-post-content"
+            numberOfLines={bodyLines}
+          >
+            {post.content}
+          </Text>
+          {canExpand ? (
+            <Pressable
+              testID="treehole-detail-read-more"
+              onPress={() => setExpanded((value) => !value)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                expanded ? t('screen.campus.read.collapse') : t('screen.campus.read.more')
+              }
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <Text role="caption" colorToken="text-brand">
+                {expanded ? t('screen.campus.read.collapse') : t('screen.campus.read.more')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </>
       )}
 
       {anonymous ? null : <TreeholeTagList tags={post.tags} />}
@@ -96,6 +129,7 @@ export function TreeholePostDetail({
           onLike={onLike}
           onComment={onComment}
           likeNotice={likeNotice}
+          timeLabel={timeLabel}
         />
       </View>
     </View>

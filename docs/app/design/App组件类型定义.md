@@ -23,9 +23,9 @@ L2 原子      12 个 ← Surface / Text / Stack / Spacer / Divider / Icon / Ava
 L3 控件      18 个 ← Button / IconButton / Fab / Input / TextArea / SearchField / Select / MultiSelect / Checkbox /
                      Switch / SegmentedControl / DatePicker / TimePicker / MonthPicker / Stepper / OtpInput /
                      MediaPicker / TagPicker
-L4 组合      20 个 ← Form / FormSection / FormField / ErrorSummary / ListScreen / ListItem / SectionHeader / Card /
+L4 组合      21 个 ← Form / FormSection / FormField / ErrorSummary / ListScreen / ListItem / SectionHeader / Card /
                      StatTile / MetricRow / QuickActionGrid / RankingRow / AuthorRow / AnonAuthorLabel / LevelBadge /
-                     ExpBar / EntityCard / MediaGrid / FilterChips / SegmentedTabs
+                     ExpBar / EntityCard / MediaGrid / FilterChips / SegmentedTabs / GridCard
 L5 状态四态   6 个 ← EmptyState / ErrorState / LoadingState / OfflineBanner / ListFooter / PullToRefresh
 L6 覆盖层    11 个 ← Toast / InlineNotice / AlertDialog / ActionSheet / BottomSheet / PickerSheet /
                      InputSheet（文本底框）/ FullScreenModal / FullScreenNotice（全屏通知）/ PermissionPrompt / ReportSheet
@@ -72,7 +72,7 @@ L7 域专用    15 个 ← CommentThread / CommentItem / CommentComposer / Reply
 | 原子（约 12）：`Surface` `Text` `Stack` `Pressable` `Icon` `Badge` `Divider` `Avatar` `Skeleton` `Input` `Sheet` `Toast` | `A01`–`A12` | **层归属被修正**：`Input` → `C04`、`Sheet` → `O06`、`Toast` → `O01`、`Pressable` → `A12`。**原清单把三种不同层的东西装进了一个桶** |
 | 组合（约 20）：`Button` `ListItem` `Card` `SectionHeader` `EmptyState` `ErrorState` `FormField` `SearchField` `TabSegment` `Chip` `ActionSheet` `Dialog` `Banner` `ConfirmDialog` `ProgressBar` `PaginationFooter` `Refreshable` `TermsGate` `CommentItem` `MailboxRow` | `C01` `K06` `K08` `K07` `T01` `T02` `K03` `C06` `C14` `A09` `O05` `O03` `O02` `C09`+`O05` `A11` `T05` `T06` **`O12`** `D02` **`K06` 的域变体** | **同样被拆层**：`Button` 是控件；`TermsGate` 是 `O12` 的**触发场景**（§3.4.3）；**`ConfirmDialog` 已并入 `O03` 的 `danger` 变体**；`MailboxRow` 是 `K06` 的域变体；`PaginationFooter`／`Refreshable` 归四态层 |
 | 原型层：8 核心 + 9 扩展 = **17** | §2.7 的 **15** | P17 已废除（宪法 9.4）、P8 随管理后台出局、P12 地图本轮不做 → 14 使用 + 1 建议新增 |
-> **"不得预留"在本文件里是一条可核对的门**：82 个组件**每一个都有确定的消费者**——要么被页面直接消费（`引用` 列），要么被本文件内其它组件消费（如 `A01 Surface` 被全部组件消费、`C01 Button` 被 `K01 Form` 消费）。
+> **"不得预留"在本文件里是一条可核对的门**：83 个组件**每一个都有确定的消费者**——要么被页面直接消费（`引用` 列），要么被本文件内其它组件消费（如 `A01 Surface` 被全部组件消费、`C01 Button` 被 `K01 Form` 消费）。
 ### 0.6 宪法 9.14 套壳审计（**21 条移除/降级逐条登记 —— v2.0 的审计证据**）
 **判据（一句话，宪法 9.14）**：*删掉这个组件、把它的内容上提一层，是否丢失任何行为？* 不丢失就是壳，**必须删**。
 | # | 条目（v1.0） | 判定 | 处置去向 |
@@ -175,7 +175,7 @@ L7 域专用    15 个 ← CommentThread / CommentItem / CommentComposer / Reply
 | **A09** | `Chip` | 可点/可删的小标签 | `static` `selectable` `removable` `filter` | 自研 | **6** | `C-01` `C-04` `S-14` `S-22` `T-09` `P-05` |
 | **A10** | `Skeleton` | 骨架占位（**加载先给东西看**） | `text` `card` `list` `media` `grid` | 自研 | **全部列表/详情** | `S-01` `S-02` `C-01` `C-02` `T-02` `T-06` `M-01` `M-04` `F-01` 等 |
 | **A11** | `Progress` | 确定性进度 | `bar` `ring` `segmented` | 自研 | **4** | `M-01` `M-17` `S-12` `T-03` |
-| **A12** | `Pressable` | 唯一可点原语；**统一命中区补足与按压反馈** | `opacity` `scale` `none` | 自研（包 RN `Pressable` + `gesture-handler`） | **全部（组件）** | 全部可点组件 |
+| **A12** | `Pressable` | 唯一可点原语；**统一命中区补足与按压反馈**。两种职责：**图标命中区**（默认，`contentAlign="center"`，子元素居中）与**内容块**（`contentAlign="stretch"`，撑满父宽、子元素左排）—— 2026-10-18 实测：把标题/正文/媒体塞进默认居中容器会让文字居中、`aspectRatio` 媒体框塌成 0 宽（图片不可见）。**手势是唯一视觉入口时**透传 `accessibilityActions` / `onAccessibilityAction` 补读屏通道（2026-10-18：树洞详情删掉箭头后的切图） | `opacity` `scale` `none` | 自研（包 RN `Pressable` + `gesture-handler`） | **全部（组件）** | 全部可点组件 |
 #### 2.1.1 `A06 Icon` —— **宪法 §16 两层图标体系的唯一实现处**（v2.0 重写）
 | 层 | 归属 | 由谁实现 | 落点 |
 |---|---|---|---|
@@ -243,7 +243,13 @@ L7 域专用    15 个 ← CommentThread / CommentItem / CommentComposer / Reply
 | **K18** | `MediaGrid` | 图片网格（1/2/3/4/9 宫格） | `grid` `hero`（头图） | **11** | `C-02` `S-04` `S-06` `S-10` `S-20` `S-21` `S-23` `S-32` `M-03` `P-02` `F-01` |
 | **K20** | `FilterChips` | 可横滑筛选 chips（标签/分类/年份） | `single` `multi` `withCount` | **6** | `S-22` `S-26` `T-09` `C-03` `C-04` `C-06` |
 | **K22** | `SegmentedTabs` | 页内**数据切换**（`tab` 角色 + 指示器）—— **⛔ 本轮不建**（与 `C14` 的分工见本节末的 P2B-05 裁决） | `text` `textWithCount` | **0（本轮）** | P2B-05 裁决 |
+| **K23** | `GridCard` | **网格卡片**（半屏宽）：图在上、标题最多 2 行（固定两行高）、底部一行「左元信息 / **右主信息（价格）**」 | `meta` `highlight`（可选角标 `badge`；画幅 `mediaAspect`，默认 4:3） | **1** | `S-22`（二手双列瀑布；2026-10-18 所有者裁决） |
 **已移除**：`K19 ImageCarousel`（轮播由 `D24 BannerSlot` 承担；帖内多图由 `K18` + `D21` 承担 → **0 消费者**）、`K21 Tabs`（**>5 项 underline tab 本轮无消费者**，所有剩余 tab 集合 ≤3，改用页内段控 —— 本轮即 `C14 SegmentedControl`，见下方裁决）。
+
+> ### ⚠️ `K23 GridCard` 与 `K17 EntityCard` 的分工（**2026-10-18 裁决**）
+> **问题**：二手列表要"一页 6–8 个商品"，`EntityCard` 的整行卡（16:9 大图 + 描述 + 作者 + 指标）在 411dp 宽下约 300dp/张 —— 一屏 1–2 张。把 `EntityCard` 压小/加"紧凑模式"会让其他 12 个域变体跟着变形（宪法 9.14 一改全改的反面）。
+> **裁决**：**版式不同 → 两个组件，不是套壳**。`EntityCard` 仍是"整行卡"（图在上、多行文字纵向排开）；`GridCard` 是"半屏卡"（固定两行标题 + 底部一行左右分置）。两者都是卡片语义，⛔ 不互相包裹；`GridCard` 只由二手瀑布消费，等第二个网格场景（食堂菜品、指南）出现再扩变体。
+> **配套用例**：`app/src/__tests__/p2x-bing-market-errand-market-ui.test.tsx`（列表 `numColumns=2`、卖家/描述不进列表、价格在卡内）。
 
 > ### ⚠️ `K22 SegmentedTabs` 与 `C14 SegmentedControl` 的分工（**P2B-05 裁决**，2026-10-06）
 > **问题**：`C14` 已经具备 `withCount`（`app/src/components/ui/SegmentedControl.tsx:29-36`），与 `K22` 声明的 `text`/`textWithCount` 形态**重叠** —— 再建一个 `K22` 就是 **9.14-① 同语义多层**（本表第 1–15 行删掉的那些组件，一半是这么来的）。
@@ -369,7 +375,7 @@ L7 域专用    15 个 ← CommentThread / CommentItem / CommentComposer / Reply
 ---
 
 ## 3. 逐类定义（重点类型）
-> 全量 82 个组件的七项声明在实现时按 §1.1 模板逐个补齐。本节只对**契约复杂、最容易做错**的类型给出完整定义。
+> 全量 83 个组件的七项声明在实现时按 §1.1 模板逐个补齐。本节只对**契约复杂、最容易做错**的类型给出完整定义。
 ### 3.1 选择器类型学（**"下拉列表"不是一个组件**）
 | 场景特征 | 正确组件 | 呈现形态 | 反例（禁止） |
 |---|---|---|---|
@@ -848,9 +854,9 @@ Android 有一个**系统级**的 "full-screen intent"（可在锁屏上全屏�
 | 批 | 内容 | 组件数 | 出口门 |
 |---|---|---|---|
 | **第 0 批**（脚手架期） | L1 令牌与主题；`A01–A12`（**12**）；`C01 C04 C05 C12`（**4**）；`K01–K08`（**8**）；`T01–T04`（**4**）；`O01–O03` + `O11`（**4**）；导航壳（原生容器） | **32** | **首个纵向切片在真机跑通，且真正消费令牌与组件库**（`design-debt-report.js`：自有 UI 组件引用 ≥1） |
-| **第 1 批**（内容模块） | 其余**全部核心组件**：`C` 剩余 14 + `K` 剩余 12（含 `K17` 与 13 个域变体）+ `T05 T06` + `O` 剩余 7（含 `O05`–`O08` `O12` `O13` `O14`）；原型骨架 `P1 P2 P3 P4 P7`（**5 个**） | **35** | 广场 + 校园里 + 详情 + 发布 + 仪表盘 五个原型可用 |
+| **第 1 批**（内容模块） | 其余**全部核心组件**：`C` 剩余 14 + `K` 剩余 13（含 `K17` 与 13 个域变体、`K23 GridCard`）+ `T05 T06` + `O` 剩余 7（含 `O05`–`O08` `O12` `O13` `O14`）；原型骨架 `P1 P2 P3 P4 P7`（**5 个**） | **36** | 广场 + 校园里 + 详情 + 发布 + 仪表盘 五个原型可用 |
 | **第 2 批**（域专用，随模块交付） | `D01`–`D06` `D09`–`D11` `D16` `D18` `D21` `D24` `D25` `D27`（**15**）；原型骨架 `P5` `P6` `P9`–`P16` `P18`（**10 个**） | **15** | 每个模块过宪法第 13 条逐屏验收 |
-> **合计核对**：32 + 35 + 15 = **82 个组件**；原型 5 + 10 = **15 个骨架**。**第 0 批刻意压到 32 个**：宪法 9.5 的门是"**第一个纵向切片必须真正消费组件库**"。一次性铺开 82 个，第一个切片只能验证其中几个——**旧 App 的"组件库写了 7 个、引用 0 次"正是这样发生的**。
+> **合计核对**：32 + 36 + 15 = **83 个组件**；原型 5 + 10 = **15 个骨架**。**第 0 批刻意压到 32 个**：宪法 9.5 的门是"**第一个纵向切片必须真正消费组件库**"。一次性铺开 83 个，第一个切片只能验证其中几个——**旧 App 的"组件库写了 7 个、引用 0 次"正是这样发生的**。
 ### 8.2 验证方式（**全部可执行**）
 | 门 | 方式 | 门槛 |
 |---|---|---|
