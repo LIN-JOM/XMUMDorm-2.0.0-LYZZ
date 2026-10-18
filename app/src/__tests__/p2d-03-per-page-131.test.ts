@@ -21,7 +21,6 @@ const DOC = path.resolve(__dirname, '..', '..', '..', 'docs', 'app', 'test', '�
 const JIA_ROUTE_FILES: readonly string[] = [
   '(tabs)/me.tsx',
   'me/edit.tsx',
-  'me/posts.tsx',
   'me/conversations.tsx',
   'me/chat/[threadId].tsx',
   'me/settings.tsx',
@@ -40,9 +39,10 @@ const JIA_ROUTE_FILES: readonly string[] = [
 describe('P2D-03 甲域逐屏 13.1 验收记录', () => {
   const doc = fs.readFileSync(DOC, 'utf8');
 
-  it('台账正好 15 行记录（`15 页` 的口径要对得上）', () => {
+  it('台账正好 14 行记录（`14 页` 的口径要对得上）', () => {
+    // 15 → 14：所有者 2026-10-18 裁决（R-M5）删掉 `/me/posts`，内容并入 `(tabs)/me.tsx` 的四个 Tab。
     const rows = doc.split('\n').filter((line) => /^\|\s*\d+\s*\|/.test(line));
-    expect(rows).toHaveLength(15);
+    expect(rows).toHaveLength(14);
   });
 
   it('台账里点名的每个路由文件都在磁盘上（⛔ 不许记录一个不存在的页）', () => {
