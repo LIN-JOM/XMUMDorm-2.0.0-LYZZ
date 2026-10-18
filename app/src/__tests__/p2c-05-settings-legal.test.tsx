@@ -70,9 +70,11 @@ describe('P2C-05 设置与法务三页', () => {
 
   it('TC-P2C-05-4A · 未上线的入口不显示；能进去的才显示', async () => {
     const view = await renderApp(<SettingsScreen />);
-    // 记账本：`about` 已落地 → 出现在设置里；`posts` 不在这里（它直接在「我的」上）
+    // 记账本：`about` 已落地 → 出现在设置里；`posts` 不在这里（它是主页的内容 Tab）
     expect(view.getByTestId('settings-entry-about')).toBeTruthy();
     expect(view.queryByTestId('settings-entry-posts')).toBeNull();
+    // ⛔ 「设置」这一行指向页面自身 —— 齿轮已是唯一入口，冗余行不许回来
+    expect(view.queryByTestId('settings-entry-settings')).toBeNull();
     // 未上线的三页（通知与推送/屏蔽用户/账号注销）⛔ 不显示禁用占位
     expect(view.queryByText('通知与推送')).toBeNull();
     expect(view.queryByText('屏蔽用户')).toBeNull();
