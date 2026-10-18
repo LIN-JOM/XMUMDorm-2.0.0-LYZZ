@@ -279,6 +279,16 @@ export const zh = {
   'square.module.guides': '校园攻略',
   'square.module.market': '二手',
   'square.module.clubs': '社团',
+  // ── 广场「今日」tab（2026-10-18）────────────────────────────────────
+  'square.today.courses': '今日课表',
+  'square.today.noCourses': '今天没有课',
+  'square.today.deadlines': 'Moodle 待交',
+  'square.today.noDeadlines': '暂时没有待交作业',
+  'square.today.moodleUnsynced': 'Moodle 待交尚未同步',
+  'square.today.moodleSync': '打开 Moodle 同步',
+  'square.today.deadlineToday': '今天 {clock} 截止',
+  'square.today.deadlineTomorrow': '明天 {clock} 截止',
+  'square.today.deadlineLater': '{date} {clock} 截止',
   // ── 我的 / 仪表盘（M-01；P2C-03 起）────────────────────────────────
   'me.level.1': '新生',
   'me.level.2': '探索者',
