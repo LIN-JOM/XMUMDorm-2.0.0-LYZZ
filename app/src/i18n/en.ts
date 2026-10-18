@@ -173,6 +173,14 @@ export const en: Record<MessageKey, string> = {
   'timetable.semesterNote': 'Weeks follow the campus time zone',
   'timetable.courseInfo': '{name} · {when} · {venue}',
   'timetable.noVenue': 'Venue TBD',
+  'timetable.sheet.code': 'Course code',
+  'timetable.sheet.venue': 'Venue',
+  'timetable.sheet.time': 'Time',
+  'timetable.sheet.weekday': 'Weekday',
+  'timetable.sheet.lecturer': 'Lecturer',
+  'timetable.sheet.credit': 'Credits',
+  'timetable.sheet.unknown': 'Not listed',
+  'timetable.sheet.occurrences': 'This week',
 
   // Weekdays (backend `day_of_week`: 1=Mon … 7=Sun)
   'weekday.1': 'Mon',

@@ -12,14 +12,14 @@ import { InlineNotice } from '@/components/ui/InlineNotice';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { Pressable } from '@/components/ui/Pressable';
-import { Screen } from '@/components/ui/Screen';
+import { Screen, useScreenInsets } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { IconButton } from '@/components/ui/IconButton';
-import { useToast } from '@/components/ui/Toast';
 import { useTheme } from '@/design-system/theme';
 import { useSession } from '@/features/auth/session';
 import { useMailboxBadge } from '@/features/mailbox/useUnread';
 import { useI18n } from '@/i18n';
+import { CourseInfoSheet } from './CourseInfoSheet';
 import { timetableIdentity } from './cacheIdentity';
 import { shouldHighlightToday, todayWeekday, useTimetableWeek, weekHasMeetings, type TimetableMeeting, type TimetableWeek } from './timetable';
 import { toToolsError } from './requestError';
@@ -78,8 +78,12 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
   const router = useRouter();
   const badge = useMailboxBadge();
   const session = useSession();
-  const toast = useToast();
   const [week, setWeek] = React.useState(() => clampWeek(currentTeachingWeek() ?? 1));
+  const [selected, setSelected] = React.useState<TimetableMeeting | null>(null);
+  const selectWeek = React.useCallback((next: number) => {
+    setSelected(null); // 换周后旧课程详情不再成立
+    setWeek(next);
+  }, []);
   const timetable = useTimetableWeek(week, async (target) => {
     const owner = timetableIdentity().epoch;
     try { return await getScheduleWeek(target); }
@@ -99,14 +103,27 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
   const hasData = shown !== null && weekHasMeetings(shown);
   const totalWeeks = shown?.totalWeeks ?? FALLBACK_TOTAL_WEEKS;
   const highlight = shouldHighlightToday(week, shown?.currentWeek ?? null) ? todayWeekday() : null;
+  // 选中课程在本周的全部时段（同一 courseCode，跨天/跨时段）
+  const occurrences = React.useMemo(() => {
+    if (selected === null || shown === null) return [];
+    const key = courseKey(selected);
+    const list: TimetableMeeting[] = [];
+    for (const day of Object.keys(shown.days)) {
+      for (const meeting of shown.days[Number(day)] ?? []) {
+        if (courseKey(meeting) === key) list.push(meeting);
+      }
+    }
+    return list;
+  }, [selected, shown]);
+  const closeSheet = React.useCallback(() => setSelected(null), []);
   return <Screen titleKey="tools.timetable" bottomMode="own" testID="screen-phase3-timetable" {...badge}>
     <View style={{ flex: 1, padding: theme.space('space_4'), gap: theme.space('space_3') }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space('space_2') }}>
         {legacyControls ? <IconButton testID="timetable-prev" Icon={ChevronLeft} accessibilityLabel={t('timetable.prevWeek')}
-          onPress={() => setWeek(clampWeek(week - 5, totalWeeks))} /> : null}
-        <View style={{ flex: 1 }}><WeekNumbers value={week} totalWeeks={totalWeeks} onChange={setWeek} legacyControls={legacyControls} /></View>
+          onPress={() => selectWeek(clampWeek(week - 5, totalWeeks))} /> : null}
+        <View style={{ flex: 1 }}><WeekNumbers value={week} totalWeeks={totalWeeks} onChange={selectWeek} legacyControls={legacyControls} /></View>
         {legacyControls ? <IconButton testID="timetable-next" Icon={ChevronRight} accessibilityLabel={t('timetable.nextWeek')}
-          onPress={() => setWeek(clampWeek(week + 5, totalWeeks))} /> : null}
+          onPress={() => selectWeek(clampWeek(week + 5, totalWeeks))} /> : null}
       </View>
       {timetable.source === 'cache' ? <OfflineBanner testID="timetable-stale" variant="stale" message={t('timetable.stale')} actionLabel={t('action.refresh')} onAction={timetable.reload} /> : null}
       {timetable.loading && !shown ? <LoadingState testID="timetable-loading" /> : timetable.error && !shown ?
@@ -114,13 +131,41 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
           <EmptyState testID="timetable-empty" kind="firstRun" title={t('timetable.empty')} actionLabel={t('import.title')} onAction={() => router.push('/tools/schedule-import')} /> :
           <View style={{ flex: 1 }}>{renderGrid({ week: shown, visibleWeekdays: VISIBLE_WEEKDAYS,
             getCourseAccent: resolveAccent, highlightWeekday: highlight, testID: 'timetable-grid',
-            onPressMeeting: (meeting) => toast.show({ message: t('timetable.courseInfo', {
-              name: meeting.courseName ?? meeting.courseCode, when: [meeting.startTime, meeting.endTime].filter(Boolean).join('-'), venue: meeting.venue ?? '',
-            }), tone: 'info' }),
+            onPressMeeting: setSelected,
           })}</View>}
       {hasData ? <InlineNotice tone="info" message={t('timetable.importHint')} actionLabel={t('import.title')} onAction={() => router.push('/tools/schedule-import')} /> : null}
       <Button label={t('action.refresh')} variant="ghost" onPress={timetable.reload} />
       <Text role="caption" colorToken="text-muted">{t('timetable.semesterNote')}</Text>
     </View>
+    {selected !== null ? (
+      <TimetableSheetHost
+        meeting={selected}
+        occurrences={occurrences}
+        accent={resolveAccent(selected)}
+        onClose={closeSheet}
+      />
+    ) : null}
   </Screen>;
+}
+
+/**
+ * 弹窗宿主：`O06 BottomSheet` 需要底部 inset，而 inset 只能由 `Screen` 上下文提供
+ * （宪法 17.1-S2/S7）。所以把这一小段放在 `Screen` 子树里，只做"取 inset → 传给容器"。
+ */
+function TimetableSheetHost(props: {
+  meeting: TimetableMeeting;
+  occurrences: readonly TimetableMeeting[];
+  accent: CourseAccent;
+  onClose: () => void;
+}): React.ReactElement {
+  const screen = useScreenInsets();
+  return (
+    <CourseInfoSheet
+      meeting={props.meeting}
+      occurrences={props.occurrences}
+      accent={props.accent}
+      onClose={props.onClose}
+      bottomInset={screen.insets.bottom}
+    />
+  );
 }

@@ -179,6 +179,14 @@ export const zh = {
   'timetable.semesterNote': '周次按学校所在地时区计算',
   'timetable.courseInfo': '{name} · {when} · {venue}',
   'timetable.noVenue': '地点待定',
+  'timetable.sheet.code': '课程码',
+  'timetable.sheet.venue': '上课地点',
+  'timetable.sheet.time': '上课时间',
+  'timetable.sheet.weekday': '星期',
+  'timetable.sheet.lecturer': '授课教师',
+  'timetable.sheet.credit': '学分',
+  'timetable.sheet.unknown': '未标注',
+  'timetable.sheet.occurrences': '本周安排',
 
   // ── 星期（后端的 `day_of_week`：1=周一 … 7=周日）────────────────────
   'weekday.1': '周一',
