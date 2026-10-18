@@ -272,6 +272,13 @@ export const zh = {
   'screen.tools': '工具',
   'screen.campus': '校园里',
   'screen.me': '我的',
+  // ── 广场品牌头与模块入口（2026-10-18 所有者裁决）──────────────────
+  'square.brand': 'XMUM Dorm',
+  'square.brand.emblem': '厦门大学校徽',
+  'square.module.schedule': '课表',
+  'square.module.guides': '校园攻略',
+  'square.module.market': '二手',
+  'square.module.clubs': '社团',
   // ── 我的 / 仪表盘（M-01；P2C-03 起）────────────────────────────────
   'me.level.1': '新生',
   'me.level.2': '探索者',

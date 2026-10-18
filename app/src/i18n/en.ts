@@ -265,6 +265,13 @@ export const en: Record<MessageKey, string> = {
   'screen.tools': 'Tools',
   'screen.campus': 'Campus',
   'screen.me': 'Me',
+  // Square brand header and module entries (owner ruling, 2026-10-18)
+  'square.brand': 'XMUM Dorm',
+  'square.brand.emblem': 'Xiamen University emblem',
+  'square.module.schedule': 'Schedule',
+  'square.module.guides': 'Campus guide',
+  'square.module.market': 'Marketplace',
+  'square.module.clubs': 'Clubs',
   // Me / dashboard (M-01; from P2C-03)
   'me.level.1': 'Freshman',
   'me.level.2': 'Explorer',

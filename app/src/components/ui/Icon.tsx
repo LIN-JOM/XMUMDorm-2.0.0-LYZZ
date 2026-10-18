@@ -52,7 +52,8 @@ export type IconTint =
   | 'danger'
   | 'success'
   | 'warning'
-  | 'onFill';
+  | 'onFill'
+  | 'onAccent';
 
 const TINT_TOKEN: Record<IconTint, DarkColorTokenName> = {
   primary: 'icon-primary',
@@ -63,6 +64,8 @@ const TINT_TOKEN: Record<IconTint, DarkColorTokenName> = {
   success: 'text-success',
   warning: 'text-warning',
   onFill: 'text-on-fill',
+  // 2026-10-18：「美团黄」填充块上的图标 —— 白字在黄底不达标，只能用 text-on-accent
+  onAccent: 'text-on-accent',
 };
 
 export type IconProps = {
