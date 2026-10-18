@@ -141,7 +141,7 @@ schedule 3 · reports 1                                  = 273
 
 | 格 | 内容（`【已定】`） | 定位 | 格图标（**第 2 层：平台原生**，宪法 16.1） | 二级 Tab |
 |---|---|---|---|---|
-| **广场** | 食堂 · 社团 · 二手 · 跑腿 · 新生指南 · 树洞 · 万能墙 | 发现与服务聚合 | Android/Web `grid_view`；iOS `square.grid.2x2`【提案】 | ✅ **有**（集合待定 → C-03） |
+| **广场** | **今日**（今日课表 + Moodle 待交）· 树洞 · 万能墙 · 食堂 · 跑腿 · **课表 / 校园攻略 / 二手 / 社团 = 品牌头下方 4 个模块入口**（独立页面） | 发现与服务聚合 | Android/Web `grid_view`；iOS `square.grid.2x2`【提案】 | ✅ **有**（2026-10-18 已定：今日 / 树洞 / 万能墙 / 食堂 / 跑腿） |
 | **工具** | 课程表 · 待办 · 放假日 · **校方系统快速打开** | **本 App 最主要功能入口** | Android/Web `construction`；iOS `wrench.and.screwdriver`【提案】 | ✅ **有**（集合待定 → C-04） |
 | **＋ 发布** | **全部发布动作**：万能墙 / 树洞 / 社团活动 / 二手 / 跑腿（+ 预告的 拼车 / 问答） | **动作，不是目的地**（宪法 4.9） | Android `add`；iOS `plus` | —（打开发布中心 **P-01**） |
 | **消息** | 通知 · 交易会话 · 系统公告 | 高频消息入口 | Android/Web `mail`；iOS `envelope`【提案】 | — |
@@ -234,7 +234,7 @@ schedule 3 · reports 1                                  = 273
 
 | # | 失效点 | 处置（开发期） |
 |---|---|---|
-| **D-1** | **S-01 广场首页的定位变了**：v2.0 是"仪表盘 + 五类服务入口宫格"；v3.0 下它是广场格的容器（顶部 Tab 承载子栏目），宫格**不再承担子栏目导航** | 2026-10-12 所有者确认同页切换：树洞 / 万能墙 / 食堂 / 集市 / 跑腿 / 攻略 / 社团，顶部 Tab 可横向滚动，内容可左右分页；首次进入模块才加载、已访问模块保留输入/筛选和列表位置。独立模块路由继续用于深链接与详情返回。**2026-10-18 已落地**：7 个模块的集合收口到 `features/navigation/secondaryTabs.ts` 的 `SQUARE_TABS`（页面不再自写一份），首页 Tab 条与模块内容都由它驱动 |
+| **D-1** | **S-01 广场首页的定位变了**：v2.0 是"仪表盘 + 五类服务入口宫格"；v3.0 下它是广场格的容器（顶部 Tab 承载子栏目），宫格**不再承担子栏目导航** | 2026-10-12 所有者确认同页切换：树洞 / 万能墙 / 食堂 / 集市 / 跑腿 / 攻略 / 社团，顶部 Tab 可横向滚动，内容可左右分页；首次进入模块才加载、已访问模块保留输入/筛选和列表位置。**2026-10-18 已落地并再次收敛**：① 新增「今日」Tab（今日全部课表 + Moodle 最近 3 条待交）且为**默认 Tab**（打开 App 固定落到它）；② 顶部改为**品牌头**（校徽 + `XMUM Dorm`），`广场` 面包屑取消；③ 品牌头下方 4 个常驻模块入口（课表 / 校园攻略 / 二手 / 社团）直达独立路由，因此攻略 / 二手 / 社团**移出 Tab 条**；④ 广场 Tab 集合 = **今日 / 树洞 / 万能墙 / 食堂 / 跑腿**，仍收口在 `features/navigation/secondaryTabs.ts` 的 `SQUARE_TABS`（页面不自写第二份）。施工与证据见[广场今日页批次](../task/广场今日页/00-批次总览与施工计划.md) |
 | **D-2** | **S-07 / S-15 / S-22 / S-24 / S-26 的"入口"列失效**（原写"S-01 服务入口"） | 改为"广场的二级 Tab" |
 | **D-3** | **T-01 工具首页同理**（原"仪表盘 + `QuickActionGrid`"）；T-02…T-10 的入口列原写"T-01" | 改为"工具的二级 Tab" |
 | **D-4** | **C-01 广场社区**仍是“一页两个互斥子视图”；从原校园一级格迁入广场，形态为**顶部 Tab 条**（宪法 4.8） | 确认组件名与规格（`SegmentedTabs` 是否改名/改规格，需与[组件类型定义](../design/App组件类型定义.md)同步）。**2026-10-18 已落地**（负责人四条裁决）：树洞只有**一份壳**（广场首页的 `confession` 模块），`/campus` 与 `/campus/search` 改为**重定向**；搜索**就地展开**（列表顶部搜索框，不跳页）；详情页改用**原生 Header**（标题 + 右上 `⋯` 收举报）；评论输入改为 **`Screen` 粘性底栏**。万能墙列表/详情保持匿名投影不变。详见[树洞页面UI布局评审-2026-10-17](../evaluation/树洞页面UI布局评审-2026-10-17.md) §10 |
@@ -296,11 +296,11 @@ schedule 3 · reports 1                                  = 273
 
 ### 3-S 广场 Tab（32 页）
 
-> **Tab 图标属第 2 层（平台原生）**。本 Tab 内的**服务入口图标属第 1 层（Lucide）**，按[图标方案调研](../research/App图标方案-Lucide与平台图标.md) §3.3 逐个指定：食堂 `utensils` · 社团 `users` · 二手 `shopping-bag` · 跑腿 `bike`（备选 `package`，须二选一）· 新生指南 `compass`（备选 `book-open`，须二选一）。`flag` 已被「举报」占用，故社团不用它。
+> **Tab 图标属第 2 层（平台原生）**。本 Tab 内的**服务入口图标属第 1 层（Lucide）**，按[图标方案调研](../research/App图标方案-Lucide与平台图标.md) §3.3 逐个指定。**2026-10-18 裁决后**的 4 个常驻入口图标：**课表 `calendar-days` · 校园攻略 `compass` · 二手 `shopping-bag` · 社团 `users`**（填充块用 `action-primary` / `action-accent` 两色交替）。`flag` 已被「举报」占用，故社团不用它。
 
 | ID | 页面（中 / 英） | 入口 | 原型 | 关键端点 | 关键组件 | 层 |
 |---|---|---|---|---|---|---|
-| **S-01** | 广场首页 / Square | **Tab 1** | P7 | `GET /api/square/home-summary`、`/banners`、`GET /api/advertisements/:id` | `BannerSlot` `StatTile` `QuickActionGrid`（五类服务）`SectionHeader` `EntityCard` `C02 IconButton` `A06 Icon(mail)` `A08 Badge` | P0 |
+| **S-01** | 广场首页 / Square | **Tab 1** | P7 | `GET /api/square/home-summary`、`/banners`、`GET /api/advertisements/:id`、`GET /api/schedule/week`（今日课表） | 品牌头（校徽 + `XMUM Dorm`）`SquareModuleEntries`（课表 / 校园攻略 / 二手 / 社团）`TodayPane`（今日课表 + Moodle 待交）`TopTabStrip` `SectionHeader` `ListItem` | P0 |
 | **S-02** | 热搜榜 / Trending | S-01 顶部内容条 | P9 | `GET /api/square/trending`（固定 LIMIT 20） | `RankingRow` `SegmentedTabs` | P0 |
 | **S-03** | 话题详情 / Topic | S-02、话题 chip | P2 | `GET /api/square/trending/:id`、`/trending/:id/posts`（`pageSize ≤ 20`） | `EntityCard` `ListFooter` | P0 |
 | **S-04** | 热搜帖详情 / Trending Post | S-03 | P3 | `GET /api/square/trending/posts/:id`、`POST .../comments`、`POST .../like` | `EntityCard` `AuthorRow` `MediaGrid` `CommentThread` `CommentComposer` `ReportSheet` | P0 |
