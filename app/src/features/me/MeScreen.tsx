@@ -38,6 +38,7 @@ import { useI18n } from '@/i18n';
 import { TAB_BAR_CLEARANCE } from '@/app/(tabs)/_layout';
 import { getMe } from '../../../../shared/api/users';
 import { levelNameKey, normalizeProfile, type MeProfile } from './profile';
+import { MeContentPane, type MeContentKey } from './ContentPanes';
 
 type Loadable<T> = { data: T; loading: boolean; failed: boolean };
 
@@ -172,7 +173,7 @@ export function MeScreen(): React.ReactElement {
               selectedKey={selectedKey}
               onSelect={selectTab}
             />
-            {/* ⏳ Phase 1 骨架：四页是占位文本，真实内容在 Phase 2 迁入 */}
+            {/* 四页常驻（pager 的行为），取数由 pane 自己的 `active` 门控制 */}
             <PagerView
               ref={pagerRef}
               style={{ flex: 1 }}
@@ -180,14 +181,11 @@ export function MeScreen(): React.ReactElement {
               onPageSelected={onPageSelected}
             >
               {tabs.map((tab) => (
-                <View
-                  key={tab.key}
-                  testID={`me-content-page-${tab.key}`}
-                  style={{ flex: 1, padding: theme.space('space_4') }}
-                >
-                  <Text role="body" colorToken="text-secondary">
-                    {tab.labelKey === undefined ? tab.label ?? '' : t(tab.labelKey)}
-                  </Text>
+                <View key={tab.key} testID={`me-content-page-${tab.key}`} style={{ flex: 1 }}>
+                  <MeContentPane
+                    kind={tab.key as MeContentKey}
+                    active={selectedKey === tab.key}
+                  />
                 </View>
               ))}
             </PagerView>
