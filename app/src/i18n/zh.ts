@@ -402,7 +402,8 @@ export const zh = {
   'mailbox.chat.empty.description': '先打个招呼',
   'mailbox.chat.read': '已读',
 
-  // ── 二级 Tab（宪法 4.8；校园里两项已定，广场/工具待 C-03/C-04）──
+  // ── 二级 Tab（宪法 4.8；广场五项已定于 2026-10-18，工具待 C-04）──
+  'secondary.today': '今日',
   'secondary.confession': '树洞',
   'secondary.wall': '万能墙',
 

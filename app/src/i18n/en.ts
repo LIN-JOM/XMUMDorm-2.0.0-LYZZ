@@ -396,6 +396,7 @@ export const en: Record<MessageKey, string> = {
   'mailbox.chat.read': 'Read',
 
   // ── Secondary tabs ───────────────────────────────────────────
+  'secondary.today': 'Today',
   'secondary.confession': 'Confessions',
   'secondary.wall': 'Wall',
 
