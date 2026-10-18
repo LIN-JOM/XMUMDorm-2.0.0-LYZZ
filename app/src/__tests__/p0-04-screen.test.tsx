@@ -13,7 +13,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { ThemeProvider } from '@/design-system/theme';
 import { I18nProvider } from '@/i18n';
-import { Screen } from '@/components/ui/Screen';
+import { Screen, resolveFooterBottomPadding } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 
 const ANDROID_TABBAR: Metrics = {
@@ -100,5 +100,29 @@ describe('P0-04 Screen 容器', () => {
     );
     expect(view.getByText('Square')).toBeTruthy();
     expect(view.getByTestId('topbar-mailbox').props.accessibilityLabel).toBe('Mailbox');
+  });
+
+  /**
+   * 粘性底栏（S6 与 insets 的合并计算）：
+   * 详情页的评论输入条**不再自己算键盘**，由 Screen 统一算「键盘高度 or insets.bottom」。
+   */
+  it('footer：底部留白归底栏，内容区不再叠加 keyboard/bottomPadding', async () => {
+    const view = await renderScreen(IOS_ISLAND, {
+      bottomMode: 'tabbar',
+      tabBarHeight: 56,
+      footer: <Text testID="footer-child">底栏</Text>,
+    });
+    expect(view.getByTestId('footer-child')).toBeTruthy();
+    // footer 接管底部：内容区不吃 tabbar 高度，也不吃 insets.bottom
+    expect(view.getByTestId('screen-content')).toHaveStyle({ paddingBottom: 0 });
+    expect(view.getByTestId('screen-footer')).toHaveStyle({ paddingBottom: 34 });
+  });
+
+  it('resolveFooterBottomPadding：键盘优先、键盘已覆盖手势条时不叠加 inset', () => {
+    expect(resolveFooterBottomPadding(0, 34)).toBe(34);
+    expect(resolveFooterBottomPadding(300, 34)).toBe(300);
+    expect(resolveFooterBottomPadding(-1, 34)).toBe(34);
+    expect(resolveFooterBottomPadding(0, -5)).toBe(0);
+    expect(resolveFooterBottomPadding(Number.NaN, 34)).toBe(34);
   });
 });

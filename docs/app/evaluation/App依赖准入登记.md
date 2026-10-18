@@ -1,6 +1,6 @@
 # App 依赖准入登记（Phase 0–2）
 
-**日期**：2026-10-11　**版本**：v1.3
+**日期**：2026-10-18　**版本**：v1.4
 **性质**：**evaluation 层**（判定记录）。承接 [生产开发计划 §Phase 0](../task/phase-0/P0-01-工程脚手架与依赖准入.md) 与 **P0-11**。
 **判据来源**：App 设计宪法 **3.4**（准入五项）· **9.13**（最后发布时间必须读**该版本自己的时间戳**，⛔ 不用 `time.modified`）· **11.4**（含原生代码的变更**必须重建**，不能 OTA）· **9.11**（⛔ 自带调色板/样式引擎不得作基座）· **16.2**（⛔ 不得引入第二套图标库）
 
@@ -128,6 +128,24 @@
 
 Lint：标准 Expo flat config。当前未启用 React Compiler，refs／set-state-in-effect／globals 的迁移诊断保留为 warning；测试探针的 immutability 同样为 warning。其他 hooks 正确性错误仍阻断。首次完整检查为0 error、217 warning，后续清偿登记 TD-70。
 
+## 5.1 补齐登记：树洞 HeroUI 构建链（2026-10-18，由准入门禁测出来）
+
+**触发**：`p1-02-data-layer` 的"每个 `package.json` 依赖都要在准入登记里有记录"在本轮**红了 7 项** —— 它们都是 2026-10-15 树洞 HeroUI 重构时引入、但**没有登记**的。补齐采集（版本/许可证取 `app/node_modules/<pkg>/package.json`；发布时间取 `npm view <pkg>@<version> time --json` 的该版本时间戳，符合 9.13）：
+
+| 包 | 版本 | 许可证 | 含原生代码 | OTA 影响 | 该版本发布时间 | 是否强加视觉身份 |
+|---|---|---|---|---|---|---|
+| `expo-blur` | 57.0.3 | MIT | **有**（android/ ios/） | 有 | 2026-09-11T11:31:16Z | 否（**当前 0 消费者**：设计债尺子实测 0 处引用；随 HeroUI 链移除） |
+| `heroui-native` | 1.0.10 | **Apache-2.0**（分发需保留 NOTICE） | 无（纯 JS，但依赖 `uniwind` 构建链） | 无（纯 JS → 可 OTA） | 2026-09-21T15:20:31Z | **是，且已停用**：曾作树洞唯一视觉层；**2026-10-18 负责人裁决撤出树洞**（评审 P0：两套视觉体系 / Card 零间距 / 40dp 触控）。现仅剩根 `Provider` 与构建链，**待整包移除**（TODO TD-74） |
+| `react-native-gesture-handler` | 2.32.0 | MIT | **有** | 有 | 2026-06-11T12:51:41Z | 否（根布局 `GestureHandlerRootView`；HeroUI 浮层曾使用） |
+| `tailwind-merge` | 3.6.0 | MIT | 无 | 无 | 2026-05-10T12:56:43Z | 否（HeroUI/uniwind 构建链的纯 JS 依赖） |
+| `tailwind-variants` | 3.2.2 | MIT | 无 | 无 | 2025-11-22T22:46:05Z | 否（同上） |
+| `tailwindcss` | 4.3.2 | MIT | 无 | 无 | 2026-06-29T14:30:01Z | 否（同上，构建期） |
+| `uniwind` | 1.12.0 | MIT | 无（构建期 + 运行期 JS） | 无 | 2026-09-04T10:15:27Z | ⚠️ **与宪法 9.11-2 冲突**（§2 已把样式引擎列为拒绝项）。它因 HeroUI 基座被引入，不是我们选的样式架构。树洞撤出 HeroUI 后**已无消费点** → 登记为**已知债务**，随 HeroUI 链一并移除 |
+
+**判定**：①许可证全部可接受；②但 `heroui-native` + `uniwind` 的**基座判定不及格**（宪法 9.11：UI kit 不作基座、样式引擎不作基座），这正是 2026-10-18 把树洞视觉层移回**自有令牌组件层**的依据之一；③`expo-blur` 已无消费者。**处置**：登记移除待办（TODO TD-74/TD-75），⛔ 不在本轮直接删包（删除会动 Metro/Babel/Jest/原生构建链，需单独一轮 + 重建验证）。
+
+---
+
 ## 6. 变更记录
 
 | 版本 | 日期 | 变更 |
@@ -136,3 +154,4 @@ Lint：标准 Expo flat config。当前未启用 React Compiler，refs／set-sta
 | v1.2 | 2026-10-07 | 按所有者授权登记 SDK57 选图、平台日期时间与 ESLint；保留真机构建验证和 lint warning 待办 |
 | v1.3 | 2026-10-11 | Phase 5 XLSX 导出登记 `expo-file-system@57.0.7` 与 `expo-sharing@57.0.22`。两者均含原生代码；后续变更必须新原生构建，并保留 Android/iOS 真机保存与分享验收。 |
 | **v1.1** | **2026-10-02** | **Phase 1 第二批 5 个直接依赖**（P1-02）：`@tanstack/react-query@5.96.2` · `@shopify/flash-list@2.0.2` · `@react-native-async-storage/async-storage@2.2.0` · `@react-native-community/netinfo@12.0.1` · `@ronradtke/react-native-markdown-display@9.0.3`，逐条登记五项判据（采集方式不变，`.scratch/collect-deps.js`）。新增排障记录 **#9**（react-query 两端版本漂移 → 钉到与 Web 一致）与 **#10**（原生依赖的官方 Jest mock + `setupFiles` 必须展开 preset）。修正 §4-3：`runtimeVersion` 经复检**当前无消费者**（`expo-updates` 未安装 → 无 OTA 层），不再写"阻塞首次构建" |
+| v1.4 | 2026-10-18 | 补齐树洞 HeroUI 重构时漏登的 **7 个依赖**（§5.1）：`expo-blur` · `heroui-native` · `react-native-gesture-handler` · `tailwind-merge` · `tailwind-variants` · `tailwindcss` · `uniwind`。其中 `heroui-native`/`uniwind` 的**基座判定不及格**（9.11），已随 2026-10-18 树洞视觉层回退而停用消费；`expo-blur` 0 引用。移除登记为 TD-74/TD-75 |

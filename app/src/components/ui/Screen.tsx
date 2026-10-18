@@ -5,6 +5,9 @@
  *   - `topMode`：`topbar`（要顶栏）/ `overlay`（覆盖层自处理）/ `none`
  *   - `bottomMode`：`tabbar`（底部留白归原生 Tab 栏）/ `own`（本屏自己的粘性底栏）/ `none`
  *   - `keyboard`：键盘弹出时是否避让（S6 合并计算）
+ *   - `footer`：**粘性底栏**（评论输入条等）。给了它以后底部留白全归本容器算：
+ *     内容区不再吃键盘 padding，底栏自己吃「键盘高度（弹出时）/ insets.bottom（收起时）」
+ *     —— S6 的"键盘与 insets 合并"仍然只有**这一处**实现，页面不重复算键盘。
  *
  * ⛔ 违反 S2 的表现：页面里自己写 `useSafeAreaInsets()` / 自己加 `paddingTop`
  *   —— 本文件的 `useSafeAreaInsets()` 是**除根布局外唯一**的调用点。
@@ -79,6 +82,12 @@ export type ScreenProps = {
   /** 内容是否可滚动（详情/列表骨架用）；默认 false，骨架由具体页面决定 */
   scroll?: boolean;
   /**
+   * 粘性底栏（评论输入条 / 常驻动作条）。
+   * ⚠️ 给了它以后 `bottomMode` 被忽略（底部留白归底栏）：内容区不再叠加键盘 padding，
+   *    底栏自己按「键盘高度（弹出时）/ insets.bottom（收起时）」留白（S6 合并计算）。
+   */
+  footer?: React.ReactNode;
+  /**
    * 覆盖层形态的自有顶栏（S7）：`topMode='overlay'` 时由本容器负责把 insets 注入给它，
    * 覆盖层只提供 UI，⛔ 不自己读 insets。典型用法：发布中心的关闭行。
    */
@@ -87,6 +96,13 @@ export type ScreenProps = {
   children?: React.ReactNode;
   testID?: string;
 };
+
+/** footer 的底部留白（S6）：键盘弹出 → 键盘高度（已覆盖手势条区域，⛔ 不再加 inset）；收起 → insets.bottom */
+export function resolveFooterBottomPadding(keyboardHeight: number, bottomInset: number): number {
+  const keyboard = Number.isFinite(keyboardHeight) && keyboardHeight > 0 ? keyboardHeight : 0;
+  if (keyboard > 0) return keyboard;
+  return Number.isFinite(bottomInset) && bottomInset > 0 ? bottomInset : 0;
+}
 
 export function Screen({
   titleKey,
@@ -98,6 +114,7 @@ export function Screen({
   topBarActions,
   tabBarHeight,
   scroll = false,
+  footer,
   headerOverlay,
   style,
   children,
@@ -107,15 +124,20 @@ export function Screen({
   const { width } = useWindowDimensions();
   const keyboardHeight = useKeyboardHeight();
   const theme = useTheme();
+  const hasFooter = footer !== undefined && footer !== null;
 
   const resolved = resolveInsets({
     insets,
     topMode,
-    bottomMode,
-    keyboardHeight,
+    // footer 自己承担底部留白 → 内容区不再按 bottomMode/键盘留白（避免双倍底部空白）
+    bottomMode: hasFooter ? 'none' : bottomMode,
+    keyboardHeight: hasFooter ? 0 : keyboardHeight,
     tabBarHeight,
     contentWidth: width,
   });
+  const footerBottomPadding = hasFooter
+    ? resolveFooterBottomPadding(keyboardHeight, resolved.insets.bottom)
+    : 0;
 
   const content = (
     <View
@@ -169,6 +191,20 @@ export function Screen({
         ) : (
           content
         )}
+        {hasFooter ? (
+          <View
+            testID="screen-footer"
+            style={{
+              // 底栏背景一路铺到底（含安全区/键盘让位区），避免"输入条下面露出画布色"
+              backgroundColor: theme.color['bg-surface'].value,
+              paddingLeft: resolved.contentPaddingLeft,
+              paddingRight: resolved.contentPaddingRight,
+              paddingBottom: footerBottomPadding,
+            }}
+          >
+            {footer}
+          </View>
+        ) : null}
       </View>
     </ScreenInsetsContext.Provider>
   );

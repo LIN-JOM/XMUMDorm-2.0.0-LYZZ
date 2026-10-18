@@ -292,6 +292,11 @@ export type ListScreenProps<T> = {
    *    所以新槽位换一个**不会与它混淆**的名字。
    */
   listHeader?: React.ReactNode;
+  /**
+   * 行间分隔（`A05 Divider` 这类组件）。列表产物**不替使用方决定是否有分隔线**
+   * （与 `K06 ListItem` 同口径：组件内部写死下边框会让"最后一行为什么有线"不可控）。
+   */
+  itemSeparator?: React.ComponentType<never> | null;
   /** 网格列数（`P2` 默认单列等宽行） */
   numColumns?: number;
   /** 从仓库恢复的滚动位置（`useListPagination().restoredScrollOffset`） */
@@ -317,6 +322,7 @@ export function ListScreen<T>({
   tabs,
   filterChips,
   listHeader,
+  itemSeparator,
   numColumns = 1,
   restoredScrollOffset = 0,
   onScrollOffset,
@@ -403,6 +409,7 @@ export function ListScreen<T>({
         renderItem={({ item, index }) => renderItem(item, index)}
         keyExtractor={keyExtractor}
         numColumns={numColumns}
+        ItemSeparatorComponent={(itemSeparator ?? undefined) as never}
         ListHeaderComponent={listHeader === undefined || listHeader === null ? null : <>{listHeader}</>}
         refreshControl={
           <PullToRefresh refreshing={pagination.refresh === 'loading'} onRefresh={onRefresh} />

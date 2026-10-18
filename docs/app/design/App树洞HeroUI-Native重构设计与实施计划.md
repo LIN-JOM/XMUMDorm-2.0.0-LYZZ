@@ -11,6 +11,10 @@
 实施先验证 HeroUI Native 在 Expo 57 / RN 0.86 development build 中可用，再迁移一条完整帖子链路。
 如果 HeroUI、Uniwind 或原生依赖无法通过双端构建，计划在第一阶段停止，不进入全量改造。
 
+> **⚠️ 2026-10-18 视觉层选型已回退（负责人裁决，取代本文的 R-1 与"HeroUI 视觉基座"）**
+> 评审结论：HeroUI 版的树洞页出现 **两套视觉体系并存 / Card 内零间距 / `size="sm"` 40dp 触控 / Surface 套 Surface**，且 `heroui-native` + `uniwind` 的**基座判定不及格**（宪法 9.11：UI kit / 样式引擎不作基座）。因此树洞视觉层改回**自有令牌组件层**（`components/ui/*`），HeroUI 仅保留根 Provider 与构建链（待整包移除，TODO TD-74）。
+> **本文的线框、信息顺序、媒体规则与验收数据集继续有效**；仅"用什么组件实现"一节作废。落地形状见文末 §2026-10-18 与[评审 §10](../evaluation/树洞页面UI布局评审-2026-10-17.md)。
+
 ## 设计边界
 
 本计划中的“全量使用 HeroUI Native”指：两个目标页面内，用户可见的通用控件、表面、反馈和状态组件均由 HeroUI Native 提供。
@@ -472,6 +476,30 @@ App 瀑布流不提供任何切图入口；详情页不在广场分页器内，�
 
 ## 变更记录
 
+- 2026-10-18：**视觉层回退**（负责人裁决）：树洞改回自有令牌组件层，HeroUI 停用消费；同时落实四条布局裁决（搜索就地展开 / Header ⋯ / 粘性底栏 / `/campus` 重定向）。落地形状见下节。
 - 2026-10-15：瀑布流取消图片切换，只保留静态多图预览；详情页继续提供叠卡切换。
 - 2026-10-15：多图改为 Web 同源叠卡动效，并按列表与详情拆分手势所有权。
 - 2026-10-15：初稿。基于已完成的树洞信息流功能，增加 HeroUI Native 视觉基座、业务组件边界和详情讨论布局。
+
+## 2026-10-18 落地形状（取代"HeroUI 组件映射"一节）
+
+**四条负责人裁决**：①搜索**就地展开**（不跳独立搜索页）②详情 Header `⋯` **收举报**（与底部动作区二选一）③评论输入为**粘性底栏** ④`/campus` **重定向并清理旧壳**。
+
+**文件形状**（`app/src/features/campus/`）：
+
+| 职责 | 文件 | 说明 |
+|---|---|---|
+| 页面组合 / 详情 | `CampusScreens.tsx` | `CampusFeed` 只做模块分派；详情用**原生 `Stack.Screen`** + `Screen footer`（粘性输入）+ `ActionSheet`/`ReportSheet` |
+| 树洞列表壳 | `TreeholeFeed.tsx` | 顶部 `TreeholeSearchBar`；标签条进 `listHeader`（随内容滚走）；`ListScreen` + `Divider` 行间分隔 |
+| 搜索 | `TreeholeSearchBar.tsx` | 收起=搜索框外观，展开=`SearchField`（autoFocus）+ 最近搜索 |
+| 标签 | `TreeholeTagBar.tsx` | `FilterChips`（角色 button + selected，⛔ 不是 tab），「全部」固定第 0 项 |
+| 帖子（列表/详情） | `TreeholePostRow.tsx` · `TreeholePostDetail.tsx` · `TreeholePostParts.tsx` | 左身份列 + 右内容列；作者/标题/正文/时间/计数的字阶与颜色分层；图标 + 计数（评论 → 喜欢） |
+| 媒体 | `TreeholeMedia.tsx` | feed 零状态静态叠层；detail 叠卡 + 拖拽/按钮循环 + 预览；不套 Card（消除 Surface 套 Surface） |
+| 折叠判定 | `treeholePreview.ts` | 截断与"阅读全文"**同一把尺子**；≥200% 字号不截断 |
+| 万能墙 | `WallFeed.tsx` | 匿名投影 + `ListItem` + 模板标题，不接实名帖子部件 |
+| 数据投影 / 校验 | `campusModel.ts` | `asPost` / `asWall` / `errorFor` / 分页常量 |
+| 互动与评论状态 | `useCampusActions.tsx` | 纯数据/动作（不含 JSX）；评论时间**在投影层格式化** |
+
+**与线框的差异（已确认不回头）**：列表行把"评论 12 / 喜欢 38"做成**一行图标 + 计数**（信息量相同、少一行文字）；详情把"计数行 + 动作行"合并为同一行图标 + 计数；feed 媒体按正文列宽（不再套卡片，图片宽度从 83.6% 恢复到满列）；**单图用 4:3（"限制极端高度"），只有多图才用 4:5 叠卡** —— 这是对本文"叠卡保持 4:5"的一处窄化，依据是同节"单图…保持内容比例并限制极端高度"；feed 行内**不设 `⋯`**（举报入口唯一在详情 Header，负责人裁决②）。
+
+**验证**：`npx tsc --noEmit` 通过；`npx jest --runInBand` **147 套 / 1645 例通过**（16 例既有 skip）；四把尺子全绿；结构契约由 `p2x-treehole-phase-two-contract.test.ts` 守。

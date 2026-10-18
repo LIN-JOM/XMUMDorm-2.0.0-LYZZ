@@ -24,6 +24,8 @@ export type SearchFieldProps = {
   onChangeText?: (next: string) => void;
   placeholder?: string;
   appearance?: SearchFieldAppearance;
+  /** 展开即聚焦（"就地展开"搜索用） */
+  autoFocus?: boolean;
   /** 提交检索（键盘回车 / 点搜索图标） */
   onSubmit?: () => void;
   /** 清除按钮的读屏标签（默认"清除"） */
@@ -37,6 +39,7 @@ export function SearchField({
   onChangeText,
   placeholder,
   appearance = 'inline',
+  autoFocus = false,
   onSubmit,
   clearLabel = '清除',
   style,
@@ -73,6 +76,7 @@ export function SearchField({
         onSubmitEditing={onSubmit}
         returnKeyType="search"
         allowFontScaling
+        autoFocus={autoFocus}
         accessibilityLabel={placeholder ?? '搜索'}
         accessibilityRole="search"
         style={{ flex: 1, color: theme.color['text-primary'].value }}
