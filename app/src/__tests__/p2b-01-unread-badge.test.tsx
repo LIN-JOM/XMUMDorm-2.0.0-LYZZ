@@ -1,9 +1,9 @@
 /**
- * P2B-01 · 未读真源与顶栏角标 —— 自动化用例
+ * P2B-01 · 未读真源与消息格角标 —— 自动化用例
  *
  * 测什么：
  *   S-4 纯规则：汇总载荷 → 未读总数（**拿不到 ≠ 0**）、同一令牌只拉一次、换令牌重拉、登出清零；
- *   S-5 源码扫描：四个一级 Tab 都用同一个 hook，且没有人写死角标。
+ *   S-5 源码扫描：消息格用同一个 hook，且没有人写死角标或保留顶栏入口。
  *
  * 依据：`docs/app/task/phase-2/P2B-01-未读真源与顶栏角标.md`、宪法 4.7-3/4。
  */
@@ -25,22 +25,8 @@ jest.mock('../../../shared/api/notifications', () => ({ getUnreadSummary: jest.f
 const api = require('../../../shared/api/notifications') as { getUnreadSummary: jest.Mock };
 
 const SRC_ROOT = path.resolve(__dirname, '..');
-const TAB_PAGES = ['index.tsx', 'tools.tsx', 'campus.tsx', 'me.tsx'];
-
-/**
- * 一个一级 Tab 的**屏幕源码**：路由文件本身，或它一行转发到的页面组合。
- * ⚠️ 为什么需要：本仓约定"路由文件只做转发"（`me.tsx` 就是这样），
- *    而"四屏一致"这条不变量盯的是**屏幕**，不是文件名 —— 否则把逻辑搬进 `features/`
- *    就会让这条守卫假红（它曾经就红过一次）。
- */
-function tabScreenSource(file: string): string {
-  const routeFile = path.join(SRC_ROOT, 'app', '(tabs)', file);
-  const routeText = fs.readFileSync(routeFile, 'utf8');
-  const forwarded = routeText.match(/from '@\/([^']+)'/);
-  if (!forwarded) return routeText;
-  const target = path.join(SRC_ROOT, `${forwarded[1]}.tsx`);
-  return fs.existsSync(target) ? `${routeText}\n${fs.readFileSync(target, 'utf8')}` : routeText;
-}
+const TABS_LAYOUT = path.join(SRC_ROOT, 'app', '(tabs)', '_layout.tsx');
+const NATIVE_TABS = path.join(SRC_ROOT, 'features', 'navigation', 'nativeTabs.tsx');
 
 let probe: { current: (UnreadState & { refresh: () => void }) | null } = { current: null };
 
@@ -57,7 +43,7 @@ beforeEach(async () => {
   probe = { current: null };
 });
 
-describe('P2B-01 未读真源与顶栏角标', () => {
+describe('P2B-01 未读真源与消息格角标', () => {
   describe('TC-P2B-01-1A · 汇总载荷 → 未读总数（拿不到 ≠ 0）', () => {
     it('正常载荷取 total；缺 total / 非对象 / 负数一律 null', () => {
       expect(totalUnread({ total: 3, byType: { like: 3 } })).toBe(3);
@@ -131,13 +117,13 @@ describe('P2B-01 未读真源与顶栏角标', () => {
     });
   });
 
-  describe('TC-P2B-01-5A · 源码扫描：四屏一致', () => {
-    it('四个一级 Tab 页都接了同一个 hook（含"一行转发壳"的写法）', () => {
-      for (const file of TAB_PAGES) {
-        const code = stripComments(tabScreenSource(file));
-        expect({ file, uses: code.includes('useMailboxBadge') }).toEqual({ file, uses: true });
-        expect({ file, spreads: code.includes('{...badge}') }).toEqual({ file, spreads: true });
-      }
+  describe('TC-P2B-01-5A · 源码扫描：消息格独占入口', () => {
+    it('未读真源只接进原生消息格，而不是重复接进顶栏', () => {
+      const layout = stripComments(fs.readFileSync(TABS_LAYOUT, 'utf8'));
+      const nativeTabs = stripComments(fs.readFileSync(NATIVE_TABS, 'utf8'));
+      expect(layout).toContain('useUnread');
+      expect(layout).toContain('unreadCount={total ?? 0}');
+      expect(nativeTabs).toContain('NativeTabs.Trigger.Badge');
     });
 
     it('⛔ 没有页面写死角标（未读只能来自真源）', () => {
@@ -156,7 +142,7 @@ describe('P2B-01 未读真源与顶栏角标', () => {
       expect(offenders).toEqual([]);
     });
 
-    it('信箱路由与顶栏动作指向同一个目的地', () => {
+    it('消息路由保持稳定', () => {
       expect(require('@/features/navigation/tabConfig').MAILBOX_ROUTE).toBe('/mailbox');
     });
   });

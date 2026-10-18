@@ -33,6 +33,7 @@ export function listClubActivities(params = {}) {
 export function listClubs(params = {}) {
   const qs = new URLSearchParams();
   if (params.q) qs.set('q', String(params.q));
+  if (params.category) qs.set('category', String(params.category));
   if (params.page) qs.set('page', String(params.page));
   if (params.pageSize) qs.set('pageSize', String(params.pageSize));
   const query = qs.toString();
@@ -145,11 +146,16 @@ export function addClubMember(clubId, email, role = 'member') {
   return post(`/api/clubs/${clubId}/members`, { email, role });
 }
 
+/** 移除成员；服务端继续保护最后一个社团管理员。 */
+export function removeClubMember(clubId, userId) {
+  return del(`/api/clubs/${clubId}/members/${userId}`);
+}
+
 /**
  * 发布社团活动。支持 JSON（无图）或 FormData（字段 + 最多 4 张 images 文件）。
  * @param {number} clubId
  * @param {Record<string, string|undefined>} fields - title, summary, location, signupLink, tag, time, endTime, status
- * @param {File[]} [imageFiles]
+ * @param {(File|{uri:string,name:string,type:string,size:number})[]} [imageFiles]
  */
 export function createClubActivity(clubId, fields, imageFiles = []) {
   const files = Array.isArray(imageFiles) ? imageFiles.filter(Boolean) : [];

@@ -29,16 +29,14 @@ import { buildDescriptor } from './resolveDescriptor';
  * ⛔ 域文件不许 import 本文件（会成环）；依赖方向只能是 本文件 → 域文件。
  */
 export const PUBLISH_DESCRIPTORS: Partial<Record<PublishId, PublishFormDescriptor>> = Object.fromEntries(
-  (['confession', 'errand', 'marketplace', 'wall'] as const).map(id => [id, buildDescriptor(id, key => zh[key])])
+  (['clubActivity', 'clubPost', 'confession', 'errand', 'marketplace', 'wall'] as const).map(id => [id, buildDescriptor(id, key => zh[key])])
 );
 
 /**
  * **缺口账本**：已就绪但还没交描述符的发布类型。
  * ⚠️ 交一份就删一行；⛔ 不许"先删了等以后补"。
  */
-export const KNOWN_MISSING_DESCRIPTORS: readonly PublishId[] = [
-  'clubActivity',
-];
+export const KNOWN_MISSING_DESCRIPTORS: readonly PublishId[] = [];
 
 export function getPublishDescriptor(id: PublishId): PublishFormDescriptor | undefined {
   return PUBLISH_DESCRIPTORS[id];

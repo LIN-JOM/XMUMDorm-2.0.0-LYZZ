@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import * as React from 'react';
-import { waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { renderApp } from './helpers/renderApp';
 import { zh } from '@/i18n';
@@ -35,8 +35,9 @@ import { unreadStore } from '@/features/mailbox/unread';
 import { secondaryTabStore } from '@/features/navigation/secondaryTabs';
 import { clearToken } from '@/features/auth/tokenStore';
 
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
+  useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
 }));
 jest.mock('../../../shared/api/users', () => ({ getMe: jest.fn() }));
 jest.mock('../../../shared/api/todos', () => ({ getTodayTodos: jest.fn() }));
@@ -89,6 +90,7 @@ beforeEach(async () => {
   await clearToken();
   unreadStore.reset();
   secondaryTabStore.clear();
+  mockPush.mockReset();
 });
 
 describe('P2C-03 M-01 我的仪表盘', () => {
@@ -193,32 +195,23 @@ describe('P2C-03 M-01 我的仪表盘', () => {
     });
   });
 
-  describe('TC-P2C-03-4A · 页面：四块内容都在', () => {
-    it('资料卡 + 等级 + 经验 + 三格指标 + 课程 + 待办', async () => {
+  describe('TC-P2C-03-4A · 页面：身份、内容与管理入口', () => {
+    it('资料卡 + 顶栏编辑/设置 + 内容/管理入口；不再展示三块摘要', async () => {
       const view = await renderApp(<MeScreen />);
 
       await waitFor(() => expect(view.getByTestId('me-profile')).toBeTruthy());
       expect(view.getByText('小明')).toBeTruthy();
       expect(view.getByTestId('me-level-level').props.children).toBe('3');
       expect(view.getByTestId('me-exp-text').props.children).toBe('20/500');
-      expect(view.getByTestId('me-stat-unread')).toBeTruthy();
-      expect(view.getByTestId('me-stat-todos')).toBeTruthy();
-      expect(view.getByTestId('me-stat-courses')).toBeTruthy();
-      await waitFor(() => expect(view.getByTestId('me-todo-9')).toBeTruthy());
-      expect(view.getByText('交作业')).toBeTruthy();
-    });
-  });
-
-  describe('TC-P2C-03-5A · 分区降级：一块挂了不吞整页', () => {
-    it('待办接口失败 → 只有待办那格显示错误行，资料卡照常', async () => {
-      api.todos.getTodayTodos.mockRejectedValue({ kind: 'offline' });
-      const view = await renderApp(<MeScreen />);
-
-      await waitFor(() => expect(view.getByTestId('me-todos-failed')).toBeTruthy());
-      expect(view.getByText(zh['me.section.failed'])).toBeTruthy();
-      // 资料卡与课程**不受影响**
-      expect(view.getByTestId('me-profile')).toBeTruthy();
-      expect(view.getByText('小明')).toBeTruthy();
+      expect(view.queryByTestId('me-metrics')).toBeNull();
+      expect(view.queryByTestId('me-course-first')).toBeNull();
+      expect(view.queryByTestId('me-todo-9')).toBeNull();
+      fireEvent.press(view.getByTestId('me-edit-entry'));
+      expect(mockPush).toHaveBeenCalledWith('/me/edit');
+      fireEvent.press(view.getByTestId('me-settings-entry'));
+      expect(mockPush).toHaveBeenCalledWith('/me/settings');
+      expect(view.getByTestId('me-entry-posts')).toBeTruthy();
+      expect(view.getByTestId('me-entry-about')).toBeTruthy();
     });
   });
 

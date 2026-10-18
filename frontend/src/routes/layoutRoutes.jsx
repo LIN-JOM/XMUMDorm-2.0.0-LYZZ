@@ -87,6 +87,8 @@ const MaterialsUpload = lazy(() => import('../pages/Materials/MaterialsUpload'))
 const MaterialsMine = lazy(() => import('../pages/Materials/MaterialsMine'));
 const AdminMaterials = lazy(() => import('../pages/Materials/AdminMaterials'));
 
+const Shop = lazy(() => import('../pages/Shop/Shop'));
+
 function renderLazyRoute(Component) {
   // 每个懒加载路由都套一层错误边界：
   // ① 部署后旧 chunk 失效 → 自动重载（见 shared/utils/chunkLoadRecovery）；
@@ -103,6 +105,7 @@ function renderLazyRoute(Component) {
 /** Layout 下的子路由配置，供 App 与 Layout 四格常驻挂载共用 */
 export const layoutRoutes = (
   <>
+    <Route path="shop/*" element={renderLazyRoute(Shop)} />
     <Route index element={<Navigate to="/about" replace />} />
     <Route path="treehole" element={<TreeHole />} />
     <Route path="publish" element={renderLazyRoute(PublishCenter)} />

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import BookOpen from 'lucide-react-native/icons/book-open';
 import ListChecks from 'lucide-react-native/icons/list-checks';
@@ -10,12 +10,10 @@ import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListItem } from '@/components/ui/ListItem';
 import { LoadingState } from '@/components/ui/LoadingState';
-import { MetricRow } from '@/components/ui/MetricRow';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { QuickActionGrid } from '@/components/ui/QuickActionGrid';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { StatTile } from '@/components/ui/StatTile';
 import { Text } from '@/components/ui/Text';
 import { useSession } from '@/features/auth/session';
 import { useMailboxBadge } from '@/features/mailbox/useUnread';
@@ -28,7 +26,8 @@ import type { AppError } from '@/i18n/errors';
 import { SCHOOL_SYSTEMS } from './schoolSystems';
 import { todayWeekday, useTimetableWeek } from './timetable';
 import { toToolsError } from './requestError';
-import { nextHoliday, schoolClockMinutes, selectCoursesNow } from './todaySummary';
+import { nextHoliday, remainingTodayCourses, schoolClockMinutes, selectCoursesNow } from './todaySummary';
+import { HolidaysContent } from './HolidaysScreen';
 
 const SYSTEM_ICONS = { ac: ListChecks, moodle: BookOpen, checkin: ShieldCheck } as const;
 export function ToolsDashboardContent({ onRequestError }: { onRequestError?: (error: unknown) => Promise<AppError> }): React.ReactElement {
@@ -37,8 +36,14 @@ export function ToolsDashboardContent({ onRequestError }: { onRequestError?: (er
   const { t, locale } = useI18n();
   const theme = useTheme();
   const router = useRouter();
+  const [holidaysOpen, setHolidaysOpen] = React.useState(false);
+  const closeHolidays = React.useCallback(() => setHolidaysOpen(false), []);
   const [now, setNow] = React.useState(() => new Date());
-  React.useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(timer); }, []);
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') setNow(new Date()); });
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, []);
   const day = kualaLumpurCalendarParts(now).ymd;
   const week = clampWeek(currentTeachingWeek(now) ?? 1);
   const timetable = useTimetableWeek(week, async (target) => {
@@ -50,10 +55,12 @@ export function ToolsDashboardContent({ onRequestError }: { onRequestError?: (er
     }
   });
   const todos = useTodayTodos(handleError, day);
-  const courses = meetingsOf(timetable.week, timetable.week?.currentWeek == null ? null : todayWeekday(now));
-  const { current, next } = selectCoursesNow(courses, schoolClockMinutes(now));
+  const minutes = schoolClockMinutes(now);
+  const courses = remainingTodayCourses(meetingsOf(timetable.week, timetable.week?.currentWeek == null ? null : todayWeekday(now)), minutes);
+  const { current, next } = selectCoursesNow(courses, minutes);
   const holiday = nextHoliday(day);
-  return <View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
+  if (holidaysOpen) return <HolidaysContent now={now} onBack={closeHolidays} />;
+  return <View testID="tools-dashboard-content" style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
     <View testID="tools-courses" style={{ gap: theme.space('space_2') }}>
       <SectionHeader title={t('tools.dashboard.schedule')} />
       {current ? <Text role="caption" testID="tools-current-course">{t('tools.dashboard.current', { name: current.courseName ?? current.courseCode })}</Text> : null}
@@ -63,18 +70,17 @@ export function ToolsDashboardContent({ onRequestError }: { onRequestError?: (er
         courses.slice(0, 3).map((course, index) => <ListItem key={`${course.courseCode}:${index}`} title={course.courseName ?? course.courseCode} subtitle={t('tools.dashboard.courseLine', { start: formatClockTime(course.startTime), end: formatClockTime(course.endTime), venue: course.venue ?? t('tools.dashboard.noVenue') })} onPress={() => router.push('/tools/timetable')} />)}
       <ListItem testID="tools-timetable" title={t('tools.timetable')} onPress={() => router.push('/tools/timetable')} />
     </View>
+    <View testID="tools-holidays" style={{ gap: theme.space('space_2') }}>
+      <SectionHeader title={t('tools.dashboard.holiday')} />
+      <ListItem testID="tools-holiday-open" title={holiday ? t('tools.dashboard.holidayLine', { name: { zh: holiday.nameZh, en: holiday.nameEn }[locale], start: holiday.start, end: holiday.end }) : t('tools.dashboard.noHoliday')} onPress={() => setHolidaysOpen(true)} />
+    </View>
     <View testID="tools-today-todos" style={{ gap: theme.space('space_2') }}>
-      <SectionHeader title={t('tools.dashboard.todos')} />
+      <SectionHeader title={t('tools.dashboard.todos')} variant="withAction" actionLabel={t('tools.todos.create')} onActionPress={() => router.push('/tools/todos/new')} />
       {todos.loading ? <LoadingState testID="tools-todos-loading" /> : todos.error ? <ErrorState testID="tools-todos-error" error={todos.error} onAction={todos.reload} /> : todos.data ? <>
         <Text role="caption">{t('tools.dashboard.todoCount', { total: todos.data.total, completed: todos.data.completed })}</Text>
-        <MetricRow><StatTile value={todos.data.active} label={t('tools.dashboard.active')} /><StatTile value={todos.data.completed} label={t('tools.dashboard.completed')} /></MetricRow>
         {todos.data.top.length ? todos.data.top.map((todo) => <ListItem key={todo.id} title={todo.title} onPress={() => router.push({ pathname: '/tools/todos/[id]', params: { id: String(todo.id) } })} />) : <Text role="body" colorToken="text-secondary">{t('tools.dashboard.noTodos')}</Text>}
       </> : null}
       <ListItem testID="tools-todos" title={t('tools.todos.title')} onPress={() => router.push('/tools/todos')} />
-    </View>
-    <View testID="tools-holidays" style={{ gap: theme.space('space_2') }}>
-      <SectionHeader title={t('tools.dashboard.holiday')} />
-      <Text role="body" colorToken="text-secondary">{holiday ? t('tools.dashboard.holidayLine', { name: { zh: holiday.nameZh, en: holiday.nameEn }[locale], start: holiday.start, end: holiday.end }) : t('tools.dashboard.noHoliday')}</Text>
     </View>
     <View style={{ gap: theme.space('space_2') }}>
       <SectionHeader title={t('tools.systems.title')} />

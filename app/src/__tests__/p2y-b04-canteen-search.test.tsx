@@ -3,7 +3,7 @@ import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { CanteenSearchScreen } from '@/features/square/CanteenSearchScreen';
 import { validateSearchQuery, mergeSearchRows, normalizeSearchPage } from '@/features/square/canteenSearch';
-jest.mock('expo-router', () => ({ __state: { targets: [] as unknown[] }, useRouter: () => ({ push: (target: unknown) => require('expo-router').__state.targets.push(target) }) }));
+jest.mock('expo-router', () => ({ __state: { targets: [] as unknown[] }, useLocalSearchParams: () => ({}), useRouter: () => ({ push: (target: unknown) => require('expo-router').__state.targets.push(target) }) }));
 jest.mock('../../../shared/api/canteen', () => ({ searchCanteen: jest.fn() }));
 const api = require('../../../shared/api/canteen') as { searchCanteen: jest.Mock };
 const page = (name: string, id = 9) => ({ products: [{ id, name, shop_name: 'Kitchen', comprehensive_score: 7 }], articles: [], hasMore: { products: false, articles: false } });

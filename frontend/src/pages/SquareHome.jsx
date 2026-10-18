@@ -13,6 +13,7 @@ import { QK } from '@shared/query/queryKeys';
 import './SquareHome.css';
 
 const PRIMARY_ACTIONS = [
+  { label: '订水 / 超市', labelEn: 'Water & groceries', to: '/shop', icon: <Store size={18} strokeWidth={2} />, tone: 'market' },
   {
     label: '社团广场',
     labelEn: 'Club Plaza',

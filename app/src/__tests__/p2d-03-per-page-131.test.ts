@@ -28,7 +28,7 @@ const JIA_ROUTE_FILES: readonly string[] = [
   'me/legal/index.tsx',
   'me/legal/privacy.tsx',
   'me/legal/terms.tsx',
-  'mailbox.tsx',
+  '(tabs)/mailbox.tsx',
   'login.tsx',
   'register.tsx',
   'reset-password.tsx',

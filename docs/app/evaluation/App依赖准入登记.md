@@ -1,6 +1,6 @@
 # App 依赖准入登记（Phase 0–2）
 
-**日期**：2026-10-07　**版本**：v1.2
+**日期**：2026-10-11　**版本**：v1.3
 **性质**：**evaluation 层**（判定记录）。承接 [生产开发计划 §Phase 0](../task/phase-0/P0-01-工程脚手架与依赖准入.md) 与 **P0-11**。
 **判据来源**：App 设计宪法 **3.4**（准入五项）· **9.13**（最后发布时间必须读**该版本自己的时间戳**，⛔ 不用 `time.modified`）· **11.4**（含原生代码的变更**必须重建**，不能 OTA）· **9.11**（⛔ 自带调色板/样式引擎不得作基座）· **16.2**（⛔ 不得引入第二套图标库）
 
@@ -19,11 +19,14 @@
 | `expo-font` | 57.0.4 | MIT | **有** | 有 | 2026-09-11 | 否（**注意**：本项目只用系统字体，见宪法 2.5；它是 `expo-symbols` 的 peer，不是用来加载自定义字体） |
 | `expo-linking` | 57.0.11 | MIT | **有** | 有 | 2026-09-24 | 否 |
 | `expo-localization` | 57.0.2 | MIT | **有** | 有 | 2026-09-11 | 否 |
+| `expo-notifications` | 57.0.22 | MIT | **有**（android/ ios/） | 有 | 2026-09-11 | 否（系统通知权限、渠道与设置跳转的 SDK 57 宿主；真机能力不等同于 Expo Go） |
 | `expo-router` | 57.0.24 | MIT | **有** | 有 | 2026-09-29 | 否 |
 | `expo-secure-store` | 57.0.4 | MIT | **有** | 有 | 2026-09-11 | 否 |
 | `expo-status-bar` | 57.0.1 | MIT | **有**（android/） | 有 | 2026-07-15 | 否 |
 | `expo-symbols` | 57.0.3 | MIT | **有**（android/ ios/） | 有 | 2026-09-11 | 否（提供**平台原生**图标，即宪法第 16 条第 2 层） |
 | `expo-system-ui` | 57.0.4 | MIT | **有**（android/ ios/） | 有 | 2026-09-11 | 否（**补齐登记**：Phase 0 为解决 `prebuild` 的 `userInterfaceStyle` 警告而安装，当时漏登；由 P1-02 的准入门禁测出来） |
+| `expo-file-system` | **~57.0.7** | MIT | **有**（android/ ios/） | **有**（变更须重建） | 2026-09-11 | 否（Phase 5 管理员报名名单 XLSX 导出：只把服务端 Blob 写入本地 Documents，不生成或改写名单） |
+| `expo-sharing` | **~57.0.22** | MIT | **有**（android/ ios/） | **有**（变更须重建） | 2026-09-24 | 否（Phase 5 XLSX 使用系统分享面板；Android 指定 XLSX MIME，iOS 指定 UTI；分享宿主不可用即失败，不伪报成功） |
 | `expo-image` | **~57.0.5** | MIT | **有**（android/ ios/） | **有**（变更须重建） | 2026-09-11 | 否（宪法 **9.9 第①层采用清单**里点名的图片加载器，⛔ 不重造）。P1-04 的 `A07 Avatar` 是它的首个消费者；`npx expo install` 同时往 `app.json` 的 `plugins` 里加了 `expo-image` |
 | `expo-asset` | **~57.0.18** | MIT | **有**（android/ ios/） | **有**（变更须重建） | 2026-09-18 | 否（**补齐登记**：P1-14 的用例触发 `expo-router` 的 `Tabs` 路径时崩在 `Cannot find module 'expo-asset' from expo-font/build/FontLoader.js` —— `expo-font` **顶层** `import { Asset } from 'expo-asset'`，却既没把它写进 `dependencies` 也没写进 `peerDependencies`。P0-01 的用例已经要求"`expo-font` 必须直接安装（否则非 Expo Go 构建可能崩）"，**同一条理由适用于它这个运行时依赖**） |
 | `lucide-react-native` | 1.52.0 | **ISC ＋ 部分 MIT**（Feather 派生图标 © Cole Bemis；`npm view` 只报 ISC，**不完整**，宪法 16.5-3） | **无**（实测 0 原生文件） | **无** → 可 OTA | 2026-10-04 | 否（但它是**我们选定的**第 1 层图标体系，见 16.1） |
@@ -131,4 +134,5 @@ Lint：标准 Expo flat config。当前未启用 React Compiler，refs／set-sta
 |---|---|---|
 | v1.0 | 2026-10-02 | 首次建立。17 个直接依赖 + 9 个开发依赖逐条登记五项判据；登记 7 项被拒依赖、5 项已解决问题的排障记录、4 项未闭合 |
 | v1.2 | 2026-10-07 | 按所有者授权登记 SDK57 选图、平台日期时间与 ESLint；保留真机构建验证和 lint warning 待办 |
+| v1.3 | 2026-10-11 | Phase 5 XLSX 导出登记 `expo-file-system@57.0.7` 与 `expo-sharing@57.0.22`。两者均含原生代码；后续变更必须新原生构建，并保留 Android/iOS 真机保存与分享验收。 |
 | **v1.1** | **2026-10-02** | **Phase 1 第二批 5 个直接依赖**（P1-02）：`@tanstack/react-query@5.96.2` · `@shopify/flash-list@2.0.2` · `@react-native-async-storage/async-storage@2.2.0` · `@react-native-community/netinfo@12.0.1` · `@ronradtke/react-native-markdown-display@9.0.3`，逐条登记五项判据（采集方式不变，`.scratch/collect-deps.js`）。新增排障记录 **#9**（react-query 两端版本漂移 → 钉到与 Web 一致）与 **#10**（原生依赖的官方 Jest mock + `setupFiles` 必须展开 preset）。修正 §4-3：`runtimeVersion` 经复检**当前无消费者**（`expo-updates` 未安装 → 无 OTA 层），不再写"阻塞首次构建" |

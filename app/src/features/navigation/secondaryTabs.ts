@@ -7,9 +7,9 @@
  *   R4 导航 Tab ≠ 筛选 Chips → 本文件只管"导航也选中的那个"，筛选状态是**另一条维度**（filters）
  *   R5 溢出横向滚动（不在这里，在组件层）；⛔ 不提供把子栏目藏起来的下拉入口
  *
- * ⚠️ 二级 Tab 的**具体集合**尚未拍板：
- *   - 「校园里」两项**已定**（宪法 4.1.1：树洞 / 万能墙，互斥、各自独立）
- *   - 广场 / 工具 / 我的 = TO-CONFIRM **C-03 / C-04 / C-05** → 这里只落**机制**，集合留空
+ * ⚠️ 二级 Tab 的**具体集合**尚未完全拍板：
+ *   - 「广场」两项**已定**（宪法 4.1.1：树洞 / 万能墙，互斥、各自独立）
+ *   - 工具 / 我的 = TO-CONFIRM **C-04 / C-05** → 这里只落**机制**，集合留空
  */
 
 import type { MessageKey } from '@/i18n';
@@ -19,20 +19,17 @@ export type SecondaryTabKey = string;
 
 export type SecondaryTabDefinition = {
   key: SecondaryTabKey;
-  labelKey: MessageKey;
-};
+} & ({ labelKey: MessageKey; label?: never } | { label: string; labelKey?: never });
 
 /** 一级格 → 该格的二级 Tab 集合（空数组 = 该格没有二级 Tab，不显示 Tab 条） */
 export type SecondaryTabRegistry = Record<string, readonly SecondaryTabDefinition[]>;
 
 export const SECONDARY_TABS: SecondaryTabRegistry = {
   // ✅ 已定：宪法 4.1.1（万能墙强制匿名、树洞非匿名 → 只允许导航层合并）
-  campus: [
+  square: [
     { key: 'confession', labelKey: 'secondary.confession' },
     { key: 'wall', labelKey: 'secondary.wall' },
   ],
-  // ⏳ 待确认 C-03：广场的二级集合（含"热搜 / 校园此刻"去哪里）
-  square: [],
   // ⏳ 待确认 C-04：工具的二级集合
   tools: [],
   // ⏳ 待确认 C-05：我的是否也用二级 Tab
@@ -60,7 +57,7 @@ export function hasSecondaryTabs(primaryTab: string): boolean {
  *   1. 同一一级格下 key 唯一（重复会让"选中哪个"歧义）；
  *   2. `labelKey` 必须在词条表里（否则界面上出现 key 本身）；
  *   3. 集合只能挂**存在的一级格**上（防拼错格名后静默变成"没有二级 Tab"）；
- *   4. ⛔ **动作型格位（第 5 格"发布"）不得有二级 Tab** —— 它没有内容区（宪法 4.9.1）。
+ *   4. ⛔ **动作型格位（中央"发布"）不得有二级 Tab** —— 它没有内容区（宪法 4.9.1）。
  *
  * `registry` 可注入，只为让用例能验证"坏集合会抛"（⛔ 生产调用不传第二个参数）。
  */
@@ -83,8 +80,8 @@ export function assertSecondaryTabInvariants(
     }
 
     for (const tab of tabs) {
-      if (!dictionaryKeys.includes(tab.labelKey)) {
-        throw new Error(`二级 Tab 的 labelKey 不在词条表：${primaryTab}/${tab.key} → ${tab.labelKey}`);
+      if (typeof tab.labelKey !== 'string' || !dictionaryKeys.includes(tab.labelKey)) {
+        throw new Error(`二级 Tab 的 labelKey 不在词条表：${primaryTab}/${tab.key}`);
       }
     }
   }

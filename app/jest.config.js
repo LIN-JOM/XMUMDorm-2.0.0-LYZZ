@@ -15,7 +15,7 @@ module.exports = {
   //    `SyntaxError: Unexpected token '<'`。⛔ 必须展开 preset 自己的正则，
   //    只追加一项；手写一份完整名单会随 preset 升级静默过期。
   transformIgnorePatterns: [
-    '/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@ronradtke/react-native-markdown-display))',
+    '/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@ronradtke/react-native-markdown-display|heroui-native|uniwind))',
     '/node_modules/react-native-reanimated/plugin/',
     '/node_modules/@react-native/babel-preset/',
   ],

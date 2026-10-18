@@ -11,7 +11,7 @@
  *   R3 一级格保留自己的二级选中项 → 调用方用 `(一级格, 二级格)` 做键
  *   R4 与本组件并列的 `FilterChips` 是**另一个组件**（有指示器的是导航，可多选的是筛选）
  *   R5 溢出**横向可滚**，⛔ 无下拉菜单（`assertNoOverflowMenu` 会让它显式失败）
- *   R6 内容区**不做**横向滑动切 Tab（本组件只处理自己的横向滚动，不接管内容区手势）
+ *   R6 默认内容区不做横滑（首页按所有者 2026-10-12 裁决由 SquareHome 分页；本组件只管 Tab 条）
  */
 
 import * as React from 'react';
@@ -78,19 +78,23 @@ export function TopTabStrip({
       >
         {tabs.map((tab, index) => {
           const selected = tab.key === selectedKey;
+          const label = tab.labelKey === undefined ? tab.label : t(tab.labelKey);
           return (
             <Pressable
               key={tab.key}
               testID={`top-tab-${tab.key}`}
               onLayout={(event) => {
-                offsets.current[tab.key] = event.nativeEvent.layout.x;
+                const x = event.nativeEvent.layout.x;
+                offsets.current[tab.key] = x;
+                // 初始深链接或字号/屏宽变化时，effect 可能早于布局测量。
+                if (selected) scrollRef.current?.scrollTo({ x: Math.max(0, x - theme.space('space_4')), animated: false });
               }}
               onPress={() => onSelect(tab.key)}
               // 导航 Tab 的角色是 tab（⛔ 不是 button —— 那是筛选 Chips 的角色，R4）
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               // 读屏要播报**位置**，不得只念标签（4.8.2）
-              accessibilityLabel={`${t(tab.labelKey)} · ${t('a11y.tabPosition', {
+              accessibilityLabel={`${label} · ${t('a11y.tabPosition', {
                 i: index + 1,
                 n: tabs.length,
               })}`}
@@ -105,7 +109,7 @@ export function TopTabStrip({
                 emphasis={selected ? 'strong' : 'regular'}
                 colorToken={selected ? 'text-brand' : 'text-secondary'}
               >
-                {t(tab.labelKey)}
+                {label}
               </Text>
               {/* 指示器：表达"当前在哪"。取值未冻结（宪法 15.4），此处用品牌色令牌 */}
               <View

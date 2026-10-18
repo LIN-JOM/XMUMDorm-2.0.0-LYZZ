@@ -40,6 +40,9 @@ import {
 } from '@/features/tools/schoolSystems';
 import { useSchoolSessions } from '@/features/tools/schoolSession';
 import { useMailboxBadge } from '@/features/mailbox/useUnread';
+import { MoodleWorkspaceHost, type MoodleWorkspaceHostLabels } from '@/features/tools/moodle/WorkspaceHost';
+import { safeMoodleReadUrl } from '@/features/tools/moodle/detail';
+import { clearMoodleReminders, replaceMoodleReminders } from '@/features/tools/reminders/native';
 
 export default function SchoolSystemScreen(): React.ReactElement {
   const params = useLocalSearchParams<{ id?: string }>();
@@ -62,6 +65,38 @@ export default function SchoolSystemScreen(): React.ReactElement {
       void Linking.openURL(system.startUrl);
     }
   }, [system, mode]);
+
+  const moodleLabels = React.useMemo<MoodleWorkspaceHostLabels>(() => ({
+    firstLogin: t('tools.moodle.firstLogin'), restoredNative: t('tools.moodle.restoredNative'),
+    nativeWorkspace: t('tools.moodle.nativeWorkspace'), login: t('tools.moodle.login'),
+    sync: t('tools.moodle.sync'), cancel: t('tools.moodle.cancel'),
+    confirmSelection: t('tools.moodle.confirmSelection'), chooseCourses: t('tools.moodle.chooseCourses'),
+    courses: t('tools.moodle.courses'), allTypes: t('tools.moodle.allTypes'), empty: t('tools.moodle.empty'),
+    original: t('tools.moodle.original'), details: t('tools.moodle.details'), unknownSection: t('tools.moodle.unknownSection'),
+    phase: (value) => t('tools.moodle.status', { value }),
+    failure: (value) => t('tools.moodle.status', { value }),
+    moduleType: (value) => t('tools.moodle.status', { value }), back: t('action.back'),
+    clear: t('tools.moodle.clear'), backToNative: t('tools.moodle.backToNative'),
+    deadlines: t('tools.moodle.deadlines'), otherEvents: t('tools.moodle.otherEvents'),
+    eventType: (value) => t('tools.moodle.status', { value: value ?? t('tools.moodle.status', { value: 'unknown' }) }),
+    actionableStatus: (value) => t('tools.moodle.status', { value: value === true ? 'actionable' : 'not actionable' }),
+    deadlineBucket: (value) => t('tools.moodle.status', { value }),
+    detailStatus: (value) => t('tools.moodle.status', { value }), reminderStatus: (value) => {
+      if (value === 'planned') return t('tools.moodle.reminders.planned');
+      if (value === 'cleared') return t('tools.moodle.reminders.cleared');
+      if (value === 'failed') return t('tools.moodle.reminders.failed');
+      return t('tools.moodle.reminders.unavailable');
+    },
+    locked: t('tools.moodle.locked'), fileUnknown: t('tools.moodle.fileUnknown'),
+    fileMetadata: (file) => t('tools.moodle.fileMetadata', { mime: file.mimeType ?? '—', size: file.size ?? '—' }),
+    submissionStatus: (value) => t('tools.moodle.status', { value }), gradingStatus: (value) => t('tools.moodle.status', { value }),
+    formatTime: (value) => new Date(value).toLocaleString(),
+  }), [t]);
+
+  const openMoodleOriginal = React.useCallback((url: string) => {
+    const safe = safeMoodleReadUrl(url) ?? safeMoodleReadUrl(url, true);
+    if (safe) void Linking.openURL(safe);
+  }, []);
 
   if (!system) {
     return <Redirect href="/tools" />;
@@ -141,7 +176,15 @@ export default function SchoolSystemScreen(): React.ReactElement {
         </View>
       ) : null}
 
-      {mode === 'webview' ? (
+      {system.id === 'moodle' ? (
+        <View testID="webview-moodle" style={{ flex: 1 }}>
+          <MoodleWorkspaceHost labels={moodleLabels} onOpenOriginal={openMoodleOriginal}
+            onReminderPlan={(plan) => replaceMoodleReminders(plan, {
+              title: t('tools.reminders.moodle.title'), body: t('tools.reminders.moodle.body'),
+            })}
+            onClearReminders={clearMoodleReminders} />
+        </View>
+      ) : mode === 'webview' ? (
         <SchoolSystemWebView
           ref={webRef}
           testID={`webview-${system.id}`}

@@ -14,7 +14,7 @@
  *
  * ⚠️ 仍待真机（必须用 development build，⛔ Expo Go 的 Tab/返回键行为不可信）：
  *   1. Android 侧 `disabled` 是否同样拒绝选中并发 `isPrevented` 事件（若不触发 → 改试 `screenListeners`）；
- *   2. `<NativeTabs.Trigger.Label hidden />` 是否**只**隐藏第 5 格的文字（Material 的
+ *   2. `<NativeTabs.Trigger.Label hidden />` 是否**只**隐藏中央发布格的文字（Material 的
  *      `labelVisibilityMode` 本是整条 BottomNavigationView 的属性）。
  *
  * ⛔ 任何情况下**不得**退回自绘 Tab 栏（宪法 4.3）。
@@ -40,13 +40,16 @@ export type NativeTabBarProps = {
   mode?: PublishSlotMode;
   /** 已取好的词条（⛔ 不在本层取词：取词依赖 Provider，放在布局层更清楚，也便于测试） */
   labels: Record<TabKey, string>;
-  /** 第 5 格被点击（已被 `disabled` 拦下导航）→ 打开发布中心 */
+  /** 未读真源；只显示在消息格，⛔ 不回退成顶栏第二入口。 */
+  unreadCount: number;
+  /** 中央发布格被点击（已被 `disabled` 拦下导航）→ 打开发布中心 */
   onActionPress: () => void;
 };
 
 export function NativeTabBar({
   mode = 'action',
   labels,
+  unreadCount,
   onActionPress,
 }: NativeTabBarProps): React.ReactElement {
   const config = buildTabBarConfig(mode);
@@ -71,10 +74,13 @@ export function NativeTabBar({
           }
         >
           <NativeTabs.Trigger.Icon sf={tab.icon.ios} md={tab.icon.android} />
+          {tab.key === 'mailbox' && unreadCount > 0 ? (
+            <NativeTabs.Trigger.Badge>{String(unreadCount)}</NativeTabs.Trigger.Badge>
+          ) : null}
           {tab.labelVisible ? (
             <NativeTabs.Trigger.Label>{labels[tab.key]}</NativeTabs.Trigger.Label>
           ) : (
-            // 第 5 格：只有加号，**无可见文字标签**（所有者原话："一个加号按钮"）
+            // 中央发布格：只有加号，**无可见文字标签**（所有者原话："一个加号按钮"）
             // ⚠️ 必须**静态**隐藏：动态切换 `hidden` 会重挂载导航器并重置 state
             <NativeTabs.Trigger.Label hidden />
           )}

@@ -19,6 +19,10 @@ import { LucideProvider } from 'lucide-react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as Localization from 'expo-localization';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { HeroUINativeProvider } from 'heroui-native';
+
+import '../../global.css';
 
 import { ThemeProvider, useTheme } from '@/design-system/theme';
 import { I18nProvider, normalizeLocale } from '@/i18n';
@@ -27,6 +31,7 @@ import { configureConnectivity, configureFocusTracking, getQueryClient } from '@
 import { ToastHost, ToastProvider } from '@/components/ui/Toast';
 import { SessionProvider } from '@/features/auth/session';
 import { SessionGate } from '@/features/auth/SessionGate';
+import { ReminderRuntimeHost } from '@/features/tools/reminders/ReminderRuntimeHost';
 
 /**
  * P1-01：把后端地址与 token 来源交给 `shared/` 的请求层。
@@ -68,6 +73,7 @@ function GlobalOverlays(): React.ReactElement {
         ⛔ 门自己不许再调 `useSafeAreaInsets()`（否则就是第三个调用点）。
       */}
       <SessionGate topInset={insets.top} bottomInset={insets.bottom} />
+      <ReminderRuntimeHost />
     </>
   );
 }
@@ -96,35 +102,39 @@ export default function RootLayout(): React.ReactElement {
   );
 
   return (
-    <QueryClientProvider client={appQueryClient}>
-      <SafeAreaProvider>
-        <ThemeProvider source="system" systemScheme={scheme === 'dark' ? 'dark' : 'light'}>
-          <I18nProvider systemLocale={systemLocale}>
-            {/* ToastProvider 只提供 context，**不渲染展示层** —— 展示在 ThemedShell 里，
-                因为 insets 只能在 SafeAreaProvider 内部取到（见 GlobalOverlays 的注释） */}
-            <ToastProvider>
-              {/* 会话（P1-13）：注入同步 token 读取器 + 冷启动水合；页面用 useSession() */}
-              <SessionProvider>
-                <ThemedShell>
-                  {/*
-                    顶栏由我们自己的 TopBar 提供（标题 + 唯一动作），故 Stack 默认不显示原生 header。
-                    ⚠️ 详情页的顶栏仍应交给原生导航栏（宪法 4.3）—— 那属于 Phase 2 的逐页口径。
-                  */}
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="(tabs)" />
-                    {/* 推入式全屏目的地：进入后隐藏 Tab 栏（宪法 4.7-2 / 4.9.2） */}
-                    <Stack.Screen name="publish-center" options={{ presentation: 'modal' }} />
-                    <Stack.Screen name="mailbox" />
-                    {/* 登录最小链路（P1-13）；完整 `P15` 鉴权原型属后续任务 */}
-                    <Stack.Screen name="login" />
-                  </Stack>
-                  <GlobalOverlays />
-                </ThemedShell>
-              </SessionProvider>
-            </ToastProvider>
-          </I18nProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={appQueryClient}>
+        <SafeAreaProvider>
+          <HeroUINativeProvider config={{ devInfo: { stylingPrinciples: false } }}>
+            <ThemeProvider source="system" systemScheme={scheme === 'dark' ? 'dark' : 'light'}>
+              <I18nProvider systemLocale={systemLocale}>
+                {/* ToastProvider 只提供 context，**不渲染展示层** —— 展示在 ThemedShell 里，
+                    因为 insets 只能在 SafeAreaProvider 内部取到（见 GlobalOverlays 的注释） */}
+                <ToastProvider>
+                  {/* 会话（P1-13）：注入同步 token 读取器 + 冷启动水合；页面用 useSession() */}
+                  <SessionProvider>
+                    <ThemedShell>
+                      {/*
+                        顶栏由我们自己的 TopBar 提供（标题 + 唯一动作），故 Stack 默认不显示原生 header。
+                        ⚠️ 详情页的顶栏仍应交给原生导航栏（宪法 4.3）—— 那属于 Phase 2 的逐页口径。
+                      */}
+                      <Stack screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="(tabs)" />
+                        {/* 推入式全屏目的地：进入后隐藏 Tab 栏（宪法 4.7-2 / 4.9.2） */}
+                        <Stack.Screen name="publish-center" options={{ presentation: 'modal' }} />
+                        <Stack.Screen name="mailbox" />
+                        {/* 登录最小链路（P1-13）；完整 `P15` 鉴权原型属后续任务 */}
+                        <Stack.Screen name="login" />
+                      </Stack>
+                      <GlobalOverlays />
+                    </ThemedShell>
+                  </SessionProvider>
+                </ToastProvider>
+              </I18nProvider>
+            </ThemeProvider>
+          </HeroUINativeProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -26,10 +26,13 @@
 import type { FormSectionDescriptor, SubmitSemantic } from '@/components/ui/Form';
 import type { FormFieldDescriptor, FormValues } from '@/components/ui/FormField';
 import type { MessageKey } from '@/i18n';
+import type { Href } from 'expo-router';
 import { PUBLISH_REGISTRY, type PublishId } from './registry';
 
+type StringHref = Extract<Href, string>;
+
 /** 提交结果：`id` 用于成功后的落地路由，`route` 由域直接指定去向 */
-export type PublishSubmitResult = { id?: number | string; route?: string | null };
+export type PublishSubmitResult = { id?: number | string; route?: StringHref | null };
 
 /**
  * 一个发布表单的完整域契约。
@@ -45,8 +48,8 @@ export type PublishFormDescriptor = {
   submit: (values: FormValues) => Promise<PublishSubmitResult | void>;
   /** `create` 语义必填：提交成功后去哪（`null` = 留在原地） */
   /** Replace the form with this list before pushing a new detail, including system back. */
-  listAfterSubmit?: string;
-  routeAfterSubmit?: (result: PublishSubmitResult | void) => string | null;
+  listAfterSubmit?: StringHref;
+  routeAfterSubmit?: (result: PublishSubmitResult | void) => StringHref | null;
   /**
    * **媒体字段名**（`kind:'custom'` 渲染图片选择器的那几个）。
    * ⚠️ 必须逐个声明：DSL 没有媒体 kind，不声明就没法机器校验 `neverDraft`。
@@ -132,7 +135,7 @@ export function assertDescriptorInvariants(
 export function resolvePublishDestination(
   descriptor: PublishFormDescriptor,
   result: PublishSubmitResult | void
-): string | null {
+): StringHref | null {
   const fromResult = result && typeof result === 'object' ? result.route ?? null : null;
   if (fromResult) return fromResult;
   return descriptor.routeAfterSubmit?.(result) ?? null;

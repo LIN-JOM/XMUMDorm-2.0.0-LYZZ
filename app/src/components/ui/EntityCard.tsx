@@ -53,7 +53,11 @@ export const ENTITY_STATUS_LABEL: Record<string, string> = {
 export type EntityCardProps = {
   domain: EntityCardDomain;
   title: string;
+  /** Rich title content while retaining the plain title for accessibility. */
+  titleContent?: React.ReactNode;
   subtitle?: string;
+  /** Rich body content while retaining the plain subtitle for accessibility. */
+  subtitleContent?: React.ReactNode;
   /** 主图（菜品 / 二手 / 帖子）；无图则整块不渲染 */
   mediaUri?: string | null;
   /** 角标区（如 `A08 Badge`） */
@@ -66,6 +70,12 @@ export type EntityCardProps = {
   status?: string;
   /** 点评作者：后端对普通用户点评**强制匿名**（调研 G18），因此有值才显示 */
   authorLabel?: string;
+  /** 帖子发布时间；只在 `post` 变体中与作者组成身份行 */
+  metaLabel?: string;
+  /** 帖子图集；只在 `post` 变体中排在正文之后 */
+  postMedia?: React.ReactNode;
+  /** 帖子行内互动；只在 `post` 变体中作为独立可访问操作区渲染 */
+  postActions?: React.ReactNode;
   /** Localized metrics supplied by domain adapters (currency/status are business rules). */
   metrics?: readonly string[];
   onPress?: () => void;
@@ -99,7 +109,9 @@ export function entityMetrics(props: Pick<
 export function EntityCard({
   domain,
   title,
+  titleContent,
   subtitle,
+  subtitleContent,
   mediaUri,
   badges,
   price,
@@ -108,6 +120,9 @@ export function EntityCard({
   reviewCount,
   status,
   authorLabel,
+  metaLabel,
+  postMedia,
+  postActions,
   metrics: injectedMetrics,
   onPress,
   style,
@@ -116,40 +131,50 @@ export function EntityCard({
   const theme = useTheme();
   const hasMedia = typeof mediaUri === 'string' && mediaUri.length > 0;
   const metrics = injectedMetrics ?? entityMetrics({ domain, price, reward, score, reviewCount, status });
+  const isPost = domain === 'post';
+  const isListing = domain === 'listing';
+  const media = hasMedia ? (
+    <Image
+      source={{ uri: mediaUri }}
+      contentFit="cover"
+      // 用**比例**而不是像素高度：令牌源里没有"卡片媒体高度"这个档位，
+      // 而比例是无量纲的，不会变成"屏内魔法数字"（宪法 2.4 管的是尺寸/间距）。
+      style={{ width: '100%', aspectRatio: 16 / 9 }}
+      accessible={false}
+      transition={0}
+    />
+  ) : null;
 
   return (
-    <Pressable
-      testID={testID}
-      onPress={onPress}
-      // §7.3：整卡可点时**卡片语义必须是一条**，不能把卡内每个元素都读出来
-      accessibilityLabel={[title, subtitle, ...metrics].filter(Boolean).join('，')}
-      style={style}
-    >
-      <Surface rounded="radius_medium" bordered="subtle">
-        {hasMedia ? (
-          <Image
-            source={{ uri: mediaUri }}
-            contentFit="cover"
-            // 用**比例**而不是像素高度：令牌源里没有"卡片媒体高度"这个档位，
-            // 而比例是无量纲的，不会变成"屏内魔法数字"（宪法 2.4 管的是尺寸/间距）。
-            style={{ width: '100%', aspectRatio: 16 / 9 }}
-            accessible={false}
-            transition={0}
-          />
-        ) : null}
+    <Surface rounded="radius_medium" bordered="subtle">
+      <Pressable
+        testID={testID}
+        onPress={onPress}
+        style={style}
+        // §7.3：整卡可点时**卡片语义必须是一条**，不能把卡内每个元素都读出来
+        accessibilityLabel={[isPost ? authorLabel : '', isPost ? metaLabel : '', title, subtitle, ...metrics].filter(Boolean).join('，')}
+      >
+        {isPost ? null : media}
         <View style={{ padding: theme.space('space_3'), gap: theme.space('space_1') }}>
           {badges ? (
             <View style={{ flexDirection: 'row', gap: theme.space('space_1') }}>{badges}</View>
           ) : null}
+          {isPost && (authorLabel || metaLabel) ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_1') }}>
+              {authorLabel ? <Text role="caption" emphasis="strong" colorToken="text-primary" numberOfLines={1}>{authorLabel}</Text> : null}
+              {metaLabel ? <Text role="caption" colorToken="text-muted" numberOfLines={1}>{metaLabel}</Text> : null}
+            </View>
+          ) : null}
           <Text role="body" emphasis="strong" colorToken="text-primary" numberOfLines={2}>
-            {title}
+            {titleContent ?? title}
           </Text>
-          {subtitle ? (
-            <Text role="caption" colorToken="text-secondary" numberOfLines={2}>
-              {subtitle}
+          {subtitle || subtitleContent ? (
+            <Text role={isPost ? 'body' : 'caption'} colorToken="text-secondary" numberOfLines={isPost ? 4 : 2}>
+              {subtitleContent ?? subtitle}
             </Text>
           ) : null}
-          {authorLabel ? (
+          {isPost ? (postMedia ?? media) : null}
+          {!isPost && authorLabel ? (
             <Text role="caption" colorToken="text-muted" numberOfLines={1}>
               {authorLabel}
             </Text>
@@ -163,16 +188,17 @@ export function EntityCard({
                 marginTop: theme.space('space_1'),
               }}
             >
-              {metrics.map((metric, index) => (
+                {metrics.map((metric, index) => (
                 // 指标串可能重复（如两条都是"暂无价格"）→ key 里带上位置
-                <Text key={`metric-${index}`} role="caption" colorToken="text-secondary">
+                <Text key={`metric-${index}`} role={isListing && index === 0 ? 'body' : 'caption'} emphasis={isListing && index === 0 ? 'strong' : 'regular'} colorToken={isListing && index === 0 ? 'text-primary' : 'text-secondary'}>
                   {metric}
                 </Text>
               ))}
             </View>
           ) : null}
         </View>
-      </Surface>
-    </Pressable>
+      </Pressable>
+      {isPost && postActions ? <View style={{ flexDirection: 'row', borderTopWidth: theme.borderWidth('border_width_hairline'), borderColor: theme.color['border-subtle'].value, paddingHorizontal: theme.space('space_3'), gap: theme.space('space_3') }}>{postActions}</View> : null}
+    </Surface>
   );
 }

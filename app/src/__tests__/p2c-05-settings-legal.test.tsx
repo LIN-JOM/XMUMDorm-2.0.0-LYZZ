@@ -25,10 +25,20 @@ import { EXPECTED_UNAVAILABLE, ME_ENTRIES, visibleEntries } from '@/features/me/
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
 }));
+const mockLogout = jest.fn();
+jest.mock('@/features/auth/session', () => ({ useSession: () => ({ logout: mockLogout }) }));
+jest.mock('../../../shared/api/users', () => ({ deactivateMyAccount: jest.fn() }));
+
+const users = require('../../../shared/api/users') as { deactivateMyAccount: jest.Mock };
 
 const SRC_ROOT = path.resolve(__dirname, '..');
 
 describe('P2C-05 设置与法务三页', () => {
+  beforeEach(() => {
+    mockLogout.mockReset();
+    users.deactivateMyAccount.mockReset();
+    users.deactivateMyAccount.mockResolvedValue({ status: 0 });
+  });
   it('TC-P2C-05-1A · 法务文本：两份文档 × 两种语言都非空，且是**可辨识的占位**', () => {
     expect(() => assertLegalDocsComplete()).not.toThrow();
     for (const doc of LEGAL_DOCS) {
@@ -66,6 +76,26 @@ describe('P2C-05 设置与法务三页', () => {
     // 未上线的三页（通知与推送/屏蔽用户/账号注销）⛔ 不显示禁用占位
     expect(view.queryByText('通知与推送')).toBeNull();
     expect(view.queryByText('屏蔽用户')).toBeNull();
+  });
+
+  it('TC-P3A4-04-1A · 退出与软删除只在真实成功后清理会话', async () => {
+    const view = await renderApp(<SettingsScreen />);
+    fireEvent.press(view.getByTestId('settings-logout'));
+    await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
+
+    fireEvent.press(view.getByTestId('settings-deactivate'));
+    await waitFor(() => expect(view.getByText(zh['me.settings.deactivate.confirm'])).toBeTruthy());
+    fireEvent.press(view.getByText(zh['me.settings.deactivate.confirm']));
+    await waitFor(() => expect(users.deactivateMyAccount).toHaveBeenCalledTimes(1));
+    expect(mockLogout).toHaveBeenCalledTimes(2);
+
+    users.deactivateMyAccount.mockRejectedValueOnce({ kind: 'offline' });
+    fireEvent.press(view.getByTestId('settings-deactivate'));
+    await waitFor(() => expect(view.getByText(zh['me.settings.deactivate.confirm'])).toBeTruthy());
+    fireEvent.press(view.getByText(zh['me.settings.deactivate.confirm']));
+    await waitFor(() => expect(users.deactivateMyAccount).toHaveBeenCalledTimes(2));
+    expect(mockLogout).toHaveBeenCalledTimes(2);
+    expect(view.getByText(zh['me.settings.deactivate.failed'])).toBeTruthy();
   });
 
   it('TC-P2C-05-5A · 入口账本已清空（三条都落地了）', () => {

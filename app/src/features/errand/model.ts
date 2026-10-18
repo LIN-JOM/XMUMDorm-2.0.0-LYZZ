@@ -1,6 +1,11 @@
 type Row=Record<string,unknown>;
 function record(value:unknown):Row {if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid errand data');return value as Row;}
 export type ErrandItem={id:number;title:string;reward:number;type:string;status:string;location:string;deadline:string|null;ownerId:number;ownerName:string};
+export function formatErrandDeadline(value:string|null,locale:'zh'|'en'='zh'):string|null {
+ if(!value)return null;
+ const date=new Date(value);if(!Number.isFinite(date.getTime()))return null;
+ return new Intl.DateTimeFormat(locale==='en'?'en-GB':'zh-CN',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date);
+}
 function item(value:unknown):ErrandItem {
  const r=record(value),owner=record(r.owner);
  if(!Number.isSafeInteger(r.id)||Number(r.id)<=0||typeof r.title!=='string'||typeof r.reward!=='number'||!Number.isFinite(r.reward)||r.reward<0||!['delivery','purchase','urgent'].includes(String(r.type))||!['open','taken','done'].includes(String(r.status))||!Number.isSafeInteger(owner.id)||Number(owner.id)<=0)throw new Error('Invalid errand item');

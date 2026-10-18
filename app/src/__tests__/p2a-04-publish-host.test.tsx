@@ -54,7 +54,7 @@ function makeDescriptor(overrides: Partial<PublishFormDescriptor> = {}): Publish
       },
     ],
     submit: jest.fn(async () => ({ id: 42 })),
-    routeAfterSubmit: (result) => `/post/${(result as { id?: number })?.id ?? ''}`,
+    routeAfterSubmit: (result) => `/campus/${(result as { id?: number })?.id ?? ''}`,
     ...overrides,
   };
 }
@@ -86,19 +86,17 @@ describe('P2A-04 发布表单宿主与提交门控', () => {
     expect(toPublishSubmitError({ body: { code: 'OTHER' } })).toBeNull();
   });
 
-  describe('TC-P2A-04-1A · 条款源缺失（缺口 G4 / Q2-A）', () => {
-    it('undefined ⇒ 放行，并打上 bypassed 标记（不是静默放行）', () => {
+  describe('TC-P2A-04-1A · 条款源缺失', () => {
+    it('undefined ⇒ 拦住，并给出条款修复入口', () => {
       const gate = resolveSubmitGate({ signedIn: true });
-      expect(gate).toEqual({ allowed: true, bypassed: 'terms-source-missing' });
+      expect(gate.allowed).toBe(false);
+      if (gate.allowed) return;
+      expect(gate.fixKey).toBe('publish.gate.terms.fix');
     });
 
-    it('⛔ 不动 canSubmit 的语义：源缺失只在"宿主"这一层放行', () => {
-      // 既有用例 TC-P0-07-6A 要求 canSubmit 对 undefined 必须拦 —— 两层必须分开
+    it('源缺失与明确未接受都遵守同一 fail-closed 门禁', () => {
       expect(canSubmit({ signedIn: true }).allowed).toBe(false);
-      expect(resolveSubmitGate({ signedIn: true })).toEqual({
-        allowed: true,
-        bypassed: 'terms-source-missing',
-      });
+      expect(resolveSubmitGate({ signedIn: true }).allowed).toBe(false);
       expect(resolveSubmitGate({ signedIn: true, acceptedTerms: false }).allowed).toBe(false);
     });
   });
@@ -116,11 +114,10 @@ describe('P2A-04 发布表单宿主与提交门控', () => {
     });
   });
 
-  describe('TC-P2A-04-3A · 已接受 ⇒ 放行且无 bypassed 标记', () => {
-    it('allowed 为真且没有 bypassed', () => {
+  describe('TC-P2A-04-3A · 已接受 ⇒ 放行', () => {
+    it('allowed 为真', () => {
       const gate = resolveSubmitGate({ signedIn: true, acceptedTerms: true });
       expect(gate.allowed).toBe(true);
-      expect('bypassed' in gate).toBe(false);
     });
   });
 
@@ -174,7 +171,7 @@ describe('P2A-04 发布表单宿主与提交门控', () => {
       await act(async () => {
         hostRef.current?.onSettled(postSubmitPlan('create'));
       });
-      expect(routerState.replaced).toEqual(['/post/42']);
+      expect(routerState.replaced).toEqual(['/campus/42']);
       expect(routerState.backCount).toBe(0);
     });
 

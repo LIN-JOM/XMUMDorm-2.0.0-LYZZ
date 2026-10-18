@@ -16,13 +16,14 @@
 
 import * as React from 'react';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 import { Form, useForm, type FormLabels } from '@/components/ui/Form';
 import type { FormFieldDescriptor } from '@/components/ui/FormField';
 import { MediaPicker } from '@/components/ui/MediaPicker';
 import { Screen } from '@/components/ui/Screen';
 import { useI18n } from '@/i18n';
-import { getMe, updateProfileInfo } from '../../../../shared/api/users';
+import { getMe, updateAvatar, updateProfileInfo } from '../../../../shared/api/users';
 import { normalizeProfile } from './profile';
 
 /** 昵称/学院/专业的上限由**页面**给（服务端不拦） */
@@ -69,6 +70,18 @@ export function formValuesToProfileBody(values: Record<string, unknown>): Record
   };
 }
 
+type AvatarCandidate = { uri?: unknown; mimeType?: unknown; sizeBytes?: unknown };
+type AvatarUploadFile = { uri: string; name: string; type: string };
+
+/** Native FormData accepts this shape on iOS and Android; remote URLs are never uploaded as user files. */
+export function avatarUploadFile(value: unknown): AvatarUploadFile | null {
+  const image = value as AvatarCandidate | null;
+  if (!image || typeof image.uri !== 'string' || !/^(file:|content:)/.test(image.uri)) return null;
+  if (typeof image.mimeType !== 'string' || !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(image.mimeType)) return null;
+  const extension = image.mimeType === 'image/jpeg' ? 'jpg' : image.mimeType.slice('image/'.length);
+  return { uri: image.uri, name: `avatar.${extension}`, type: image.mimeType };
+}
+
 export function EditProfileScreen(): React.ReactElement {
   const { t } = useI18n();
   const router = useRouter();
@@ -104,17 +117,27 @@ export function EditProfileScreen(): React.ReactElement {
         labelKey: 'me.edit.avatar',
         // ⛔ 本地 URI 重启后失效 → 绝不落草稿
         neverDraft: true,
-        render: () => (
+        render: (api) => (
           <MediaPicker
             testID="me-edit-avatar"
-            value={avatarUri === null ? null : { uri: avatarUri }}
-            onChange={() => undefined}
+            value={api.value && typeof api.value === 'object' && typeof (api.value as {uri?: unknown}).uri === 'string'
+              ? api.value as {uri:string;mimeType?:string|null;sizeBytes?:number|null}
+              : avatarUri === null ? null : { uri: avatarUri }}
+            onChange={(next) => {
+              api.onChange(next);
+              setAvatarUri(next?.uri ?? null);
+            }}
             maxBytes={8 * 1024 * 1024}
             allowGif
             pickLabel={t('me.edit.avatar')}
-            unavailableLabel={t('me.edit.avatarUnavailable')}
             removeLabel={t('action.clear')}
-            disabled
+            onPick={async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: false, quality: 1 });
+              if (result.canceled) return { ok: false, reason: 'cancelled' };
+              const asset = result.assets[0];
+              if (!asset?.uri || !asset.mimeType || !asset.fileSize) return { ok: false, reason: 'failed' };
+              return { ok: true, image: { uri: asset.uri, mimeType: asset.mimeType, sizeBytes: asset.fileSize } };
+            }}
           />
         ),
       },
@@ -128,6 +151,8 @@ export function EditProfileScreen(): React.ReactElement {
     initialValues: initial ?? undefined,
     onSubmit: async (values) => {
       await updateProfileInfo(formValuesToProfileBody(values));
+      const avatar = avatarUploadFile(values.avatar);
+      if (avatar) await updateAvatar(avatar);
     },
   });
 

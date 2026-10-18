@@ -1,29 +1,9 @@
-/**
- * `S-07` 食堂首页 / Canteen（父 `S-01`，原型 `P7`）
- *
- * 页面清单给的接口是 `/regions`、`/banners`、`/pick-random`、`/rankings/*`，
- * 组件是 `BannerSlot` `QuickActionGrid` `SectionHeader` `RankingRow` `Fab`（今天吃什么）。
- *
- * ⚠️ **本轮交付范围**（如实登记，见 P1-17 §3）：
- *   ✅ 区域网格（`QuickActionGrid` → `S-08`）
- *   ✅ 「今天吃什么」（`/pick-random` → 随机跳一个菜品详情）
- *   ⛔ **`/banners` 与 `/rankings/*` 未做**：广告位要先把 6 种 `link_type` 的目标解析
- *      （含 https-only 规则）做出来，而那是**广告模块**的既有逻辑（`S-02`/`S-03`）——
- *      在这里再实现一遍就是"同语义两层"（9.14-①）。榜单同理（4 个 `/rankings/*` 接口）。
- *
- * ⛔ 页面清单里 `S-07` 的 `Fab`（今天吃什么）**不是发布入口**：宪法第三轮裁决只禁
- *    "第二个**发布**入口"，而"今天吃什么"是内容动作 → 用普通按钮实现，
- *    ⛔ 不新建 `Fab` 组件（组件定义 §2.6 里没有它）。
- */
+/** S-07 Canteen, P7 discovery: search, one ranking, areas, random meal and food articles. */
 
 import * as React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import MapPin from 'lucide-react-native/icons/map-pin';
-import ShoppingBag from 'lucide-react-native/icons/shopping-bag';
-import Bike from 'lucide-react-native/icons/bike';
-import BookOpen from 'lucide-react-native/icons/book-open';
-import Shuffle from 'lucide-react-native/icons/shuffle';
 
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
@@ -33,20 +13,25 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { QuickActionGrid, type QuickAction } from '@/components/ui/QuickActionGrid';
-import { Screen } from '@/components/ui/Screen';
+import { FeatureScreen } from '@/components/ui/FeatureScreen';
 import { useMailboxBadge } from '@/features/mailbox/useUnread';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useToast } from '@/components/ui/Toast';
 import { getRegions, pickRandomMeal } from '../../../../shared/api/canteen';
 import { normalizeRegions, canteenCacheKey, CANTEEN_CACHE_TTL_MS } from './canteen';
 import { useCanteenResource } from './useCanteenResource';
+import { SearchField } from '@/components/ui/SearchField';
+import { FoodArticleFeed } from './FoodArticleFeed';
+import { CanteenRankings } from './CanteenRankings';
+import type { RankingTab } from './canteenRankingModel';
 
-export function CanteenHome(): React.ReactElement {
+export function CanteenHome({ embedded = false, rankingTabs = [{ key: 'hotProducts', labelKey: 'canteen.dishes' }] }: { embedded?: boolean; rankingTabs?: readonly RankingTab[] } = {}): React.ReactElement {
   const badge = useMailboxBadge();
   const theme = useTheme();
   const { t } = useI18n();
   const router = useRouter();
   const toast = useToast();
+  const [query, setQuery] = React.useState('');
   const [picking, setPicking] = React.useState(false);
 
   const regions = useCanteenResource(getRegions, normalizeRegions, [], { key: canteenCacheKey('regions'), ttlMs: CANTEEN_CACHE_TTL_MS.regions });
@@ -83,14 +68,10 @@ export function CanteenHome(): React.ReactElement {
   };
 
   return (
-    <Screen testID="screen-canteen" titleKey="canteen.title" bottomMode="own" {...badge}>
-      <View style={{ flex: 1, padding: theme.space('space_4'), gap: theme.space('space_4') }}>
-        <QuickActionGrid testID="square-services" actions={[
-          {key:'market',label:t('screen.market.title'),icon:ShoppingBag,onPress:()=>router.push('/market' as never)},
-          {key:'errand',label:t('screen.errand.title'),icon:Bike,onPress:()=>router.push('/errand' as never)},
-          {key:'guides',label:t('square.guides.title'),icon:BookOpen,onPress:()=>router.push('/guides' as never)},
-        ]}/>
-        <Button testID="canteen-search-entry" label={t('canteen.search.title')} variant="secondary" onPress={() => router.push('/canteen/search')} />
+    <FeatureScreen embedded={embedded} testID="screen-canteen" titleKey="canteen.title" bottomMode="own" {...badge}>
+      <FoodArticleFeed header={<View style={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
+        <SearchField testID="canteen-home-search" appearance="full" value={query} onChangeText={setQuery} placeholder={t('canteen.search.placeholder')} clearLabel={t('action.clear')} onSubmit={() => router.push({ pathname: '/canteen/search', params: { query: query.trim() } })} />
+        <CanteenRankings tabs={rankingTabs} />
         {regions.stale ? <OfflineBanner testID="canteen-stale" variant="stale" message={t('canteen.cache.stale')} actionLabel={t('action.refresh')} onAction={regions.reload} /> : null}
         {regions.loading && regions.data === null ? (
           <LoadingState testID="canteen-loading" />
@@ -121,7 +102,7 @@ export function CanteenHome(): React.ReactElement {
             void pickForMe();
           }}
         />
-      </View>
-    </Screen>
+      </View>} />
+    </FeatureScreen>
   );
 }

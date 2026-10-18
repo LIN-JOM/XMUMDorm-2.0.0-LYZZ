@@ -17,6 +17,14 @@ export function listMarketplaceItems(params = {}) {
   return get(`/api/marketplace/items${query ? `?${query}` : ''}`);
 }
 
+export function listMarketplaceMyItems(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString();
+  return get(`/api/marketplace/me/items${query ? `?${query}` : ''}`);
+}
+
 export function listMarketplaceMyWants(params = {}) {
   const qs = new URLSearchParams();
   if (params.page) qs.set('page', String(params.page));
@@ -39,6 +47,17 @@ export function updateMarketplaceItem(id, body) {
 
 export function toggleMarketplaceWant(id) {
   return post(`/api/marketplace/items/${id}/want`, {});
+}
+
+/** Marketplace reports use the shared moderation contract, not a domain-only route. */
+export function reportMarketplaceItem(id, { reason, detail, screenshots } = {}) {
+  return post('/api/reports', {
+    target_type: 'marketplace',
+    target_id: id,
+    reason,
+    detail,
+    screenshots,
+  });
 }
 
 export function updateMarketplaceItemStatus(id, status) {

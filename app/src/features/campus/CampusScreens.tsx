@@ -1,34 +1,79 @@
 import {ReportSheet} from '@/components/ui/ReportSheet';
+import {TreeholeReport} from './TreeholeReport';
+import {Button as HeroButton, useToast as useHeroUIToast} from 'heroui-native';
 import {useToast} from '@/components/ui/Toast';
 import type {CampusReportReason} from './useCampusReport';
-import {useCampusActions} from './useCampusActions';
+import {useCampusActions,useCampusLike} from './useCampusActions';
 import * as React from 'react';
 import {useRouter} from 'expo-router';
-import {Button} from '@/components/ui/Button';
 import {TopTabStrip} from '@/components/ui/TopTabStrip';
 import {getSecondaryTabs} from '@/features/navigation/secondaryTabs';
 import {getQueryClient} from '@/shared/queryClient';
 import {QK} from '../../../../shared/query/queryKeys';
 import {getConfessionWindow,getConfession} from '../../../../shared/api/confessions';
 import {Screen, type ScreenProps} from '@/components/ui/Screen';
-import {ListScreen, useListPagination} from '@/components/ui/ListScreen';
+import {ListScreen, resolveListState, useListPagination} from '@/components/ui/ListScreen';
+import {TreeholeFeedState} from './TreeholeFeedState';
 import {ListItem} from '@/components/ui/ListItem';
+import {TreeholeTagFilters} from './TreeholeTagFilters';
 import {Text} from '@/components/ui/Text';
 import {Pressable} from '@/components/ui/Pressable';
+import {ScrollView, View} from 'react-native';
 import {SearchHighlight} from './SearchHighlight';
-import {MediaGrid} from '@/components/ui/MediaGrid';
 import {DetailScreen} from '@/proto/P3';
 import {useI18n} from '@/i18n';
 import type {AppError} from '@/i18n/errors';
-import {getPostList, getPostDetail} from '../../../../shared/api/posts';
+import {getPostList, getPostDetail, getPostTagsList} from '../../../../shared/api/posts';
+import { wallTemplateLabel, WallTemplateContent } from './wallTemplates';
+import {formatPostTime} from '../../../../shared/utils/formatTime';
+import {TreeholePost} from './TreeholePost';
+import {TreeholeMedia} from './TreeholeMedia';
+import {TreeholeCommentThread} from './TreeholeCommentThread';
+import {toTreeholePostViewModel} from './treeholePostViewModel';
 
-type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;author?:{nickname?:string;username?:string}|null;images?:{url:string}[]};
+export type Post={id:number;liked?:boolean;user_liked?:boolean;like_count?:number;comment_count?:number;title?:string|null;content:string;created_at?:string;template_key?:string;author?:{id?:number;avatar?:string;nickname?:string;username?:string;level?:number;badge?:string}|null;tags?:{id?:number;slug?:string;name_zh?:string;name_en?:string}[];images?:{url:string}[]};
+type PostTag={id:number;name_zh?:string;name_en?:string};
+function postImageUrls(post:Pick<Post,'images'>|null|undefined):string[]{
+ return Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
+}
 function asPost(value:unknown):Post {
  if(!value || typeof value!=='object') throw {kind:'content'};
  const row=value as Post & {hidden?:boolean;deleted_at?:unknown;hidden_by_admin?:boolean};
  if(!Number.isSafeInteger(row.id)||row.id<=0||typeof row.content!=='string'||row.hidden||row.deleted_at||row.hidden_by_admin) throw {kind:'content'};
  if(row.title!=null && typeof row.title!=='string') throw {kind:'content'};
+ if(row.created_at!=null && typeof row.created_at!=='string') throw {kind:'content'};
  return row;
+}
+function asPostTag(value:unknown):PostTag|null {
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const tag=value as PostTag;
+ if(!Number.isSafeInteger(tag.id)||tag.id<=0)return null;
+ if(typeof tag.name_zh!=='string'&&typeof tag.name_en!=='string')return null;
+ return tag;
+}
+function tagLabel(tag:PostTag,locale:'zh'|'en'):string {
+ return (locale==='en'?tag.name_en||tag.name_zh:tag.name_zh||tag.name_en)?.trim()||'';
+}
+function selectedTagId(filters:Readonly<Record<string,string|readonly string[]>>):number|null {
+ const value=filters.tag;
+ if(typeof value!=='string'||!/^[1-9]\d*$/.test(value))return null;
+ const id=Number(value);
+ return Number.isSafeInteger(id)?id:null;
+}
+function useTreeholeTags(enabled:boolean):readonly PostTag[] {
+ const [tags,setTags]=React.useState<readonly PostTag[]>([]);
+ React.useEffect(()=>{
+  if(!enabled){setTags([]);return;}
+  let active=true;
+  void getPostTagsList({limit:20}).then(value=>{
+   if(!active||!Array.isArray(value))return;
+   const unique=new Map<number,PostTag>();
+   for(const item of value){const tag=asPostTag(item);if(tag&&tagLabel(tag,'zh'))unique.set(tag.id,tag);}
+   setTags([...unique.values()]);
+  }).catch(()=>{if(active)setTags([]);});
+  return()=>{active=false;};
+ },[enabled]);
+ return tags;
 }
 function errorFor(failure:unknown):AppError {
  if(failure && typeof failure==='object') {
@@ -47,37 +92,67 @@ type Snapshot={rows:readonly Post[];page:number;cursor:number|null;hasMore:boole
 function asWall(value:unknown):Post {
  const row=asPost(value);
  // Never retain raw identity, title or images from an anonymous response.
- return {id:row.id,content:row.content,liked:row.liked,like_count:row.like_count,comment_count:row.comment_count};
+ return {id:row.id,content:row.content,template_key:row.template_key,liked:row.liked,like_count:row.like_count,comment_count:row.comment_count};
 }
-function snapshotKey(kind:CampusKind){
- return [...(kind==='wall'?QK.confessionWindow('_guest'):QK.postsInfinite('_guest',10)), 'campusReadSnapshot'];
+function snapshotKey(kind:CampusKind,tagId?:number|null){
+ return [...(kind==='wall'?QK.confessionWindow('_guest'):QK.postsInfinite('_guest',10,tagId==null?undefined:String(tagId))), 'campusReadSnapshot'];
 }
 
-export function CampusListScreen({initialTab='confession', ...screenProps}:{initialTab?:CampusKind} & Omit<ScreenProps, 'children' | 'titleKey'>={}):React.ReactElement {
+export function CampusListScreen({initialTab='confession', beforeTabs, ...screenProps}:{initialTab?:CampusKind;beforeTabs?:React.ReactNode} & Omit<ScreenProps, 'children' | 'titleKey'>={}):React.ReactElement {
  const {t}=useI18n();const router=useRouter();const [selected,setSelected]=React.useState<CampusKind>(initialTab);
  React.useEffect(() => setSelected(initialTab), [initialTab]);
  return <Screen titleKey="screen.campus" showMailbox={false} testID="campus-screen" {...screenProps}>
-  <TopTabStrip tabs={getSecondaryTabs('campus')} selectedKey={selected} onSelect={key=>{
+  {beforeTabs}
+  <TopTabStrip tabs={getSecondaryTabs('square')} selectedKey={selected} onSelect={key=>{
    if(key!=='confession'&&key!=='wall')return;
    setSelected(key);router.setParams({tab:key});
   }}/>
-  {selected==='confession'?<Button label={t('screen.campus.search.title')} onPress={()=>router.push('/campus/search' as never)}/>:null}
+  {selected==='confession'?<HeroButton size="sm" variant="ghost" onPress={()=>router.push('/campus/search' as never)}>{t('screen.campus.search.title')}</HeroButton>:null}
   <CampusFeed key={selected} kind={selected}/>
  </Screen>;
 }
 
-/** A keyed child owns one fixed scope; switching tabs unmounts its pending requests. */
+function TreeholeFeedRow({row,query}:{row:Post;query?:string}):React.ReactElement {
+ const {t,locale}=useI18n();const router=useRouter();const like=useCampusLike(row,'confession');
+ const images=postImageUrls(row);
+ return <>
+  <Pressable testID={`campus-row-${row.id}`} accessibilityRole="button" accessibilityLabel={row.title||row.content} onPress={()=>router.push(`/campus/${row.id}` as never)}>
+   <TreeholePost post={{...toTreeholePostViewModel(row),liked:like.liked,likeCount:like.likeCount,commentCount:like.commentCount}}
+    variant="feed" actionTestIDPrefix={`campus-row-${row.id}`} media={<View testID={`campus-row-${row.id}-media`}><TreeholeMedia postId={row.id} urls={images} mode="feed"/></View>}
+    metaLabel={row.created_at?formatPostTime(row.created_at,{locale}):undefined}
+    titleContent={query&&row.title?<SearchHighlight value={row.title} query={query}/>:undefined}
+    contentContent={query?<SearchHighlight value={row.content} query={query}/>:undefined}
+    onLike={like.onToggleLike} onReply={()=>router.push(`/campus/${row.id}` as never)}/>
+  </Pressable>
+  {like.notice&&like.notice!=='login'?<Text testID={`campus-row-${row.id}-notice`} role="body">{t(like.notice==='denied'?'screen.campus.write.denied':'screen.campus.write.likeFailed')}</Text>:null}
+  {like.notice==='login'?<HeroButton testID={`campus-row-${row.id}-login`} size="sm" onPress={()=>router.push('/login')}>{t('screen.campus.write.login')}</HeroButton>:null}
+ </>;
+}
+
+/** A keyed child owns one fixed scope; switching filters unmounts its pending requests. */
 export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.ReactElement {
+ const {locale}=useI18n();
+ const scopedTreehole=kind==='confession'&&!query;
+ const filterState=useListPagination({scope:scopedTreehole?{primaryTab:'square',secondaryTab:'confession'}:undefined});
+ const tagId=selectedTagId(filterState.filters);
+ const tags=useTreeholeTags(scopedTreehole);
+ const options=React.useMemo(()=>tags.map(tag=>({key:String(tag.id),label:tagLabel(tag,locale)})).filter(option=>option.label),[locale,tags]);
+ const filterChips=scopedTreehole?<TreeholeTagFilters options={options} selected={tagId==null?[]:[String(tagId)]}
+  onToggle={key=>filterState.setFilters({tag:key})} onClear={()=>filterState.setFilters({})} testID="campus-tag-filters"/>:undefined;
+ return <CampusFeedData key={`${kind}:${query??'_'}:${tagId??'_all'}`} kind={kind} query={query} tagId={tagId} filterChips={filterChips}/>;
+}
+
+function CampusFeedData({kind,query,tagId,filterChips}:{kind:CampusKind;query?:string;tagId?:number|null;filterChips?:React.ReactNode}):React.ReactElement {
  const {t}=useI18n();const router=useRouter();const client=getQueryClient();
- const key=React.useMemo(()=>query?[...snapshotKey(kind),'search',query]:snapshotKey(kind),[kind,query]);
+ const key=React.useMemo(()=>query?[...snapshotKey(kind),'search',query]:snapshotKey(kind,tagId),[kind,query,tagId]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
  const snapshot=React.useRef<Snapshot>(initial.current??{rows:[],page:0,cursor:null,hasMore:true});
  const [rows,setRows]=React.useState(snapshot.current.rows),[revision,setRevision]=React.useState(0);
- const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query?undefined:{primaryTab:'campus',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
+ const {pagination,dispatch,restoredScrollOffset,persistScrollOffset: persistTabScrollOffset,setCursor}=useListPagination({scope:query||tagId!=null?undefined:{primaryTab:'square',secondaryTab:kind},initial:{hasMore:snapshot.current.hasMore}});
  const persistScrollOffset=React.useCallback((offset:number)=>{
-  if(query){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
+  if(query||tagId!=null){snapshot.current={...snapshot.current,scrollOffset:offset};client.setQueryData(key,snapshot.current);}
   else persistTabScrollOffset(offset);
- },[query,client,key,persistTabScrollOffset]);
+ },[query,tagId,client,key,persistTabScrollOffset]);
  const generation=React.useRef(0),pending=React.useRef<'refresh'|'append'|null>(null);
  const load=React.useCallback(async(mode:'refresh'|'append')=>{
   if(pending.current==='refresh'||(mode==='append'&&(pending.current||!snapshot.current.hasMore)))return;
@@ -93,7 +168,7 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
     cursor=typeof data.oldest_cursor==='number'&&Number.isSafeInteger(data.oldest_cursor)&&data.oldest_cursor>0?data.oldest_cursor:null;
     if(hasMore&&(!Number.isSafeInteger(cursor)||Number(cursor)<=0||cursor===snapshot.current.cursor&&mode==='append'))throw {kind:'content'};
    }else{
-    const data=await getPostList({page,pageSize:10,...(query?{q:query}:{})});
+    const data=await getPostList({page,pageSize:10,...(query?{q:query}:{}),...(tagId!=null?{tagId}:{})});
     if(request!==generation.current)return;
     if(!Array.isArray(data?.list)||typeof data.hasMore!=='boolean')throw {kind:'content'};
     incoming=data.list.map(asPost);hasMore=data.hasMore;
@@ -107,7 +182,7 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
    dispatch({type:mode==='refresh'?'refresh:success':'append:success',hasMore});
   }catch(error){if(request===generation.current)dispatch({type:mode==='refresh'?'refresh:failure':'append:failure',error:errorFor(error)});}
   finally{if(request===generation.current)pending.current=null;}
- },[kind,query,key,client,dispatch,setCursor,persistScrollOffset]);
+ },[kind,query,tagId,key,client,dispatch,setCursor,persistScrollOffset]);
  React.useEffect(()=>{if(!initial.current)void load('refresh');return()=>{generation.current++;pending.current=null;};},[load]);
  // Publishing removes snapshots; mounted feeds must also refresh, not only future mounts.
  React.useEffect(()=>{
@@ -119,24 +194,30 @@ export function CampusFeed({kind,query}:{kind:CampusKind;query?:string}):React.R
   return unsubscribe;
  },[client,key,load]);
  const refresh=()=>void load('refresh'),append=()=>void load('append');
+ const treeholeState=kind==='confession'?resolveListState({pagination,itemCount:rows.length}):'data';
+ if(treeholeState!=='data')return <>{filterChips}<TreeholeFeedState testID={`campus-list-${treeholeState}`} state={treeholeState} error={pagination.error} title={t(query?'screen.campus.search.empty':'screen.campus.read.empty')} actionLabel={t('action.retry')} onAction={refresh}/></>;
  return <>
-  {rows.length>0&&pagination.errorScope==='refresh'?<Button label={t('screen.campus.read.refreshFailed')} onPress={refresh}/>:null}
+  {rows.length>0&&pagination.errorScope==='refresh'?<HeroButton size="sm" variant="outline" onPress={refresh}>{t('screen.campus.read.refreshFailed')}</HeroButton>:null}
   <ListScreen key={revision} testID="campus-list" data={rows} keyExtractor={row=>String(row.id)} pagination={pagination}
-   restoredScrollOffset={revision===0&&initial.current?(query?initial.current.scrollOffset??0:restoredScrollOffset):0} onScrollOffset={persistScrollOffset}
+   restoredScrollOffset={revision===0&&initial.current?(query||tagId!=null?initial.current.scrollOffset??0:restoredScrollOffset):0} onScrollOffset={persistScrollOffset}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
+   filterChips={filterChips}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.campus.read.listEnd'),empty:{kind:'noResult',title:t(query?'screen.campus.search.empty':'screen.campus.read.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={row=>query?<Pressable testID={`campus-row-${row.id}`} accessibilityRole="button"
-    accessibilityLabel={`${row.title||t('screen.campus.read.post')}: ${row.content}`}
-    onPress={()=>router.push(`/campus/${row.id}` as never)}>
-    <SearchHighlight value={row.title||t('screen.campus.read.post')} query={query}/>
-    <SearchHighlight value={row.content} query={query}/>
-   </Pressable>:<ListItem testID={`campus-row-${row.id}`} title={kind==='wall'?t('screen.campus.read.anonymous'):row.title||t('screen.campus.read.post')} subtitle={row.content}
-    onPress={()=>router.push((kind==='wall'?`/campus/wall/${row.id}`:`/campus/${row.id}`) as never)}/>}/>
+   renderItem={row=>kind==='wall'?<ListItem testID={`campus-row-${row.id}`} title={wallTemplateLabel(t,row.template_key)} subtitle={row.content} meta={t('screen.campus.read.anonymous')}
+     onPress={()=>router.push(`/campus/wall/${row.id}` as never)}/>:<TreeholeFeedRow row={row} query={query}/>}/>
  </>;
 }
 
+/** Treehole owns its HeroUI visual hierarchy; Screen remains only the platform safe-area shell. */
+function TreeholeDetailShell({state,error,backLabel,retryLabel,emptyActionLabel,onBack,onRetry,emptyTitle,children}:{state:'loading'|'error'|'empty'|'content';error:AppError|null;backLabel:string;retryLabel:string;emptyActionLabel:string;onBack:()=>void;onRetry:()=>void;emptyTitle:string;children:React.ReactNode}):React.ReactElement {
+ return <Screen testID="campus-detail">
+  <HeroButton testID="campus-detail-back" size="sm" variant="ghost" onPress={onBack}>{backLabel}</HeroButton>
+  {state==='content'?<ScrollView style={{flex:1,minHeight:0}} contentContainerStyle={{paddingBottom:24}}><View style={{padding:16,gap:12}}>{children}</View></ScrollView>:<TreeholeFeedState testID={`campus-detail-${state}`} state={state==='loading'?'loading':state==='error'?'error':'empty'} error={error} title={emptyTitle} actionLabel={state==='empty'?emptyActionLabel:retryLabel} onAction={state==='empty'?onBack:onRetry}/>}
+ </Screen>;
+}
+
 export function CampusDetailScreen({published=false,postId,kind='confession'}:{published?:boolean;postId:string;kind?:CampusKind}):React.ReactElement {
- const {t}=useI18n();const router=useRouter();
+ const {t,locale}=useI18n();const router=useRouter();
  const [post,setPost]=React.useState<Post|null>(null),[error,setError]=React.useState<AppError|null>(null);
  const [loading,setLoading]=React.useState(true);const generation=React.useRef(0);
  const load=React.useCallback(async()=>{
@@ -152,25 +233,33 @@ export function CampusDetailScreen({published=false,postId,kind='confession'}:{p
  React.useEffect(()=>{void load();return()=>{generation.current++;};},[load]);
  const actions=useCampusActions(post,kind);
  const toast=useToast();
+ const {toast:heroToast}=useHeroUIToast();
  const [reportOpen,setReportOpen]=React.useState(false),[reportReason,setReportReason]=React.useState<string|null>(null),[reportDetail,setReportDetail]=React.useState('');
  React.useEffect(()=>{setReportOpen(false);setReportReason(null);setReportDetail('');},[postId,kind]);
- React.useEffect(()=>{if(actions.report.state==='success'){setReportOpen(false);toast.show({message:t('screen.campus.report.success'),tone:'success'});}},[actions.report.state,t,toast]);
+ React.useEffect(()=>{if(actions.report.state==='success'){setReportOpen(false);if(kind==='confession')heroToast.show({label:t('screen.campus.report.success'),variant:'success'});else toast.show({message:t('screen.campus.report.success'),tone:'success'});}},[actions.report.state,heroToast,kind,t,toast]);
  const reportReasons=['spam','fraud','abuse','nsfw','trolling','privacy','illegal_trade','other'] as const;
  const reportReasonKeys={spam:'screen.campus.report.spam',fraud:'screen.campus.report.fraud',abuse:'screen.campus.report.abuse',nsfw:'screen.campus.report.nsfw',trolling:'screen.campus.report.trolling',privacy:'screen.campus.report.privacy',illegal_trade:'screen.campus.report.illegal_trade',other:'screen.campus.report.other'} as const;
- const reportPanel=<ReportSheet maxDetailLength={1000} visible={reportOpen} reasons={reportReasons.map(value=>({value,label:t(reportReasonKeys[value])}))} reason={reportReason} detail={reportDetail} onReason={setReportReason} onDetail={setReportDetail}
+ const reportPanel=kind==='confession'?<TreeholeReport visible={reportOpen} reasons={reportReasons.map(value=>({value,label:t(reportReasonKeys[value])}))} reason={reportReason} detail={reportDetail} onReason={setReportReason} onDetail={setReportDetail}
+  busy={actions.report.state==='sending'} onSubmit={()=>{if(reportReason)void actions.report.submit(reportReason as CampusReportReason,reportDetail);}} onCancel={()=>setReportOpen(false)}
+  message={['failed','denied','invalid','login'].includes(actions.report.state)?t(actions.report.state==='login'?'screen.campus.write.login':actions.report.state==='denied'?'screen.campus.write.denied':'screen.campus.report.failed'):undefined}
+  action={actions.report.state==='login'?{label:t('screen.campus.write.login'),onPress:()=>{setReportOpen(false);router.push('/login');}}:undefined}
+  labels={{title:t('screen.campus.read.report'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>:<ReportSheet maxDetailLength={1000} visible={reportOpen} reasons={reportReasons.map(value=>({value,label:t(reportReasonKeys[value])}))} reason={reportReason} detail={reportDetail} onReason={setReportReason} onDetail={setReportDetail}
   busy={actions.report.state==='sending'} onSubmit={()=>{if(reportReason)void actions.report.submit(reportReason as CampusReportReason,reportDetail);}} onCancel={()=>setReportOpen(false)}
   message={['failed','denied','invalid','login'].includes(actions.report.state)?t(actions.report.state==='login'?'screen.campus.write.login':actions.report.state==='denied'?'screen.campus.write.denied':'screen.campus.report.failed'):undefined}
   action={actions.report.state==='login'?{label:t('screen.campus.write.login'),onPress:()=>{setReportOpen(false);router.push('/login');}}:undefined}
   labels={{title:t('screen.campus.read.report'),reason:t('screen.campus.report.reason'),detail:t('screen.campus.report.detail'),submit:t('screen.campus.read.report'),cancel:t('action.cancel')}}/>;
- const back=()=>published?router.replace('/(tabs)/campus' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/campus?tab=wall':'/campus') as never);
- const images=Array.isArray(post?.images)?post.images.filter(image=>image&&typeof image.url==='string').map(image=>image.url):[];
- return <DetailScreen testID="campus-detail" title={kind==='wall'?t('screen.campus.read.wallTitle'):post?.title||t('screen.campus.read.title')}
+ const back=()=>published?router.replace('/' as never):router.canGoBack()?router.back():router.replace((kind==='wall'?'/?tab=wall':'/') as never);
+ const images=postImageUrls(post);
+ const treeholePost=post?{...toTreeholePostViewModel(post),liked:actions.interactions.liked,likeCount:actions.interactions.likeCount,commentCount:actions.interactions.commentCount}:null;
+ const state=loading?'loading':error?.kind==='content'?'empty':error?'error':post?'content':'empty';
+ const treeholeBody=<>{treeholePost?<TreeholePost post={treeholePost} variant="detail" actionTestIDPrefix="campus-detail" media={<View testID="campus-media-0"><TreeholeMedia postId={treeholePost.id} urls={images} mode="detail"/></View>} metaLabel={post?.created_at?formatPostTime(post.created_at,{locale,absolute:true}):undefined} onLike={actions.onToggleLike} onReport={actions.report.state!=='success'?()=>setReportOpen(true):undefined}/>:null}{post?actions.body:null}<TreeholeCommentThread testID="campus-detail-comments" nodes={actions.comments.nodes} labels={{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')}} onReply={actions.comments.onReply} onRetry={actions.comments.onRetry} retryLabel={t('action.retry')} showRetry={actions.comments.pagination.append==='error'}/>{reportPanel}</>;
+ if(kind==='confession')return <TreeholeDetailShell state={state} error={error} backLabel={t('action.back')} retryLabel={t('action.retry')} emptyActionLabel={t('screen.campus.read.backToList')} onBack={back} onRetry={()=>error?.kind==='content'?back():void load()} emptyTitle={t('screen.campus.read.unavailable')}>{treeholeBody}</TreeholeDetailShell>;
+ return <DetailScreen testID="campus-detail" title={wallTemplateLabel(t,post?.template_key)}
   author={post?.author ? {kind:'named',name:post.author.nickname||post.author.username||t('screen.campus.read.author')} : {kind:'anonymous'}}
-  onReport={post&&actions.report.state!=='success'?()=>setReportOpen(true):undefined} interactions={actions.interactions} onToggleLike={post?actions.onToggleLike:undefined} comments={post?actions.comments:undefined} state={loading?'loading':error?.kind==='content'?'empty':error?'error':post?'content':'empty'} error={error}
+  onReport={post&&actions.report.state!=='success'?()=>setReportOpen(true):undefined} interactions={actions.interactions} onToggleLike={post?actions.onToggleLike:undefined} comments={post?actions.comments:undefined} state={state} error={error}
   empty={{kind:'noResult',title:t('screen.campus.read.unavailable'),actionLabel:t('screen.campus.read.backToList'),onAction:back}}
   onBack={back} onRetry={()=>error?.kind==='content'?back():void load()}
-  hero={images.length>0?<MediaGrid testID="campus-media" uris={images} variant="hero"/>:undefined}
-  body={<><Text role="body">{post?.content}</Text>{post?actions.body:null}{reportPanel}</>}
+  body={<>{post?<WallTemplateContent templateKey={post.template_key} content={post.content}/>:null}{post?actions.body:null}{reportPanel}</>}
   labels={{back:t('action.back'),like:t('screen.campus.read.like'),favorite:t('action.save'),comment:t('screen.campus.read.comments'),report:t('screen.campus.read.report'),countPlaceholder:'—',anonymous:t('screen.campus.read.anonymous'),
    comments:{anonymous:t('screen.campus.read.anonymous'),deleteLabel:t('screen.campus.read.delete'),replyLabel:t('screen.campus.read.reply'),likeLabel:t('screen.campus.read.like'),moreReplies:n=>String(n),collapse:t('screen.campus.read.collapse')},commentsEnd:t('screen.campus.read.end'),commentsRetry:t('action.retry')}}/>;
 }

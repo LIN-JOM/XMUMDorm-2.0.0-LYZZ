@@ -21,6 +21,7 @@
 import * as React from 'react';
 import { render, type RenderResult } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
+import { HeroUINativeProvider } from 'heroui-native';
 
 import { ThemeProvider } from '@/design-system/theme';
 import { I18nProvider, type Locale } from '@/i18n';
@@ -62,11 +63,13 @@ export async function renderApp(
 
   const { locale = 'zh', inScreen = false, scheme = 'dark' } = options;
   const tree = (
-    <ThemeProvider source={scheme} systemScheme={scheme}>
-      <I18nProvider locale={locale}>
-        <ToastProvider>{inScreen ? <Screen bottomMode="own">{node}</Screen> : node}</ToastProvider>
-      </I18nProvider>
-    </ThemeProvider>
+    <HeroUINativeProvider config={{ devInfo: { stylingPrinciples: false } }}>
+      <ThemeProvider source={scheme} systemScheme={scheme}>
+        <I18nProvider locale={locale}>
+          <ToastProvider>{inScreen ? <Screen bottomMode="own">{node}</Screen> : node}</ToastProvider>
+        </I18nProvider>
+      </ThemeProvider>
+    </HeroUINativeProvider>
   );
 
   /**

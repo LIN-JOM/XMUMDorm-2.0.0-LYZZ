@@ -1,5 +1,5 @@
 /**
- * 万能墙三款版式的正文渲染 — M09
+ * 万能墙六款版式的正文渲染 — M09
  *
  * 版式契约见 docs/04-Module/M09-万能墙/Module09-万能墙模块设计.md §5.2。
  * 三款版式共用同一个卡片外壳（ConfessionCard），差异只在这里的正文排布。
@@ -56,6 +56,27 @@ function NoteBody({ content }) {
   );
 }
 
+function textLines(content) {
+  const lines = String(content).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return lines.length ? lines : [String(content)];
+}
+
+function AnnouncementBody({ content }) {
+  return <div className="cf-body cf-body--announcement"><p className="cf-announcement-text">{content}</p></div>;
+}
+
+function DialogueBody({ content }) {
+  return <div className="cf-body cf-body--dialogue">{textLines(content).map((line, idx) => (
+    <p key={`${idx}-${line.slice(0, 8)}`} className="cf-dialogue-line">“{line}”</p>
+  ))}</div>;
+}
+
+function ChecklistBody({ content }) {
+  return <div className="cf-body cf-body--checklist"><ul className="cf-checklist">{textLines(content).map((line, idx) => (
+    <li key={`${idx}-${line.slice(0, 8)}`}>{line}</li>
+  ))}</ul></div>;
+}
+
 /**
  * 按 template_key 分派正文渲染。
  * 未知 key 一律回落到默认版式（后端已做白名单，这里是第二道防线）。
@@ -69,6 +90,12 @@ export default function ConfessionBody({ templateKey, content, anonymousLabel = 
       return <LetterBody content={safeContent} anonymousLabel={anonymousLabel} />;
     case 'note':
       return <NoteBody content={safeContent} />;
+    case 'announcement':
+      return <AnnouncementBody content={safeContent} />;
+    case 'dialogue':
+      return <DialogueBody content={safeContent} />;
+    case 'checklist':
+      return <ChecklistBody content={safeContent} />;
     case 'bigtype':
     default:
       return <BigTypeBody content={safeContent} />;

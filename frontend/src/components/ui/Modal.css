@@ -120,3 +120,5 @@
     animation: none;
   }
 }
+
+.shop-product-modal{max-height:84vh;max-height:84dvh;overflow-y:auto;overscroll-behavior:contain}.shop-editor-modal{max-height:84vh;max-height:84dvh;overflow-y:auto;overscroll-behavior:contain}@media(max-width:640px){.shop-product-modal,.shop-editor-modal{max-height:88vh;max-height:88dvh}}

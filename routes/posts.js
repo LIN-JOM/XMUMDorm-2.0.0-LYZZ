@@ -20,6 +20,7 @@ const { grantExp, revokeByRef, checkAndGrantPostPopularRewards, formatAuthorLeve
 const { attachExp } = require('../utils/expResponse');
 const { isPostContentEligible, isCommentEligible } = require('../utils/expEligibility');
 const { requireCurrentTerms } = require('../services/termsAcceptance');
+const { inlineLimit } = require('../utils/sqlLimit');
 
 // 统一的文本清洗，防止 XSS 注入（去掉所有 HTML 标签，只保留纯文本）
 function cleanText(input) {
@@ -497,6 +498,20 @@ router.get('/', async (req, res) => {
 // ============================================
 router.get('/tags', async (req, res) => {
   try {
+    const term = cleanText(req.query && req.query.q).slice(0, 100);
+    if (term) {
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+      const like = `%${term}%`;
+      const rows = await query(
+        `SELECT id, slug, name_zh, name_en, created_at
+           FROM tags
+          WHERE name_zh LIKE ? OR name_en LIKE ? OR slug LIKE ?
+          ORDER BY created_at ASC, id ASC
+          LIMIT ${inlineLimit(limit, { fallback: 20, max: 50 })}`,
+        [like, like, like]
+      );
+      return res.status(200).json({ status: 0, message: 'ok', data: rows || [] });
+    }
     const ttlMs = Number(process.env.CACHE_TAGS_TTL_MS || 60 * 60 * 1000); // 60min
     const rows = await simpleCache.getOrSet('posts:tags:v1', ttlMs, async () => {
       return await query('SELECT id, slug, name_zh, name_en, created_at FROM tags ORDER BY created_at ASC, id ASC');
@@ -545,13 +560,10 @@ router.get('/hot-tags', async (req, res) => {
 });
 
 // ============================================
-// 创建标签（仅管理员）
+// 创建标签（登录用户；创建后立即公开）
 // ============================================
 router.post('/tags', authenticateToken, async (req, res) => {
   try {
-    if (!isAdmin(req)) {
-      return res.status(403).json({ status: -1, message: '仅管理员可创建标签 Admins only' });
-    }
     const nameZh = cleanText(req.body && req.body.name_zh).slice(0, 100);
     const nameEn = cleanText(req.body && req.body.name_en).slice(0, 100);
     if (!nameZh || !nameEn) {
@@ -564,6 +576,7 @@ router.post('/tags', authenticateToken, async (req, res) => {
       'INSERT INTO tags (slug, name_zh, name_en, created_by) VALUES (?, ?, ?, ?)',
       [slug, nameZh, nameEn, req.user.id]
     );
+    simpleCache.delete('posts:tags:v1');
     res.status(200).json({
       status: 0,
       message: '创建成功 Created',

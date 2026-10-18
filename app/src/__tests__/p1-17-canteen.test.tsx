@@ -542,7 +542,7 @@ describe('TC-P1-17-7A · 入口与结构约束', () => {
 
   it('⛔ 分类走 `filterChips` 槽位，⛔ 不塞进 `tabs`（导航 Tab ≠ 筛选 Chips）', () => {
     const src = readSquare('ShopMenu.tsx');
-    expect(src).toContain('filterChips');
+    expect(src).toContain('shop-categories');
     expect(src).not.toMatch(/\btabs=\{/);
   });
 

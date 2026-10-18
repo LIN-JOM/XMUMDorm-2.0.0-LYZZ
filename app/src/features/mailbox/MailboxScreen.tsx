@@ -2,7 +2,7 @@
  * 信箱页（`F-01`）—— 页面级组合（P2B-04）
  *
  * 形态依据：
- *   · **推入式全屏目的地**：⛔ 不是模态、⛔ 不是 Tab、⛔ 不进收纳处（宪法 4.7-1）
+ *   · **消息一级目的地**：原生 Tab 内容区，复用唯一底栏净空。
  *   · **列表骨架**：`P2` → `K05 ListScreen`（四态与分页状态机只在骨架里）
  *   · **分类切换**：`C14 SegmentedControl` 的 `withCount`（P2B-05 裁决：这是**页内筛选**，不是导航）
  *     → 因此它进 `filterChips`/自己的位置，⛔ **不进 `tabs` 槽位**（4.8.1-R4）
@@ -17,7 +17,7 @@
 
 import * as React from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Badge } from '@/components/ui/Badge';
@@ -28,6 +28,7 @@ import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
+import { TAB_BAR_HEIGHT } from '@/features/navigation/tabConfig';
 import {
   clearNotificationsByCategory,
   getNotifications,
@@ -47,13 +48,26 @@ import {
 import { toMailboxError } from './conversations';
 import { useUnread } from './useUnread';
 
+type StringHref = Extract<Href, string>;
+
 /**
  * 通知目标 → App 内路由。
- * ⛔ **本轮故意几乎全空**：`target.path` 是 Web 路径，硬套会跳到不存在的页面。
- * 等 **S03 DeepLinkRouter** 落地后，这里改成用它（页面清单 §5 的深链表）。
+ * 社团路由已注册后，只映射拥有稳定 App 路由的三种服务端目标。
+ * 其余 `target.path` 仍是 Web 路径，不能直接推给 Expo Router。
  */
-export function resolveNotificationRoute(_row: NotificationRow): string | null {
-  return null;
+export function resolveNotificationRoute(row: NotificationRow): StringHref | null {
+  const { target } = row;
+  if (!target.available || !Number.isSafeInteger(target.id) || target.id <= 0) return null;
+  switch (target.type) {
+    case 'club':
+      return `/clubs/${target.id}` as StringHref;
+    case 'club_activity':
+      return `/clubs/activity/${target.id}` as StringHref;
+    case 'club_post':
+      return `/clubs/post/${target.id}` as StringHref;
+    default:
+      return null;
+  }
 }
 
 export function MailboxScreen(): React.ReactElement {
@@ -163,7 +177,12 @@ export function MailboxScreen(): React.ReactElement {
   const canClear = rows.some((row) => isClearable(row.type));
 
   return (
-    <Screen testID="screen-mailbox" titleKey="screen.mailbox" bottomMode="none" showMailbox={false}>
+    <Screen
+      testID="screen-mailbox"
+      titleKey="screen.mailbox"
+      bottomMode="tabbar"
+      tabBarHeight={TAB_BAR_HEIGHT}
+    >
       <View style={{ flex: 1 }}>
         <View
           style={{

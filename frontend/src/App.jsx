@@ -12,6 +12,7 @@ import SiteShellRoute from './components/shell/SiteShellRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
+import ShopRouter from './pages/Shop/Shop';
 import AdminLayout from './components/Admin/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import UserList from './pages/Admin/UserList';
@@ -95,6 +96,8 @@ function MainApp() {
                   {layoutRoutes}
                 </Route>
                 <Route
+                  path="/myzone/admin/shop" element={<AuthGuard><ShopRouter /></AuthGuard>} />
+                <Route
                   path="/myzone/admin"
                   element={(
                     <AuthGuard>
@@ -103,6 +106,7 @@ function MainApp() {
                   )}
                 >
                   <Route index element={<AdminDashboard />} />
+
                   <Route path="users" element={<UserList />} />
                   <Route path="users/:id" element={<UserDetail />} />
                   <Route path="reports" element={<ReportList />} />

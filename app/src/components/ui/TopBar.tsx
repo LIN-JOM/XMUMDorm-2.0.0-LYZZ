@@ -1,11 +1,7 @@
 /**
- * 顶栏 —— **标题 + 唯一动作（信箱）**
+ * 顶栏 —— **标题**
  *
- * 宪法 4.2：⛔ 顶栏不得变成图标收纳区，**只允许一个动作**。
- *   → 本组件**结构上**只接受一个动作（信箱），没有第二个插槽，因此"加第二个图标"需要改本文件，
- *     会被 review 与逐屏清单（13.1）拦下。
- * 宪法 4.7：信箱是**贯穿全局的顶栏动作**，四个一级 Tab 上图标 / 位置 / 命中区 / 角标语义**必须完全一致**
- *   → 唯一实现（不在各屏复制）。
+ * 宪法 4.2：⛔ 顶栏不得变成图标收纳区。消息迁移到一级格后，顶栏默认无入口。
  * 宪法 17.2-1：顶栏背景**铺满到屏幕顶边**，内容从 inset 之下开始（`headerPaddingTop` 由 Screen 传入）。
  */
 
@@ -24,19 +20,22 @@ export type TopBarProps = {
   titleKey: MessageKey;
   /** 顶栏内容相对屏幕顶边的偏移（= 真实顶部 inset，由 Screen 计算） */
   headerPaddingTop: number;
-  /** 是否显示信箱动作；默认显示（⛔ 不允许"只在某一屏才有信箱入口"） */
+  /** 是否显示旧信箱动作；仅保留给尚未迁移的显式调用。 */
   showMailbox?: boolean;
   /** 未读角标数（单一未读真源，客户端不本地递减） */
   unreadCount?: number;
   onMailboxPress?: () => void;
+  /** 页面已登记的少量顶栏动作；不用于承载二级导航。 */
+  rightActions?: React.ReactNode;
 };
 
 export function TopBar({
   titleKey,
   headerPaddingTop,
-  showMailbox = true,
+  showMailbox = false,
   unreadCount = 0,
   onMailboxPress,
+  rightActions,
 }: TopBarProps): React.ReactElement {
   const theme = useTheme();
   const { t } = useI18n();
@@ -65,15 +64,18 @@ export function TopBar({
         <Text role="headline" emphasis="strong" colorToken="text-primary">
           {t(titleKey)}
         </Text>
-        {showMailbox ? (
-          <IconButton
-            testID="topbar-mailbox"
-            Icon={Mail}
-            accessibilityLabel={mailboxLabel}
-            badgeCount={unreadCount}
-            onPress={onMailboxPress}
-          />
-        ) : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {rightActions}
+          {showMailbox ? (
+            <IconButton
+              testID="topbar-mailbox"
+              Icon={Mail}
+              accessibilityLabel={mailboxLabel}
+              badgeCount={unreadCount}
+              onPress={onMailboxPress}
+            />
+          ) : null}
+        </View>
       </View>
     </View>
   );

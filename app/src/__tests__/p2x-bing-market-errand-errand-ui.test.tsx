@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as Linking from 'expo-linking';
-import {act,fireEvent,waitFor} from '@testing-library/react-native';
+import {act,fireEvent,waitFor,within} from '@testing-library/react-native';
 import {renderApp} from './helpers/renderApp';
 import {ErrandListScreen,ErrandDetailScreen} from '@/features/errand/ErrandScreens';
 import {listErrands,getErrandDetail,takeErrand,doneErrand,deleteErrand} from '../../../shared/api/errands';
@@ -22,9 +22,50 @@ afterEach(()=>getQueryClient().clear());
 it('跑腿列表分页按返回页大小且列表没有联系字段',async()=>{
  list.mockResolvedValueOnce({list:[row],page:1,pageSize:5,total:6}).mockResolvedValue({list:[{...row,id:4}],page:2,pageSize:5,total:6});
  const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ const rendered=mockListProps.renderItem(row,0) as React.ReactElement<{style?:unknown}>;
+ expect(rendered.props.style).toEqual(expect.objectContaining({marginBottom:12}));
+ expect(v.getByTestId('errand-row-2').props.style[0]).toEqual(expect.arrayContaining([expect.objectContaining({alignSelf:'stretch'})]));
  expect(v.queryByText('test contact')).toBeNull();await act(async()=>mockListProps.onEndReached?.());
  await waitFor(()=>expect(v.getByTestId('errand-row-4')).toBeTruthy());expect(mockListProps.pagination.hasMore).toBe(false);
  await fireEvent.press(v.getByTestId('errand-row-2'));expect(mockPush).toHaveBeenCalledWith('/errand/2');
+});
+it('任务卡显示类型地点截止时间和报酬',async()=>{
+ const task={...row,type:'urgent',location:'Library',deadline:'2026-10-16T12:00:00.000Z'};
+ list.mockResolvedValue({list:[task],page:1,pageSize:5,total:1});const v=await renderApp(<ErrandListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ const card=v.getByTestId('errand-row-2');
+ const cardView=within(card);
+ expect(cardView.getByText('紧急')).toBeTruthy();
+ expect(cardView.getByText('Library · 2026/10/16 20:00')).toBeTruthy();
+ expect(cardView.getByText('RM 5.00')).toBeTruthy();
+ expect(card.props.accessibilityLabel).toContain('2026/10/16 20:00');
+});
+it('跑腿类型和状态分组筛选并可独立清除',async()=>{
+ list.mockResolvedValue({list:[row],page:1,pageSize:5,total:1});const v=await renderApp(<ErrandListScreen/>);
+ await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ await fireEvent.press(v.getByTestId('errand-type-delivery'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,type:'delivery'}));
+ await fireEvent.press(v.getByTestId('errand-status-open'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,type:'delivery',status:'open'}));
+ expect(v.getByText('任务类型')).toBeTruthy();expect(v.getByText('任务状态')).toBeTruthy();
+ expect(v.getByTestId('errand-type-delivery').props.accessibilityState.selected).toBe(true);
+ await fireEvent.press(v.getByTestId('errand-type-clear'));
+ await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,status:'open'}));
+ expect(v.getByTestId('errand-status-open').props.accessibilityState.selected).toBe(true);
+});
+it('刷新失败保留跑腿行并可从提示重试',async()=>{
+ list.mockResolvedValueOnce({list:[row],page:1,pageSize:5,total:1}).mockRejectedValueOnce(new TypeError('offline')).mockResolvedValueOnce({list:[{...row,id:4}],page:1,pageSize:5,total:1});
+ const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ await act(async()=>mockListProps.onRefresh?.());
+ await waitFor(()=>expect(v.getByTestId('errand-refresh-retry')).toBeTruthy());
+ expect(v.getByTestId('errand-row-2')).toBeTruthy();
+ await fireEvent.press(v.getByTestId('errand-refresh-retry'));
+ await waitFor(()=>expect(v.getByTestId('errand-row-4')).toBeTruthy());
+});
+it('跑腿列表返回时恢复滚动位置与缓存行',async()=>{
+ getQueryClient().setQueryData(['bing-errand','list',{}],{rows:[row],page:1,hasMore:true,scrollOffset:360});
+ const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ expect(mockListProps.restoredScrollOffset).toBe(360);expect(list).not.toHaveBeenCalled();
 });
 it('列表泄漏联系方式作为错误，不展示内容',async()=>{
  list.mockResolvedValue({list:[{...row,contactInfo:'test contact'}],page:1,pageSize:5,total:1});
@@ -34,6 +75,16 @@ it('详情展示联系信息，非所有者不出现状态操作',async()=>{
  detail.mockResolvedValue(full);me.mockResolvedValue({id:9,role:'student'});
  const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByText('test contact')).toBeTruthy());
  expect(v.queryByTestId('errand-take')).toBeNull();expect(v.queryByTestId('errand-done')).toBeNull();
+});
+it('任务详情首屏显示报酬地点截止时间和状态摘要',async()=>{
+ const task={...full,location:'Library',deadline:'2026-10-16T12:00:00.000Z'};detail.mockResolvedValue(task);me.mockResolvedValue({id:9,role:'student'});
+ const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByText('test contact')).toBeTruthy());
+ expect(v.getByTestId('errand-detail-summary')).toBeTruthy();expect(v.getByText('RM 5.00')).toBeTruthy();expect(v.getByText('Library')).toBeTruthy();expect(v.getByText('2026/10/16 20:00')).toBeTruthy();
+});
+it('任务详情将联系方式和状态动作分区',async()=>{
+ detail.mockResolvedValue({...full,contactInfo:'+60 12-345 6789'});me.mockResolvedValue({id:3,role:'student'});
+ const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByTestId('errand-take')).toBeTruthy());
+ expect(v.getByTestId('errand-contact-actions')).toBeTruthy();expect(v.getByTestId('errand-status-actions')).toBeTruthy();
 });
 it('发布者确认接单后重读详情，完成操作也二次确认',async()=>{
  detail.mockResolvedValueOnce(full).mockResolvedValueOnce({...full,status:'taken'}).mockResolvedValue({...full,status:'done'});me.mockResolvedValue({id:3,role:'student'});take.mockResolvedValue(undefined);done.mockResolvedValue(undefined);
@@ -51,8 +102,8 @@ it('接单成功但重读失败时要求刷新，不允许再次切换',async()=
  detail.mockResolvedValueOnce(full).mockRejectedValueOnce(new TypeError('private')).mockResolvedValue({...full,status:'taken'});me.mockResolvedValue({id:3,role:'student'});take.mockResolvedValue(undefined);
  const v=await renderApp(<ErrandDetailScreen errandId="2"/>);await waitFor(()=>expect(v.getByTestId('errand-take')).toBeTruthy());
  await fireEvent.press(v.getByTestId('errand-take'));await fireEvent.press(v.getByText('确认'));
- await waitFor(()=>expect(v.getByText('操作未确认，请刷新后重试')).toBeTruthy());await fireEvent.press(v.getByTestId('errand-take'));expect(take).toHaveBeenCalledTimes(1);expect(v.queryByText('private')).toBeNull();
- await fireEvent.press(v.getByText('刷新详情'));await waitFor(()=>expect(v.getByText('取消接单')).toBeTruthy());
+ await waitFor(()=>expect(v.getByText('操作未确认，请刷新后重试')).toBeTruthy());expect(v.getByTestId('errand-detail-refresh')).toBeTruthy();await fireEvent.press(v.getByTestId('errand-take'));expect(take).toHaveBeenCalledTimes(1);expect(v.queryByText('private')).toBeNull();
+ await fireEvent.press(v.getByTestId('errand-detail-refresh'));await waitFor(()=>expect(v.getByText('取消接单')).toBeTruthy());
 });
 it('管理员能切换接单但不能替非本人非接单者标记完成',async()=>{
  detail.mockResolvedValue(full);me.mockResolvedValue({id:9,role:'admin'});

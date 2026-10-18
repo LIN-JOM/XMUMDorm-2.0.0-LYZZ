@@ -15,18 +15,18 @@
 export const CONFESSION_TEMPLATES = [
   {
     key: 'bigtype',
-    labelZh: '大字卡',
-    labelEn: 'Big Type',
-    descZh: '短句心意，居中大字',
-    descEn: 'Short lines, centered and large',
+    labelZh: '海报卡',
+    labelEn: 'Poster',
+    descZh: '短句主张，居中突出',
+    descEn: 'A short statement with a bold centre',
     maxLength: 60,
   },
   {
     key: 'letter',
-    labelZh: '信笺卡',
-    labelEn: 'Letter',
-    descZh: '长文倾诉，纸感信笺',
-    descEn: 'Longer text on letter paper',
+    labelZh: '档案卡',
+    labelEn: 'Archive',
+    descZh: '完整记录，适合长文',
+    descEn: 'A complete record for longer writing',
     maxLength: 1000,
   },
   {
@@ -36,6 +36,30 @@ export const CONFESSION_TEMPLATES = [
     descZh: '寻人寻物，要点分行',
     descEn: 'Lines as items, for finding people or things',
     maxLength: 300,
+  },
+  {
+    key: 'announcement',
+    labelZh: '公告卡',
+    labelEn: 'Announcement',
+    descZh: '简短通知，信息明确',
+    descEn: 'A concise notice with clear information',
+    maxLength: 200,
+  },
+  {
+    key: 'dialogue',
+    labelZh: '对话卡',
+    labelEn: 'Dialogue',
+    descZh: '逐行对话，保留语气',
+    descEn: 'Line-by-line dialogue that keeps the voice',
+    maxLength: 500,
+  },
+  {
+    key: 'checklist',
+    labelZh: '清单卡',
+    labelEn: 'Checklist',
+    descZh: '逐行列项，便于核对',
+    descEn: 'One item per line for quick checking',
+    maxLength: 500,
   },
 ];
 
