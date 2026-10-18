@@ -7,9 +7,10 @@
  *   R4 导航 Tab ≠ 筛选 Chips → 本文件只管"导航也选中的那个"，筛选状态是**另一条维度**（filters）
  *   R5 溢出横向滚动（不在这里，在组件层）；⛔ 不提供把子栏目藏起来的下拉入口
  *
- * ⚠️ 二级 Tab 的**具体集合**尚未完全拍板：
- *   - 「广场」两项**已定**（宪法 4.1.1：树洞 / 万能墙，互斥、各自独立）
- *   - 工具 / 我的 = TO-CONFIRM **C-04 / C-05** → 这里只落**机制**，集合留空
+ * ⚠️ 二级 Tab 的**具体集合**逐格拍板：
+ *   - 「广场」**已定**（所有者 2026-10-12 裁决，7 个同页模块）
+ *   - 「我的」**已定**（所有者 2026-10-18 裁决，4 个内容模块同页横滑 —— C-05 关闭）
+ *   - 工具 = TO-CONFIRM **C-04** → 集合留空，⛔ 不预占所有者的决定
  */
 
 import type { MessageKey } from '@/i18n';
@@ -45,12 +46,32 @@ export const SQUARE_TABS = [
   { key: 'clubs', labelKey: 'clubs.title' },
 ] as const satisfies readonly SecondaryTabDefinition[];
 
+/**
+ * 「我的」的四个内容模块 —— **唯一真源**（2026-10-18 拍板，C-05 关闭）。
+ *
+ * 所有者 2026-10-18 裁决：「我的」一级页把**原本在 `/me/posts` 子页面里**的
+ * 树洞 / 二手 / 跑腿 / 点评 做成**顶部可横滑的同页模块**；主页不再有通往子页面
+ * 的入口列表。旧实现把这份集合**硬编码在 `PostsScreen.tsx` 的 `CONTENT_TABS`**，
+ * 字段级重复 —— 现在只保留这里一份，页面通过 `getSecondaryTabs('me')` 消费。
+ *
+ * key 与内容域既有键一致（`posts` / `marketplace` / `errands` / `reviews`）：
+ * 分页与滚动位置按 `(me, <key>)` 存在 `secondaryTabStore`（R2），换名等于丢状态。
+ *
+ * ⛔ 不要把模块集合再写回页面：P2A-03 的源码扫描会让它显式失败。
+ */
+export const ME_CONTENT_TABS = [
+  { key: 'posts', labelKey: 'me.content.posts' },
+  { key: 'marketplace', labelKey: 'me.content.marketplace' },
+  { key: 'errands', labelKey: 'me.content.errands' },
+  { key: 'reviews', labelKey: 'me.content.reviews' },
+] as const satisfies readonly SecondaryTabDefinition[];
+
 export const SECONDARY_TABS: SecondaryTabRegistry = {
   square: SQUARE_TABS,
   // ⏳ 待确认 C-04：工具的二级集合
   tools: [],
-  // ⏳ 待确认 C-05：我的是否也用二级 Tab
-  me: [],
+  // ✅ C-05 已拍板（2026-10-18）：「我的」用二级 Tab，四个内容模块同页横滑
+  me: ME_CONTENT_TABS,
 };
 
 export function getSecondaryTabs(primaryTab: string): readonly SecondaryTabDefinition[] {
