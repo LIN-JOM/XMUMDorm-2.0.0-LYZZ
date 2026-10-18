@@ -6,7 +6,6 @@ import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import { clampWeek, currentTeachingWeek, FALLBACK_TOTAL_WEEKS } from '../../../../shared/config/semesters';
 import { getScheduleWeek } from '../../../../shared/api/schedule';
 import { Button } from '@/components/ui/Button';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
@@ -20,7 +19,7 @@ import { useMailboxBadge } from '@/features/mailbox/useUnread';
 import { useI18n } from '@/i18n';
 import { CourseInfoSheet } from './CourseInfoSheet';
 import { timetableIdentity } from './cacheIdentity';
-import { shouldHighlightToday, todayWeekday, useTimetableWeek, weekHasMeetings, type TimetableMeeting, type TimetableWeek } from './timetable';
+import { shouldHighlightToday, todayWeekday, useTimetableWeek, type TimetableMeeting, type TimetableWeek } from './timetable';
 import { toToolsError } from './requestError';
 import {
   FALLBACK_COURSE_ACCENT,
@@ -114,7 +113,6 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
       accents?.get(courseKey(meeting)) ?? FALLBACK_COURSE_ACCENT,
     [accents]
   );
-  const hasData = shown !== null && weekHasMeetings(shown);
   const totalWeeks = shown?.totalWeeks ?? FALLBACK_TOTAL_WEEKS;
   const highlight = shouldHighlightToday(week, shown?.currentWeek ?? null) ? todayWeekday() : null;
   // 选中课程在本周的全部时段（同一 courseCode，跨天/跨时段）
@@ -141,25 +139,23 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
       </View>
       {timetable.source === 'cache' ? <OfflineBanner testID="timetable-stale" variant="stale" message={t('timetable.stale')} actionLabel={t('action.refresh')} onAction={timetable.reload} /> : null}
       {timetable.loading && !shown ? <LoadingState testID="timetable-loading" /> : timetable.error && !shown ?
-        <ErrorState testID="timetable-error" error={timetable.error} onAction={timetable.reload} /> : !shown || !weekHasMeetings(shown) ?
-          <EmptyState testID="timetable-empty" kind="firstRun" title={t('timetable.empty')} actionLabel={t('import.title')} onAction={() => router.push('/tools/schedule-import')} /> :
+        <ErrorState testID="timetable-error" error={timetable.error} onAction={timetable.reload} /> : shown === null ? null :
+        // 2026-10-18：即使这周没课也**画完整时间轴**（08:00–21:00 空着），不再用空态替换网格
           <View style={{ flex: 1 }}>{renderGrid({ week: shown, visibleWeekdays: VISIBLE_WEEKDAYS,
             getCourseAccent: resolveAccent, highlightWeekday: highlight, testID: 'timetable-grid',
             onPressMeeting: setSelected,
           })}</View>}
-      {hasData ? (
-        // 底部收成一行：导入课表 / 刷新（原来的 InlineNotice + 说明段会堆三层，页面显脏）
-        <View style={{ flexDirection: 'row', gap: theme.space('space_2') }}>
-          <View style={{ flex: 1 }}>
-            <Button testID="timetable-import" label={t('import.title')} variant="ghost"
-              onPress={() => router.push('/tools/schedule-import')} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button testID="timetable-refresh" label={t('action.refresh')} variant="ghost"
-              onPress={timetable.reload} />
-          </View>
+      {/* 底部固定一行：导入课表 / 刷新（空周也要能导入，所以不依赖 hasData） */}
+      <View style={{ flexDirection: 'row', gap: theme.space('space_2') }}>
+        <View style={{ flex: 1 }}>
+          <Button testID="timetable-import" label={t('import.title')} variant="ghost"
+            onPress={() => router.push('/tools/schedule-import')} />
         </View>
-      ) : null}
+        <View style={{ flex: 1 }}>
+          <Button testID="timetable-refresh" label={t('action.refresh')} variant="ghost"
+            onPress={timetable.reload} />
+        </View>
+      </View>
     </View>
     {selected !== null ? (
       <TimetableSheetHost

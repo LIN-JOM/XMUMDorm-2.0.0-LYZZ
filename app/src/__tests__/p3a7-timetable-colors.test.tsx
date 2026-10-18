@@ -56,7 +56,7 @@ describe('P3A7 课表课程色与卡片', () => {
     });
     const values = [...courseAccentMap(parsed).values()];
     expect(values).toHaveLength(6);
-    expect(new Set(values.map((accent) => `${accent.fill}/${accent.text}`)).size).toBe(6);
+    expect(new Set(values.map((accent) => `${accent.fill}/${accent.ink}`)).size).toBe(6);
   });
 
   it('超过 6 门按模循环（第 7 门回到第一色）', () => {

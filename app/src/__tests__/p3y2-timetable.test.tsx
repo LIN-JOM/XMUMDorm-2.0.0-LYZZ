@@ -57,11 +57,12 @@ it('preserves a cached week when the network fails', async () => {
   expect(view.getByTestId('grid-probe')).toBeTruthy();
 });
 
-it('keeps an import action for a week with no weekday meetings', async () => {
+it('keeps the full 08:00–21:00 axis for a week with no weekday meetings', async () => {
   api.getScheduleWeek.mockImplementation(async (week: number) => ({ week, currentWeek: week, days: {} }));
   const view = await renderApp(<TimetableScreen renderGrid={grid} />);
-  await waitFor(() => expect(view.getByTestId('timetable-empty')).toBeTruthy());
-  expect(view.getByText('课表导入')).toBeTruthy();
+  await waitFor(() => expect(view.getByTestId('grid-probe')).toBeTruthy());
+  expect(view.queryByTestId('timetable-empty')).toBeNull();
+  expect(view.getByTestId('timetable-import')).toBeTruthy();
 });
 
 it.each([1e308, 1000000, NaN, Infinity, -1, 0, 1.5])('falls back to the configured twenty-week count for unsafe response %s', (count) => {
