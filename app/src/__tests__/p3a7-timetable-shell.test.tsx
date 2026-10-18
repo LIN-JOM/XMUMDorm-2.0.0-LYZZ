@@ -5,11 +5,12 @@
  *   · 上一周/下一周按 1 周步进；· 底部收成一行（导入 / 刷新）；· 周次选中态仍可读。
  */
 import * as React from 'react';
-import { waitFor } from '@testing-library/react-native';
+import { userEvent, waitFor } from '@testing-library/react-native';
 
 import { renderApp } from './helpers/renderApp';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SessionProvider } from '@/features/auth/session';
+import TimetableScreen from '@/app/tools/timetable';
 import { clampWeek, currentTeachingWeek } from '../../../shared/config/semesters';
 
 jest.mock('../../../shared/api/schedule', () => ({ getScheduleWeek: jest.fn() }));
@@ -28,8 +29,7 @@ jest.mock('expo-router', () => {
 });
 
 const api = jest.requireMock('../../../shared/api/schedule') as { getScheduleWeek: jest.Mock };
-const routerState = require('expo-router').__state as { pushed: unknown[] };
-const TimetableScreen = require('../app/tools/timetable').default as () => React.ReactElement;
+const routerState = jest.requireMock('expo-router').__state as { pushed: unknown[] };
 
 const payload = (week: number) => ({
   week,
@@ -56,7 +56,7 @@ describe('P3A7 课表页面骨架', () => {
     const initial = clampWeek(currentTeachingWeek(new Date()) ?? 1, 20);
     const view = await renderApp(withProviders(<TimetableScreen />));
     await waitFor(() => expect(view.getByTestId('timetable-grid')).toBeTruthy());
-    const user = require('@testing-library/react-native').userEvent.setup();
+    const user = userEvent.setup();
     await user.press(view.getByTestId('timetable-next'));
     await waitFor(() => expect(api.getScheduleWeek).toHaveBeenCalledWith(clampWeek(initial + 1, 20)));
   });
@@ -65,7 +65,7 @@ describe('P3A7 课表页面骨架', () => {
     const initial = clampWeek(currentTeachingWeek(new Date()) ?? 1, 20);
     const view = await renderApp(withProviders(<TimetableScreen />));
     await waitFor(() => expect(view.getByTestId('timetable-grid')).toBeTruthy());
-    const user = require('@testing-library/react-native').userEvent.setup();
+    const user = userEvent.setup();
     await user.press(view.getByTestId('timetable-prev'));
     await waitFor(() => expect(api.getScheduleWeek).toHaveBeenCalledWith(clampWeek(initial - 1, 20)));
   });
@@ -76,7 +76,7 @@ describe('P3A7 课表页面骨架', () => {
     expect(view.getByTestId('timetable-refresh')).toBeTruthy();
     // 旧的说明段落已移除
     expect(view.queryByText('周次按学校所在地时区计算')).toBeNull();
-    const user = require('@testing-library/react-native').userEvent.setup();
+    const user = userEvent.setup();
     await user.press(view.getByTestId('timetable-import'));
     expect(routerState.pushed).toContain('/tools/schedule-import');
   });

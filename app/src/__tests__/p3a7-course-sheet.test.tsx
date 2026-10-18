@@ -5,11 +5,12 @@
  *   · 点卡片弹半屏；· 展示全部字段；· 本周安排列出该课所有时段；· 关闭后不 push 路由。
  */
 import * as React from 'react';
-import { waitFor } from '@testing-library/react-native';
+import { userEvent, waitFor } from '@testing-library/react-native';
 
 import { renderApp } from './helpers/renderApp';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SessionProvider } from '@/features/auth/session';
+import TimetableScreen from '@/app/tools/timetable';
 
 jest.mock('../../../shared/api/schedule', () => ({ getScheduleWeek: jest.fn() }));
 jest.mock('expo-router', () => {
@@ -27,8 +28,7 @@ jest.mock('expo-router', () => {
 });
 
 const api = jest.requireMock('../../../shared/api/schedule') as { getScheduleWeek: jest.Mock };
-const routerState = require('expo-router').__state as { pushed: unknown[] };
-const TimetableScreen = require('../app/tools/timetable').default as () => React.ReactElement;
+const routerState = jest.requireMock('expo-router').__state as { pushed: unknown[] };
 
 const withProviders = (node: React.ReactElement): React.ReactElement => (
   <SessionProvider>
@@ -58,7 +58,7 @@ async function openSheet(days: Record<string, unknown[]> = { 1: [ENGLISH] }) {
   api.getScheduleWeek.mockResolvedValue(payload(days));
   const view = await renderApp(withProviders(<TimetableScreen />));
   await waitFor(() => expect(view.getAllByTestId('timetable-grid-card-G0173').length).toBeGreaterThan(0));
-  const user = require('@testing-library/react-native').userEvent.setup();
+  const user = userEvent.setup();
   await user.press(view.getAllByTestId('timetable-grid-card-G0173')[0]);
   return view;
 }
@@ -104,7 +104,7 @@ describe('P3A7 课程详情半屏弹窗', () => {
 
   it('点关闭键后弹窗消失，且没有 push 任何路由', async () => {
     const view = await openSheet();
-    const user = require('@testing-library/react-native').userEvent.setup();
+    const user = userEvent.setup();
     await user.press(view.getByTestId('course-sheet-close'));
     await waitFor(() => expect(view.queryByTestId('course-sheet')).toBeNull());
     expect(routerState.pushed).toEqual([]);
@@ -112,7 +112,7 @@ describe('P3A7 课程详情半屏弹窗', () => {
 
   it('点遮罩也能关闭', async () => {
     const view = await openSheet();
-    const user = require('@testing-library/react-native').userEvent.setup();
+    const user = userEvent.setup();
     await user.press(view.getByTestId('course-sheet-backdrop'));
     await waitFor(() => expect(view.queryByTestId('course-sheet')).toBeNull());
   });

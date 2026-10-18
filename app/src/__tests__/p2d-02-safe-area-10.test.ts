@@ -109,6 +109,8 @@ describe('P2D-02 安全区 10 条清单', () => {
     //    台账里第 6 条标 `❌ 未验`；若将来真的做了断点布局，这里会红，逼着同步改台账。
     expect(widthReaders).toEqual([
       path.join('components', 'ui', 'BannerSlot.tsx'),
+      // 2026-10-18：O06 BottomSheet 读窗口**高度**算半屏高度，不参与宽度断点
+      path.join('components', 'ui', 'BottomSheet.tsx'),
       path.join('components', 'ui', 'Screen.tsx'),
     ]);
   });
