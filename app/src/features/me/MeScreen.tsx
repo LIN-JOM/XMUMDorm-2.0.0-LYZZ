@@ -88,6 +88,28 @@ export function MeScreen(): React.ReactElement {
   // 集合来自**唯一真源**（`secondaryTabs.ts`），⛔ 主页不另写一份（P2A-03 扫描盯着）
   const tabs = getSecondaryTabs('me');
   const [selectedKey, setSelectedKey] = React.useState(tabs[0]?.key ?? '');
+  const pagerRef = React.useRef<PagerView>(null);
+
+  /**
+   * 选中键是**唯一状态源**，Tab 条与 pager 都是它的投影（⛔ 不搞两个 state 互相同步）。
+   * 正向：点 Tab → 翻页；反向：横滑翻页 → 回写选中键。
+   */
+  const selectTab = React.useCallback(
+    (key: string) => {
+      setSelectedKey(key);
+      const index = tabs.findIndex((tab) => tab.key === key);
+      if (index >= 0) pagerRef.current?.setPage(index);
+    },
+    [tabs]
+  );
+
+  const onPageSelected = React.useCallback(
+    (event: { nativeEvent: { position: number } }) => {
+      const next = tabs[event.nativeEvent.position];
+      if (next !== undefined) setSelectedKey(next.key);
+    },
+    [tabs]
+  );
 
   return (
     <Screen
@@ -148,10 +170,15 @@ export function MeScreen(): React.ReactElement {
               testID="me-content-tabs"
               tabs={tabs}
               selectedKey={selectedKey}
-              onSelect={setSelectedKey}
+              onSelect={selectTab}
             />
             {/* ⏳ Phase 1 骨架：四页是占位文本，真实内容在 Phase 2 迁入 */}
-            <PagerView style={{ flex: 1 }} initialPage={0}>
+            <PagerView
+              ref={pagerRef}
+              style={{ flex: 1 }}
+              initialPage={0}
+              onPageSelected={onPageSelected}
+            >
               {tabs.map((tab) => (
                 <View
                   key={tab.key}
