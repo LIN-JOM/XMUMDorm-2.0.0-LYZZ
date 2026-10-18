@@ -8,7 +8,6 @@ import { getScheduleWeek } from '../../../../shared/api/schedule';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { InlineNotice } from '@/components/ui/InlineNotice';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { Pressable } from '@/components/ui/Pressable';
@@ -51,18 +50,33 @@ function WeekNumbers({ value, totalWeeks, onChange, legacyControls }: { value: n
     if (x !== undefined) scroll.current?.scrollTo({ x, animated: !theme.reduceMotion });
   }, [value, theme.reduceMotion]);
   return <View testID={legacyControls ? 'timetable-weeks' : undefined}><ScrollView testID="timetable-week-numbers" ref={scroll} horizontal showsHorizontalScrollIndicator={false}
-    contentContainerStyle={{ gap: theme.space('space_1') }}>
-      {Array.from({ length: totalWeeks }, (_, index) => index + 1).map((week) => <View key={week}
-        onLayout={(event) => {
-          const x = event.nativeEvent.layout.x;
-          offsets.current[week] = x;
-          if (week === value) scroll.current?.scrollTo({ x, animated: !theme.reduceMotion });
-        }}>
-        <Pressable testID={`week-number-${week}`} accessibilityLabel={t('timetable.weekLabel', { n: week })}
-          selected={week === value} onPress={() => onChange(week)}>
-          <Text role="label" emphasis={week === value ? 'strong' : 'regular'} colorToken={week === value ? 'text-brand' : 'text-secondary'}>{String(week)}</Text>
-        </Pressable>
-      </View>)}
+    contentContainerStyle={{ gap: theme.space('space_2'), paddingVertical: theme.space('space_1') }}>
+      {Array.from({ length: totalWeeks }, (_, index) => index + 1).map((week) => {
+        const selected = week === value;
+        return <View key={week}
+          onLayout={(event) => {
+            const x = event.nativeEvent.layout.x;
+            offsets.current[week] = x;
+            if (selected) scroll.current?.scrollTo({ x, animated: !theme.reduceMotion });
+          }}>
+          <Pressable testID={`week-number-${week}`} accessibilityLabel={t('timetable.weekLabel', { n: week })}
+            selected={selected} onPress={() => onChange(week)}>
+            {/* 周次胶囊：选中 = 品牌填充 + 反白字，未选中 = 下沉底 + 次要字（两对都过对比度门） */}
+            <View style={{
+              minWidth: theme.space('space_8'),
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: theme.space('space_1'),
+              paddingHorizontal: theme.space('space_2'),
+              borderRadius: theme.radius('radius_full'),
+              backgroundColor: theme.color[selected ? 'action-primary' : 'bg-sunken'].value,
+            }}>
+              <Text role="label" emphasis={selected ? 'strong' : 'regular'}
+                colorToken={selected ? 'text-on-fill' : 'text-secondary'}>{String(week)}</Text>
+            </View>
+          </Pressable>
+        </View>;
+      })}
     </ScrollView></View>;
 }
 
@@ -120,10 +134,10 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
     <View style={{ flex: 1, padding: theme.space('space_4'), gap: theme.space('space_3') }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space('space_2') }}>
         {legacyControls ? <IconButton testID="timetable-prev" Icon={ChevronLeft} accessibilityLabel={t('timetable.prevWeek')}
-          onPress={() => selectWeek(clampWeek(week - 5, totalWeeks))} /> : null}
+          onPress={() => selectWeek(clampWeek(week - 1, totalWeeks))} /> : null}
         <View style={{ flex: 1 }}><WeekNumbers value={week} totalWeeks={totalWeeks} onChange={selectWeek} legacyControls={legacyControls} /></View>
         {legacyControls ? <IconButton testID="timetable-next" Icon={ChevronRight} accessibilityLabel={t('timetable.nextWeek')}
-          onPress={() => selectWeek(clampWeek(week + 5, totalWeeks))} /> : null}
+          onPress={() => selectWeek(clampWeek(week + 1, totalWeeks))} /> : null}
       </View>
       {timetable.source === 'cache' ? <OfflineBanner testID="timetable-stale" variant="stale" message={t('timetable.stale')} actionLabel={t('action.refresh')} onAction={timetable.reload} /> : null}
       {timetable.loading && !shown ? <LoadingState testID="timetable-loading" /> : timetable.error && !shown ?
@@ -133,9 +147,19 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
             getCourseAccent: resolveAccent, highlightWeekday: highlight, testID: 'timetable-grid',
             onPressMeeting: setSelected,
           })}</View>}
-      {hasData ? <InlineNotice tone="info" message={t('timetable.importHint')} actionLabel={t('import.title')} onAction={() => router.push('/tools/schedule-import')} /> : null}
-      <Button label={t('action.refresh')} variant="ghost" onPress={timetable.reload} />
-      <Text role="caption" colorToken="text-muted">{t('timetable.semesterNote')}</Text>
+      {hasData ? (
+        // 底部收成一行：导入课表 / 刷新（原来的 InlineNotice + 说明段会堆三层，页面显脏）
+        <View style={{ flexDirection: 'row', gap: theme.space('space_2') }}>
+          <View style={{ flex: 1 }}>
+            <Button testID="timetable-import" label={t('import.title')} variant="ghost"
+              onPress={() => router.push('/tools/schedule-import')} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button testID="timetable-refresh" label={t('action.refresh')} variant="ghost"
+              onPress={timetable.reload} />
+          </View>
+        </View>
+      ) : null}
     </View>
     {selected !== null ? (
       <TimetableSheetHost
