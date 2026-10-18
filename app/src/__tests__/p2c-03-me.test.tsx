@@ -196,7 +196,7 @@ describe('P2C-03 M-01 我的仪表盘', () => {
   });
 
   describe('TC-P2C-03-4A · 页面：身份、内容与管理入口', () => {
-    it('资料卡 + 顶栏编辑/设置 + 内容/管理入口；不再展示三块摘要', async () => {
+    it('资料卡 + 顶栏编辑/设置 + 四个内容 Tab；入口列表已撤下', async () => {
       const view = await renderApp(<MeScreen />);
 
       await waitFor(() => expect(view.getByTestId('me-profile')).toBeTruthy());
@@ -210,8 +210,16 @@ describe('P2C-03 M-01 我的仪表盘', () => {
       expect(mockPush).toHaveBeenCalledWith('/me/edit');
       fireEvent.press(view.getByTestId('me-settings-entry'));
       expect(mockPush).toHaveBeenCalledWith('/me/settings');
-      expect(view.getByTestId('me-entry-posts')).toBeTruthy();
-      expect(view.getByTestId('me-entry-about')).toBeTruthy();
+      // 四个内容 Tab 已提升到主页（C-05 拍板）
+      expect(view.getByTestId('me-content-tabs')).toBeTruthy();
+      expect(view.getByTestId('top-tab-posts')).toBeTruthy();
+      expect(view.getByTestId('top-tab-marketplace')).toBeTruthy();
+      expect(view.getByTestId('top-tab-errands')).toBeTruthy();
+      expect(view.getByTestId('top-tab-reviews')).toBeTruthy();
+      // 入口列表整体撤下，⛔ 不再有通往子页面的行
+      expect(view.queryByTestId('me-entry-posts')).toBeNull();
+      expect(view.queryByTestId('me-entry-settings')).toBeNull();
+      expect(view.queryByTestId('me-entry-about')).toBeNull();
     });
   });
 
