@@ -89,9 +89,14 @@ describe('P0-06 二级顶部 Tab 条', () => {
       ]);
     });
 
-    it('工具 / 我的 暂为空（待所有者拍板，⛔ 不猜）', () => {
+    it('工具仍未拍板（C-04，⛔ 不猜）；「我的」已拍板为四集合（C-05，2026-10-18）', () => {
       expect(SECONDARY_TABS.tools).toEqual([]);
-      expect(SECONDARY_TABS.me).toEqual([]);
+      expect(SECONDARY_TABS.me.map((tab) => tab.key)).toEqual([
+        'posts',
+        'marketplace',
+        'errands',
+        'reviews',
+      ]);
     });
   });
 
