@@ -43,11 +43,15 @@ describe('P2X Treehole 视觉层契约（令牌组件层）', () => {
     expect(fs.existsSync(path.join(appRoot, 'src', 'features', 'campus', 'CampusSearchScreen.tsx'))).toBe(false);
   });
 
-  it('标签筛选在列表头部（随内容滚走），不是常驻的独立条', () => {
+  it('标签筛选是下拉列表（在列表头部，随内容滚走），不是一排常驻圆角 Tab', () => {
     const feed = read('src', 'features', 'campus', 'TreeholeFeed.tsx');
-    expect(feed).toContain('TreeholeTagBar');
+    const filter = read('src', 'features', 'campus', 'TreeholeTagFilter.tsx');
+    expect(feed).toContain('TreeholeTagFilter');
     expect(feed).toContain('listHeader=');
     expect(feed).toContain('itemSeparator={Divider}');
+    // 2026-10-18 所有者裁决：换成下拉列表（Select），⛔ 不再用 FilterChips
+    expect(filter).toContain('Select');
+    expect(filter.includes('ui/FilterChips')).toBe(false);
   });
 
   it('详情走原生 Header + 粘性底栏，⛔ 不再在内容里画返回按钮', () => {

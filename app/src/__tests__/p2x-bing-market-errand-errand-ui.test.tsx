@@ -22,6 +22,8 @@ afterEach(()=>getQueryClient().clear());
 it('跑腿列表分页按返回页大小且列表没有联系字段',async()=>{
  list.mockResolvedValueOnce({list:[row],page:1,pageSize:5,total:6}).mockResolvedValue({list:[{...row,id:4}],page:2,pageSize:5,total:6});
  const v=await renderApp(<ErrandListScreen/>);await waitFor(()=>expect(v.getByTestId('errand-row-2')).toBeTruthy());
+ // 2026-10-18 所有者裁决：两行筛选随内容滚走（放进 listHeader）
+ expect(mockListProps.listHeader).toBeTruthy();
  const rendered=mockListProps.renderItem(row,0) as React.ReactElement<{style?:unknown}>;
  expect(rendered.props.style).toEqual(expect.objectContaining({marginBottom:12}));
  expect(v.getByTestId('errand-row-2').props.style[0]).toEqual(expect.arrayContaining([expect.objectContaining({alignSelf:'stretch'})]));
@@ -47,7 +49,9 @@ it('跑腿类型和状态分组筛选并可独立清除',async()=>{
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,type:'delivery'}));
  await fireEvent.press(v.getByTestId('errand-status-open'));
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,type:'delivery',status:'open'}));
- expect(v.getByText('任务类型')).toBeTruthy();expect(v.getByText('任务状态')).toBeTruthy();
+ // 2026-10-18 所有者裁决：分区文字（Task type / Task status）去掉，筛选行随内容滚走
+ expect(v.getByTestId('errand-type')).toBeTruthy();expect(v.getByTestId('errand-status')).toBeTruthy();
+ expect(v.queryByText('任务类型')).toBeNull();
  expect(v.getByTestId('errand-type-delivery').props.accessibilityState.selected).toBe(true);
  await fireEvent.press(v.getByTestId('errand-type-clear'));
  await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,status:'open'}));

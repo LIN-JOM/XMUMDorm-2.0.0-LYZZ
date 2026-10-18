@@ -7,7 +7,8 @@ import {useRouter} from 'expo-router';
 import {ListScreen,useListPagination} from '@/components/ui/ListScreen';
 import {EntityCard} from '@/components/ui/EntityCard';
 import {Badge} from '@/components/ui/Badge';
-import {FilterChips} from '@/components/ui/FilterChips';
+import {FloatingBackToTop} from '@/components/ui/FloatingBackToTop';
+import {UnderlineFilter} from '@/components/ui/UnderlineFilter';
 import {Button} from '@/components/ui/Button';
 import {Text} from '@/components/ui/Text';
 import {ReportSheet} from '@/components/ui/ReportSheet';
@@ -36,25 +37,29 @@ function errorFor(error:unknown):AppError {
 const typeKeys={all:'screen.errand.all',delivery:'screen.errand.delivery',purchase:'screen.errand.purchase',urgent:'screen.errand.urgent'} as const;
 const statusKeys={all:'screen.errand.all',open:'screen.errand.open',taken:'screen.errand.taken',done:'screen.errand.done'} as const;
 const noticeKeys={failed:'screen.errand.failed',login:'screen.errand.login',denied:'screen.errand.denied',conflict:'screen.errand.conflict'} as const;
-export function ErrandListScreen({ embedded = false }: { embedded?: boolean } = {}):React.ReactElement {
- const {t}=useI18n();const client=getQueryClient();
+ export function ErrandListScreen({ embedded = false }: { embedded?: boolean } = {}):React.ReactElement {
+ const {t}=useI18n();const client=getQueryClient();const theme=useTheme();
  const [filters,setFilters]=React.useState<Filters>(()=>client.getQueryData<Filters>(['bing-errand','selected'])??{});
  const select=(next:Filters)=>{client.setQueryData(['bing-errand','selected'],next);setFilters(next);};
  const clearType=()=>{const next={...filters,type:undefined};client.removeQueries({queryKey:['bing-errand','list',next]});select(next);};
  const clearStatus=()=>{const next={...filters,status:undefined};client.removeQueries({queryKey:['bing-errand','list',next]});select(next);};
- return <FeatureScreen embedded={embedded} titleKey="screen.errand.title" showMailbox={false} testID="errand-screen">
-  <View testID="errand-filters">
-   <Text role="label">{t('screen.errand.type')}</Text>
-   <FilterChips testID="errand-type" itemTestIDPrefix="errand-type" options={(['all','delivery','purchase','urgent'] as const).map(key=>({key,labelKey:typeKeys[key]}))} selected={[filters.type??'all']} onToggle={type=>select({...filters,type:type==='all'?undefined:type})}/>
+ const hasFilters=filters.type!==undefined||filters.status!==undefined;
+ // 2026-10-18 所有者裁决：两行筛选**随内容滚走**（放进 ListScreen 的 listHeader），
+ // ⛔ 不再固定在顶部；"Task type / Task status" 这两行分区文字也去掉。
+ const header=<View testID="errand-filters" style={{paddingTop:theme.space('space_2'),gap:theme.space('space_2')}}>
+  {/* 类型 / 状态：下划线式筛选（⛔ 不用圆角按钮冒充 Tab，也不加分区标题） */}
+  <UnderlineFilter testID="errand-type" options={(['all','delivery','purchase','urgent'] as const).map(key=>({key,labelKey:typeKeys[key]}))} selectedKey={filters.type??'all'} onSelect={type=>select({...filters,type:type==='all'?undefined:type})}/>
+  <UnderlineFilter testID="errand-status" options={(['all','open','taken','done'] as const).map(key=>({key,labelKey:statusKeys[key]}))} selectedKey={filters.status??'all'} onSelect={status=>select({...filters,status:status==='all'?undefined:status})}/>
+  {hasFilters?<View style={{flexDirection:'row',gap:theme.space('space_3'),paddingHorizontal:theme.space('space_4')}}>
    {filters.type?<Button testID="errand-type-clear" label={t('action.clear')} variant="link" size="small" onPress={clearType}/>:null}
-   <Text role="label">{t('screen.errand.status')}</Text>
-   <FilterChips testID="errand-status" itemTestIDPrefix="errand-status" options={(['all','open','taken','done'] as const).map(key=>({key,labelKey:statusKeys[key]}))} selected={[filters.status??'all']} onToggle={status=>select({...filters,status:status==='all'?undefined:status})}/>
    {filters.status?<Button testID="errand-status-clear" label={t('action.clear')} variant="link" size="small" onPress={clearStatus}/>:null}
-  </View>
-  <ErrandFeed key={JSON.stringify(filters)} filters={filters}/>
+  </View>:null}
+ </View>;
+ return <FeatureScreen embedded={embedded} titleKey="screen.errand.title" showMailbox={false} testID="errand-screen">
+  <ErrandFeed key={JSON.stringify(filters)} filters={filters} header={header}/>
  </FeatureScreen>;
 }
-function ErrandFeed({filters}:{filters:Filters}):React.ReactElement {
+function ErrandFeed({filters,header}:{filters:Filters;header:React.ReactNode}):React.ReactElement {
  const {t,locale}=useI18n();const theme=useTheme();const router=useRouter();const client=getQueryClient();
  const key=React.useMemo(()=>['bing-errand','list',filters] as const,[filters]);
  const initial=React.useRef(client.getQueryData<Snapshot>(key));
@@ -85,13 +90,17 @@ function ErrandFeed({filters}:{filters:Filters}):React.ReactElement {
   return unsubscribe;
  },[client,key,load]);
  const refresh=()=>void load('refresh'),append=()=>void load('append');
- return <>
+ const [offset,setOffset]=React.useState(0);
+ const [scrollTopSignal,setScrollTopSignal]=React.useState(0);
+ const onScroll=(value:number)=>{saveScroll(value);setOffset(value);};
+ return <View style={{flex:1,minHeight:0}}>
   {rows.length>0&&pagination.errorScope==='refresh'?<Button testID="errand-refresh-retry" label={t('screen.errand.refreshFailed')} onPress={refresh}/>:null}
-  <ListScreen key={revision} testID="errand-list" data={rows} keyExtractor={r=>String(r.id)} pagination={pagination} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={saveScroll}
+  <ListScreen key={revision} testID="errand-list" data={rows} keyExtractor={r=>String(r.id)} pagination={pagination} listHeader={header} restoredScrollOffset={revision===0?initial.current?.scrollOffset??0:0} onScrollOffset={onScroll} scrollToTopSignal={scrollTopSignal}
    onRefresh={refresh} onEndReached={append} onRetryRefresh={refresh} onRetryAppend={append}
    labels={{retryLabel:t('action.retry'),endLabel:t('screen.errand.end'),empty:{kind:'noResult',title:t('screen.errand.empty'),actionLabel:t('action.retry'),onAction:refresh}}}
-   renderItem={r=>{const typeKey=typeKeys[r.type as keyof typeof typeKeys]??typeKeys.all;const deadline=formatErrandDeadline(r.deadline,locale);return <View style={{marginBottom:theme.space('space_3')}}><EntityCard domain="errand" testID={`errand-row-${r.id}`} title={r.title} subtitle={[r.location,deadline].filter(Boolean).join(' · ')||undefined} badges={<Badge text={t(typeKey)} tone={r.type==='urgent'?'warning':'neutral'}/>} metrics={[`RM ${r.reward.toFixed(2)}`,t(statusKeys[r.status as 'open'|'taken'|'done'])]} style={{alignSelf:'stretch'}} onPress={()=>router.push(`/errand/${r.id}` as never)}/></View>;}}/>
- </>;
+   renderItem={r=>{const typeKey=typeKeys[r.type as keyof typeof typeKeys]??typeKeys.all;const deadline=formatErrandDeadline(r.deadline,locale);return <View style={{marginBottom:theme.space('space_3'),paddingHorizontal:theme.space('space_4')}}><EntityCard domain="errand" testID={`errand-row-${r.id}`} title={r.title} subtitle={[r.location,deadline].filter(Boolean).join(' · ')||undefined} badges={<Badge text={t(typeKey)} tone={r.type==='urgent'?'warning':'neutral'}/>} metrics={[`RM ${r.reward.toFixed(2)}`,t(statusKeys[r.status as 'open'|'taken'|'done'])]} style={{alignSelf:'stretch'}} onPress={()=>router.push(`/errand/${r.id}` as never)}/></View>;}}/>
+  <FloatingBackToTop visible={offset>480} onPress={()=>setScrollTopSignal(value=>value+1)} label={t('action.backToTop')} testID="errand-back-to-top"/>
+ </View>;
 }
 type Detail=ReturnType<typeof readErrandDetail>;
 type Viewer={id:number;role:string};
