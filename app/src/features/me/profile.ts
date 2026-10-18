@@ -62,8 +62,16 @@ export function normalizeProfile(payload: unknown): MeProfile {
   };
 }
 
-/** 「我的」的入口行（**数据驱动**：加一项就多一行，⛔ 不动页面结构） */
-export type MeEntryKey = 'posts' | 'settings' | 'about';
+/**
+ * 「我的」的入口行（**数据驱动**：加一项就多一行，⛔ 不动页面结构）
+ *
+ * ⚠️ 2026-10-18 形态变更后，这份表的**唯一消费者是设置页**（齿轮进去后的「更多」区块）：
+ *   - `posts` 已删除 —— 四个内容模块提升到主页成了 Tab（C-05），不再需要入口；
+ *   - `settings` 已删除 —— 它指向设置页**自身**，而顶栏齿轮就是设置页的入口，
+ *     留着等于在设置页里放一个"点我还是设置页"的行；
+ *   - `about` 留下 —— 所有者要求「关于与法律」收进齿轮，即设置页里能进法务页。
+ */
+export type MeEntryKey = 'about';
 
 export type MeEntry = {
   key: MeEntryKey;
@@ -72,21 +80,18 @@ export type MeEntry = {
   /**
    * ⚠️ **路由文件还不存在时不许显示**（否则点进去是 404）。
    * 每个 `available: true` 的条目都有用例检查对应路由文件真的在磁盘上；
-   * 反过来，**账本**（`EXPECTED_UNAVAILABLE`）逼着后来者在 P2C-04/P2C-05 落地时把它翻过来。
+   * 反过来，**账本**（`EXPECTED_UNAVAILABLE`）逼着后来者落地时把它翻过来。
    */
   available: boolean;
 };
 
 export const ME_ENTRIES: readonly MeEntry[] = [
-  { key: 'posts', labelKey: 'me.entry.posts', route: '/me/posts', available: true },
-  { key: 'settings', labelKey: 'me.entry.settings', route: '/me/settings', available: true },
   { key: 'about', labelKey: 'me.entry.about', route: '/me/legal', available: true },
 ];
 
 /**
  * **缺口账本**：当前还没落地的入口。
- * ✅ 三条都已落地（P2C-04 的 `posts`、P2C-05 的 `settings`/`about`）→ 账本清空。
- * ⛔ 新增入口（例如 `M-02` 资料编辑）时，先在 `ME_ENTRIES` 里置 `available:false` 并登记到这里。
+ * ✅ 已落地的都已从账本移除；⛔ 新增入口时先在 `ME_ENTRIES` 里置 `available:false` 并登记到这里。
  */
 export const EXPECTED_UNAVAILABLE: readonly MeEntryKey[] = [];
 

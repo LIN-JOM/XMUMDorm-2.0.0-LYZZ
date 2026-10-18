@@ -100,9 +100,10 @@ describe('P2C-05 设置与法务三页', () => {
     expect(view.getByText(zh['me.settings.deactivate.failed'])).toBeTruthy();
   });
 
-  it('TC-P2C-05-5A · 入口账本已清空（三条都落地了）', () => {
+  it('TC-P2C-05-5A · 入口账本：主页两个入口已删，只剩「关于与法律」', () => {
     expect(EXPECTED_UNAVAILABLE).toEqual([]);
-    expect(visibleEntries().map((entry) => entry.key)).toEqual(['posts', 'settings', 'about']);
+    // 2026-10-18：`settings` 指向页面自身（齿轮已是唯一入口）、`posts` 提升为主页 Tab
+    expect(visibleEntries().map((entry) => entry.key)).toEqual(['about']);
     // 每个入口的路由文件都真的在磁盘上
     for (const entry of ME_ENTRIES) {
       const candidates = [

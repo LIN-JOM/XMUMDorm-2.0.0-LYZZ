@@ -40,8 +40,12 @@ export function SettingsScreen(): React.ReactElement {
   const [deactivateOpen, setDeactivateOpen] = React.useState(false);
   const [deactivationFailed, setDeactivationFailed] = React.useState(false);
 
-  // 入口来自**同一份**账本（`ME_ENTRIES`）：能进去的才显示，⛔ 不在这里另写一份列表
-  const entries = visibleEntries(ME_ENTRIES).filter((entry) => entry.key !== 'posts');
+  /**
+   * 入口来自**同一份**账本（`ME_ENTRIES`）：能进去的才显示，⛔ 不在这里另写一份列表。
+   * 2026-10-18 起这份表里只剩「关于与法律」（设置与我的帖子两个入口都已删除：
+   * 前者由顶栏齿轮承担，后者提升为主页 Tab）—— 所以这里不再需要过滤。
+   */
+  const entries = visibleEntries(ME_ENTRIES);
   const deactivate = async (): Promise<void> => {
     setDeactivateOpen(false);
     setDeactivationFailed(false);
