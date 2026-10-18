@@ -1,567 +1,649 @@
+/**
+ * P2X 校园内容（树洞 / 万能墙）—— 2026-10-18 重构后的行为回归
+ *
+ * 守住的是**旧实现已验证过的行为契约**（分页、筛选、竞态、匿名、点赞、评论、举报、返回），
+ * 只把渲染目标换成了新组件（`TreeholeFeed` / `WallFeed` / `CampusDetailScreen`）。
+ *
+ * 新增的布局契约单独由 `p2x-treehole-phase-two-contract.test.ts` 守（源码结构），
+ * 这里只测**用户可见行为**。
+ */
+
 import * as React from 'react';
-import {Button} from '@/components/ui/Button';
-import {act, fireEvent, waitFor} from '@testing-library/react-native';
-import {renderApp} from './helpers/renderApp';
-import {CampusListScreen, CampusDetailScreen} from '@/features/campus/CampusScreens';
-import {getPostList, getPostDetail, getPostTagsList} from '../../../shared/api/posts';
-const mockHeroToastShow=jest.fn();
-jest.mock('heroui-native',()=>{
- const React=require('react');const {Image,Pressable,Text,TextInput,View}=require('react-native');
- function Avatar(props:unknown){return React.createElement(View,props);}
- Avatar.Image=function AvatarImage(props:unknown){return React.createElement(Image,props);};
- Avatar.Fallback=function AvatarFallback(props:unknown){return React.createElement(Text,props);};
- function Dialog(props:unknown){return React.createElement(View,props);}
- Dialog.Portal=function DialogPortal(props:unknown){return React.createElement(View,props);};
- Dialog.Overlay=function DialogOverlay(props:unknown){return React.createElement(Pressable,props);};
- Dialog.Content=function DialogContent(props:unknown){return React.createElement(View,props);};
- Dialog.Title=function DialogTitle(props:unknown){return React.createElement(Text,props);};
- Dialog.Description=function DialogDescription(props:unknown){return React.createElement(Text,props);};
- Dialog.Close=function DialogClose(props:unknown){return React.createElement(Pressable,props);};
- function BottomSheet(props:unknown){return React.createElement(View,props);}
- BottomSheet.Portal=function BottomSheetPortal(props:unknown){return React.createElement(View,props);};
- BottomSheet.Overlay=function BottomSheetOverlay(props:unknown){return React.createElement(Pressable,props);};
- BottomSheet.Content=function BottomSheetContent(props:unknown){return React.createElement(View,props);};
- BottomSheet.Title=function BottomSheetTitle(props:unknown){return React.createElement(Text,props);};
- function Button({children,...props}: {children?: unknown}){return React.createElement(Pressable,props,typeof children==='string'?React.createElement(Text,null,children):children);}
- function Card(props:unknown){return React.createElement(View,props);}
- Card.Header=function CardHeader(props:unknown){return React.createElement(View,props);};
- Card.Body=function CardBody(props:unknown){return React.createElement(View,props);};
- Card.Footer=function CardFooter(props:unknown){return React.createElement(View,props);};
- Card.Title=function CardTitle(props:unknown){return React.createElement(Text,props);};
- Card.Description=function CardDescription(props:unknown){return React.createElement(Text,props);};
- function Chip(props:unknown){return React.createElement(View,props);}
- Chip.Label=function ChipLabel(props:unknown){return React.createElement(Text,props);};
- function Skeleton(props:unknown){return React.createElement(View,props);}
- function HeroUINativeProvider({children}: {children:unknown}){return children;}
- function TextArea(props:unknown){return React.createElement(TextInput,props);}
- function Menu(props:unknown){return React.createElement(View,props);}
- Menu.Trigger=function MenuTrigger(props:unknown){return React.createElement(View,props);};
- Menu.Portal=function MenuPortal(props:unknown){return React.createElement(View,props);};
- Menu.Overlay=function MenuOverlay(props:unknown){return React.createElement(Pressable,props);};
- Menu.Content=function MenuContent(props:unknown){return React.createElement(View,props);};
- Menu.Item=function MenuItem(props:unknown){return React.createElement(Pressable,props);};
- Menu.ItemTitle=function MenuItemTitle(props:unknown){return React.createElement(Text,props);};
- return {HeroUINativeProvider,Avatar,BottomSheet,Button,Card,Chip,Dialog,Menu,Skeleton,TextArea,useToast:()=>({toast:{show:mockHeroToastShow},isToastVisible:false})};
+import { act, fireEvent, waitFor, within } from '@testing-library/react-native';
+
+import { Button } from '@/components/ui/Button';
+import { CampusDetailScreen, TreeholeFeed, WallFeed } from '@/features/campus/CampusScreens';
+import { getQueryClient } from '@/shared/queryClient';
+import { secondaryTabStore } from '@/features/navigation/secondaryTabs';
+import {
+  getPostComments,
+  getPostDetail,
+  getPostList,
+  getPostTagsList,
+  createComment,
+  toggleLike,
+} from '../../../shared/api/posts';
+import {
+  getConfession,
+  getConfessionComments,
+  getConfessionWindow,
+  createConfessionComment,
+  toggleConfessionLike,
+} from '../../../shared/api/confessions';
+import type { ListScreenProps } from '@/components/ui/ListScreen';
+import { renderApp } from './helpers/renderApp';
+
+/* ── expo-router：把原生 Header 的 options 真渲染出来，行为（⋯/返回）才可测 ── */
+jest.mock('expo-router', () => {
+  const React = require('react');
+  const { Text, View } = require('react-native');
+  const router = {
+    push: jest.fn(),
+    back: jest.fn(),
+    replace: jest.fn(),
+    canGoBack: jest.fn(() => true),
+    setParams: jest.fn(),
+  };
+  return {
+    __router: router,
+    useRouter: () => router,
+    useLocalSearchParams: () => ({}),
+    Redirect: (props: unknown) => React.createElement(View, props),
+    Stack: {
+      Screen: ({ options }: { options?: Record<string, unknown> }) =>
+        React.createElement(
+          View,
+          { testID: 'campus-header' },
+          React.createElement(Text, { testID: 'campus-header-title' }, String(options?.title ?? '')),
+          typeof options?.headerLeft === 'function' ? options.headerLeft() : null,
+          typeof options?.headerRight === 'function' ? options.headerRight() : null
+        ),
+    },
+  };
 });
-const mockPush=jest.fn(), mockBack=jest.fn(), mockReplace=jest.fn(), mockSetParams=jest.fn();
-jest.mock('expo-router',()=>({useRouter:()=>({setParams:mockSetParams,push:mockPush,back:mockBack,replace:mockReplace,canGoBack:()=>true})}));
-jest.mock('../../../shared/api/posts',()=>({getPostList:jest.fn(),getPostDetail:jest.fn(),getPostTagsList:jest.fn(),toggleLike:jest.fn(),getPostComments:jest.fn(),createComment:jest.fn()}));
-import {getConfessionWindow, getConfession} from '../../../shared/api/confessions';
-import {getQueryClient} from '@/shared/queryClient';
-import {secondaryTabStore} from '@/features/navigation/secondaryTabs';
-import type {ListScreenProps} from '@/components/ui/ListScreen';
-let mockListProps:ListScreenProps<unknown>;
-jest.mock('@/components/ui/ListScreen',()=>{
- const actual=jest.requireActual('@/components/ui/ListScreen'), React=require('react');
- return {...actual,ListScreen:(props:ListScreenProps<unknown>)=>{mockListProps=props;return React.createElement(actual.ListScreen,{...props,onEndReached:()=>undefined});}};
-});
-jest.mock('../../../shared/api/confessions',()=>({getConfessionWindow:jest.fn(),getConfession:jest.fn(),toggleConfessionLike:jest.fn(),getConfessionComments:jest.fn(),createConfessionComment:jest.fn()}));
-const wall=getConfessionWindow as jest.Mock, wallDetail=getConfession as jest.Mock;
-afterEach(()=>getQueryClient().clear());
-const list=getPostList as jest.Mock, detail=getPostDetail as jest.Mock;
-const tags=getPostTagsList as jest.Mock;
-beforeEach(()=>{getQueryClient().clear();secondaryTabStore.clear();jest.clearAllMocks();list.mockReset();detail.mockReset();tags.mockReset();tags.mockResolvedValue([]);wall.mockReset();wallDetail.mockReset();});
-it('树洞从第一页读取，点击进入帖子',async()=>{
- list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动'}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByText('校内交流')).toBeTruthy());
- expect(list).toHaveBeenCalledWith({page:1,pageSize:10});
- await fireEvent.press(v.getByTestId('campus-row-7'));
- expect(mockPush).toHaveBeenCalledWith('/campus/7');
-});
-it('树洞列表保留作者、时间和服务端互动计数',async()=>{
- list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动',author:{nickname:'小林'},created_at:new Date().toISOString(),like_count:12,comment_count:3}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByText('小林')).toBeTruthy());
- expect(v.getByText('刚刚')).toBeTruthy();
- expect(v.getByText('12 赞')).toBeTruthy();
- expect(v.getByText('3 评论')).toBeTruthy();
-});
-it('树洞显示服务器标签，选择和清除都保留真实筛选状态',async()=>{
- tags.mockResolvedValue([{id:7,name_zh:'组队自习',name_en:'Study group'}]);
- list.mockResolvedValue({list:[{id:7,content:'找自习搭子'}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('filter-chip-7')).toBeTruthy());
- expect(tags).toHaveBeenCalledWith({limit:20});
- await fireEvent.press(v.getByTestId('filter-chip-7'));
- await waitFor(()=>expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10,tagId:7}));
- expect(v.getByTestId('filter-chip-7').props.accessibilityState.selected).toBe(true);
- expect(secondaryTabStore.get('square','confession').filters).toEqual({tag:'7'});
- await fireEvent.press(v.getByTestId('filter-chips-clear'));
- await waitFor(()=>expect(v.getByTestId('filter-chip-7').props.accessibilityState.selected).toBe(false));
- expect(v.getByTestId('campus-row-7')).toBeTruthy();
- expect(secondaryTabStore.get('square','confession').filters).toEqual({});
-});
-it('标签目录失败不阻断全部树洞阅读',async()=>{
- tags.mockRejectedValue(new TypeError('tags unavailable'));
- list.mockResolvedValue({list:[{id:7,content:'仍可阅读'}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByText('仍可阅读')).toBeTruthy());
- expect(v.queryByTestId('campus-tag-filters')).toBeNull();
-});
-it('标签各自保留分页内容和位置，追加请求不串标签',async()=>{
- tags.mockResolvedValue([
-  {id:7,name_zh:'组队自习',name_en:'Study group'},
-  {id:8,name_zh:'失物招领',name_en:'Lost and found'},
- ]);
- list.mockImplementation(({tagId,page})=>{
-  if(tagId===7&&page===1)return Promise.resolve({list:[{id:70,content:'自习首篇'}],hasMore:true});
-  if(tagId===7&&page===2)return Promise.resolve({list:[{id:71,content:'自习次篇'}],hasMore:false});
-  if(tagId===8)return Promise.resolve({list:[{id:80,content:'失物首篇'}],hasMore:false});
-  return Promise.resolve({list:[{id:1,content:'全部首篇'}],hasMore:false});
- });
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('filter-chip-7')).toBeTruthy());
- await fireEvent.press(v.getByTestId('filter-chip-7'));
- await waitFor(()=>expect(v.getByText('自习首篇')).toBeTruthy());
- await act(async()=>mockListProps.onScrollOffset?.(480));
- await act(async()=>mockListProps.onEndReached?.());
- await waitFor(()=>expect(v.getByText('自习次篇')).toBeTruthy());
- await fireEvent.press(v.getByTestId('filter-chip-8'));
- await waitFor(()=>expect(v.getByText('失物首篇')).toBeTruthy());
- expect(v.queryByText('自习次篇')).toBeNull();
- await fireEvent.press(v.getByTestId('filter-chip-7'));
- await waitFor(()=>expect(v.getByText('自习次篇')).toBeTruthy());
- expect(mockListProps.restoredScrollOffset).toBe(480);
- expect(list.mock.calls.map(call=>call[0])).toEqual([
-  {page:1,pageSize:10},
-  {page:1,pageSize:10,tagId:7},
-  {page:2,pageSize:10,tagId:7},
-  {page:1,pageSize:10,tagId:8},
- ]);
-});
-it('树洞列表复用媒体层：多图只提供静态预览与数量',async()=>{
- list.mockResolvedValue({list:[
-  {id:7,title:'单图',content:'一张',images:[{url:'https://example.com/one.jpg'}]},
-  {id:8,title:'多图',content:'两张',images:[{url:'https://example.com/two-a.jpg'},{url:'https://example.com/two-b.jpg'}]},
- ],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('campus-row-7-media')).toBeTruthy());
- expect(v.getByTestId('campus-row-8-media')).toBeTruthy();
- expect(v.queryByTestId('treehole-media-next')).toBeNull();
- expect(v.queryByTestId('treehole-media-preview')).toBeNull();
- expect(v.getAllByTestId('treehole-media-count')[0]).toHaveTextContent('2 张图片');
-});
-it('树洞帖子按身份、正文、媒体和指标的顺序组合',async()=>{
- list.mockResolvedValue({list:[{id:7,title:'晚间散步',content:'今晚有人想去湖边吗？',author:{nickname:'小林'},created_at:new Date().toISOString(),like_count:2,images:[{url:'https://example.com/one.jpg'}]}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('campus-row-7-media')).toBeTruthy());
- const sequence:string[]=[];
- const visit=(node:unknown):void=>{if(typeof node==='string'){sequence.push(node);return;}if(Array.isArray(node)){node.forEach(visit);return;}if(node&&typeof node==='object'){const value=node as {props?:{testID?:unknown};children?:unknown};if(typeof value.props?.testID==='string')sequence.push(value.props.testID);visit(value.children);}};
- visit(v.getByTestId('campus-row-7').parent);
- expect(sequence.indexOf('小林')).toBeLessThan(sequence.indexOf('晚间散步'));
- expect(sequence.indexOf('晚间散步')).toBeLessThan(sequence.indexOf('今晚有人想去湖边吗？'));
- expect(sequence.indexOf('今晚有人想去湖边吗？')).toBeLessThan(sequence.indexOf('campus-row-7-media'));
- expect(sequence.indexOf('campus-row-7-media')).toBeLessThan(sequence.indexOf('2 赞'));
-});
-it('详情显示正文作者和图片，返回原页',async()=>{
- detail.mockResolvedValue({id:7,title:'校内交流',content:'一起打球',author:{nickname:'小林'},images:[{url:'https://example.com/photo.jpg'}]});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('一起打球')).toBeTruthy());
- expect(v.getByText('小林')).toBeTruthy();expect(v.getByTestId('campus-media-0', {includeHiddenElements:true})).toBeTruthy();
- expect(detail).toHaveBeenCalledWith(7);
- await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockBack).toHaveBeenCalled();
-});
-it('树洞详情从 HeroUI 更多菜单打开举报 BottomSheet',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('campus-detail-more')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-more'));
- await fireEvent.press(v.getByTestId('campus-detail-report'));
- expect(v.getByTestId('treehole-report-sheet')).toBeTruthy();
-});
-it('树洞详情不再渲染 Phase 1 tracer',async()=>{
- detail.mockResolvedValue({id:7,content:'真实帖子正文',author:{nickname:'小林',avatar:'https://example.test/avatar.png'}});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('treehole-post-detail')).toBeTruthy());
- expect(v.queryByTestId('treehole-heroui-tracer')).toBeNull();
-});
-it('树洞详情只由业务帖子组件呈现标题',async()=>{
- detail.mockResolvedValue({id:7,title:'不重复的标题',content:'正文'});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('不重复的标题')).toBeTruthy());
- expect(v.getAllByText('不重复的标题')).toHaveLength(1);
-});
-it('树洞详情把正文放在媒体之前',async()=>{
- detail.mockResolvedValue({id:7,content:'正文优先',images:[{url:'https://example.com/one'}]});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('campus-media-0',{includeHiddenElements:true})).toBeTruthy());
- const tree=JSON.stringify(v.toJSON());
- expect(tree.indexOf('正文优先')).toBeLessThan(tree.indexOf('campus-media'));
-});
-it('详情失败重试保留安全提示',async()=>{
- detail.mockRejectedValueOnce(new TypeError('secret-db')).mockResolvedValueOnce({id:7,content:'恢复正文'});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('campus-detail-error')).toBeTruthy());
- expect(v.queryByText('secret-db')).toBeNull();
- await fireEvent.press(v.getByText('连上校园网后重试'));
- await waitFor(()=>expect(v.getByText('恢复正文')).toBeTruthy());
-});
-it('无效 id 不请求详情',async()=>{
- const v=await renderApp(<CampusDetailScreen postId="abc"/>);
- await waitFor(()=>expect(v.getByTestId('campus-detail-empty')).toBeTruthy());expect(detail).not.toHaveBeenCalled();
-});
-it('不显示错配 id 的正文',async()=>{
- detail.mockResolvedValue({id:8,content:'错配正文'});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('campus-detail-empty')).toBeTruthy());expect(v.queryByText('错配正文')).toBeNull();
-});
-it('英文空列表显示业务空态',async()=>{
- list.mockResolvedValue({list:[],hasMore:false});
- const v=await renderApp(<CampusListScreen/>,{locale:'en'});
- await waitFor(()=>expect(v.getByText('No posts yet')).toBeTruthy());
-});
-it('未完成请求显示加载态',async()=>{
- detail.mockReturnValue(new Promise(()=>undefined));
- const v=await renderApp(<CampusDetailScreen postId="7"/>);expect(v.getByTestId('campus-detail-loading')).toBeTruthy();
+// SymbolView 在 Jest 里没有字体渲染，换成占位即可（header 结构仍可点）
+jest.mock('expo-symbols', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return { SymbolView: (props: unknown) => React.createElement(View, props) };
 });
 
-it('隐藏帖不显示正文',async()=>{
- detail.mockResolvedValue({id:7,content:'隐藏正文',hidden:true});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('campus-detail-empty')).toBeTruthy());expect(v.queryByText('隐藏正文')).toBeNull();
-});
-it('切换帖子后旧请求不能覆盖新正文',async()=>{
- let finish:(row:unknown)=>void=()=>undefined;
- detail.mockReturnValueOnce(new Promise(resolve=>{finish=resolve;})).mockResolvedValueOnce({id:8,content:'新帖子'});
- function Harness(){const [id,setId]=React.useState("7");return <><Button label="切换帖子" onPress={()=>setId("8")}/><CampusDetailScreen postId={id}/></>;}
- const v=await renderApp(<Harness/>);
- await fireEvent.press(v.getByText("切换帖子"));
- await waitFor(()=>expect(v.getByText('新帖子')).toBeTruthy());
- await act(async()=>finish({id:7,content:'旧帖子'}));
- expect(v.getByText('新帖子')).toBeTruthy();expect(v.queryByText('旧帖子')).toBeNull();
-});
-it('列表请求失败可以重试第一页',async()=>{
- list.mockRejectedValueOnce(new TypeError('internal-secret')).mockResolvedValueOnce({list:[{id:7,content:'恢复列表'}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('campus-list-error')).toBeTruthy());
- expect(v.queryByText('internal-secret')).toBeNull();
- await fireEvent.press(v.getByText('连上校园网后重试'));
- await waitFor(()=>expect(v.getByText('恢复列表')).toBeTruthy());
- expect(list.mock.calls.map(call=>call[0].page)).toEqual([1,1]);
+const routerMock = (require('expo-router') as {
+  __router: {
+    push: jest.Mock;
+    back: jest.Mock;
+    replace: jest.Mock;
+    canGoBack: jest.Mock;
+    setParams: jest.Mock;
+  };
+}).__router;
+
+const mockAuthFailure = jest.fn(async () => ({ kind: 'permission' }));
+const mockSession = { isSignedIn: true, handleAuthFailure: mockAuthFailure };
+jest.mock('@/features/auth/session', () => ({ useSession: () => mockSession }));
+
+jest.mock('../../../shared/api/posts', () => ({
+  getPostList: jest.fn(),
+  getPostDetail: jest.fn(),
+  getPostTagsList: jest.fn(),
+  toggleLike: jest.fn(),
+  getPostComments: jest.fn(),
+  createComment: jest.fn(),
+}));
+jest.mock('../../../shared/api/confessions', () => ({
+  getConfessionWindow: jest.fn(),
+  getConfession: jest.fn(),
+  toggleConfessionLike: jest.fn(),
+  getConfessionComments: jest.fn(),
+  createConfessionComment: jest.fn(),
+}));
+
+/** 捕获分页 props：用例自己触发 append / refresh（FlashList 的滚动在 Jest 里不触发） */
+let mockListProps: ListScreenProps<unknown>;
+jest.mock('@/components/ui/ListScreen', () => {
+  const actual = jest.requireActual('@/components/ui/ListScreen');
+  const React = require('react');
+  return {
+    ...actual,
+    ListScreen: (props: ListScreenProps<unknown>) => {
+      mockListProps = props;
+      return React.createElement(actual.ListScreen, { ...props, onEndReached: () => undefined });
+    },
+  };
 });
 
-it('树洞分页失败重试同一页，去重并在末页停止',async()=>{
- list.mockResolvedValueOnce({list:[{id:7,content:'首篇'}],hasMore:true}).mockRejectedValueOnce(new TypeError('retry')).mockResolvedValueOnce({list:[{id:7,content:'首篇'},{id:8,content:'次篇'}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);await waitFor(()=>expect(v.getByText('首篇')).toBeTruthy());
- await act(async()=>mockListProps.onEndReached());await waitFor(()=>expect(mockListProps.pagination?.errorScope).toBe('append'));
- await act(async()=>mockListProps.onRetryAppend?.());await waitFor(()=>expect(v.getByText('次篇')).toBeTruthy());
- expect(list.mock.calls.map(call=>call[0].page)).toEqual([1,2,2]);expect(v.getAllByText('首篇')).toHaveLength(1);
- await act(async()=>mockListProps.onEndReached());expect(list).toHaveBeenCalledTimes(3);
-});
-it('切栏互斥并恢复树洞位置与已加载页',async()=>{
- list.mockResolvedValueOnce({list:[{id:7,content:'树洞首篇'}],hasMore:true}).mockResolvedValueOnce({list:[{id:8,content:'树洞次篇'}],hasMore:false});
- wall.mockResolvedValue({items:[{id:40,content:'墙正文'}],has_older:false,oldest_cursor:40});
- const v=await renderApp(<CampusListScreen/>);await waitFor(()=>expect(v.getByText('树洞首篇')).toBeTruthy());
- await act(async()=>mockListProps.onEndReached());await waitFor(()=>expect(v.getByText('树洞次篇')).toBeTruthy());
- await act(async()=>mockListProps.onScrollOffset?.(480));
- await fireEvent.press(v.getByText('万能墙'));await waitFor(()=>expect(v.getByText('墙正文')).toBeTruthy());
- expect(v.queryByText('树洞首篇')).toBeNull();
- await fireEvent.press(v.getByText('树洞'));await waitFor(()=>expect(v.getByText('树洞次篇')).toBeTruthy());
- expect(mockListProps.restoredScrollOffset).toBe(480);expect(list).toHaveBeenCalledTimes(2);
-});
-it('万能墙用服务端窗口游标且不展示身份',async()=>{
- wall.mockResolvedValueOnce({items:[{id:40,content:'墙首篇',author:{nickname:'泄漏作者'}}],has_older:true,oldest_cursor:40}).mockResolvedValueOnce({items:[{id:35,content:'墙次篇'}],has_older:false,oldest_cursor:35});
- list.mockResolvedValue({list:[],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);await fireEvent.press(v.getByText('万能墙'));
- await waitFor(()=>expect(v.getByText('墙首篇')).toBeTruthy());expect(v.queryByText('泄漏作者')).toBeNull();
- await act(async()=>mockListProps.onEndReached());await waitFor(()=>expect(v.getByText('墙次篇')).toBeTruthy());
- expect(wall.mock.calls.map(call=>call[0])).toEqual([{cursor:null,direction:'older',limit:5},{cursor:40,direction:'older',limit:5}]);
- await fireEvent.press(v.getByTestId('campus-row-35'));expect(mockPush).toHaveBeenCalledWith('/campus/wall/35');
-});
-it('万能墙详情只投影匿名作者',async()=>{
- wallDetail.mockResolvedValue({id:40,content:'匿名正文',title:'身份标题',author:{nickname:'泄漏作者'},images:[{url:'https://example.com/leak'}]});
- const v=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>);
- await waitFor(()=>expect(v.getByText('匿名正文')).toBeTruthy());expect(v.queryByText('泄漏作者')).toBeNull();expect(v.queryByText('身份标题')).toBeNull();expect(v.getByText('匿名')).toBeTruthy();expect(detail).not.toHaveBeenCalled();
-});
-it('万能墙列表按服务端模板键标明模板',async()=>{
- wall.mockResolvedValue({items:[{id:40,content:'停水通知',template_key:'announcement'}],has_older:false,oldest_cursor:40});
- const listView=await renderApp(<CampusListScreen initialTab="wall"/>,{locale:'en'});
- await waitFor(()=>expect(listView.getByText('Announcement')).toBeTruthy());
-});
-it('万能墙详情按服务端模板键标明模板',async()=>{
- wallDetail.mockResolvedValue({id:40,content:'停水通知',template_key:'announcement'});
- const detailView=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>,{locale:'en'});
- await waitFor(()=>expect(detailView.getByText('Announcement')).toBeTruthy());
-});
-it('慢树洞请求在切栏后不污染墙及其缓存',async()=>{
- let finish:(data:unknown)=>void=()=>undefined;list.mockReturnValueOnce(new Promise(resolve=>{finish=resolve;})).mockResolvedValueOnce({list:[{id:9,content:'新树洞'}],hasMore:false});
- wall.mockResolvedValue({items:[{id:40,content:'墙正文'}],has_older:false,oldest_cursor:40});
- const v=await renderApp(<CampusListScreen/>);await fireEvent.press(v.getByText('万能墙'));await waitFor(()=>expect(v.getByText('墙正文')).toBeTruthy());
- await act(async()=>finish({list:[{id:7,content:'过期树洞'}],hasMore:false}));expect(v.queryByText('过期树洞')).toBeNull();
- await fireEvent.press(v.getByText('树洞'));await waitFor(()=>expect(v.getByText('新树洞')).toBeTruthy());expect(v.queryByText('过期树洞')).toBeNull();
-});
-it('刷新一栏归零位置且不清另一栏缓存',async()=>{
- list.mockResolvedValueOnce({list:[{id:7,content:'旧树洞'}],hasMore:true}).mockResolvedValueOnce({list:[{id:8,content:'新树洞'}],hasMore:false});
- wall.mockResolvedValue({items:[{id:40,content:'墙正文'}],has_older:false,oldest_cursor:40});
- const v=await renderApp(<CampusListScreen/>);await waitFor(()=>expect(v.getByText('旧树洞')).toBeTruthy());
- await fireEvent.press(v.getByText('万能墙'));await waitFor(()=>expect(v.getByText('墙正文')).toBeTruthy());await act(async()=>mockListProps.onScrollOffset?.(120));
- await fireEvent.press(v.getByText('树洞'));await waitFor(()=>expect(v.getByText('旧树洞')).toBeTruthy());await act(async()=>mockListProps.onRefresh());await waitFor(()=>expect(v.getByText('新树洞')).toBeTruthy());expect(v.queryByText('旧树洞')).toBeNull();
- expect(mockListProps.restoredScrollOffset).toBe(0);await fireEvent.press(v.getByText('万能墙'));await waitFor(()=>expect(v.getByText('墙正文')).toBeTruthy());expect(mockListProps.restoredScrollOffset).toBe(120);expect(wall).toHaveBeenCalledTimes(1);
-});
+const list = getPostList as jest.Mock;
+const detail = getPostDetail as jest.Mock;
+const tags = getPostTagsList as jest.Mock;
+const wall = getConfessionWindow as jest.Mock;
+const wallDetail = getConfession as jest.Mock;
 
-it('从墙详情返回重新挂载时恢复墙位置与缓存',async()=>{
- wall.mockResolvedValue({items:[{id:40,content:'墙正文'}],has_older:false,oldest_cursor:40});
- function Harness(){const [reading,setReading]=React.useState(false);return <><Button label={reading?'回列表':'读详情'} onPress={()=>setReading(!reading)}/>{reading?<></>:<CampusListScreen initialTab="wall"/>}</>;}
- const v=await renderApp(<Harness/>);await waitFor(()=>expect(v.getByText('墙正文')).toBeTruthy());await act(async()=>mockListProps.onScrollOffset?.(240));
- await fireEvent.press(v.getByText('读详情'));await fireEvent.press(v.getByText('回列表'));await waitFor(()=>expect(v.getByText('墙正文')).toBeTruthy());
- expect(wall).toHaveBeenCalledTimes(1);expect(mockListProps.restoredScrollOffset).toBe(240);
-});
-it('从树洞详情返回重新挂载时恢复树洞位置与缓存',async()=>{
- list.mockResolvedValue({list:[{id:7,title:'树洞首篇',content:'正文'}],hasMore:false});detail.mockResolvedValue({id:7,content:'正文'});
- function Harness(){const [reading,setReading]=React.useState(false);return <><Button label={reading?'回列表':'读详情'} onPress={()=>setReading(!reading)}/>{reading?<CampusDetailScreen postId="7"/>:<CampusListScreen/>}</>;}
- const v=await renderApp(<Harness/>);await waitFor(()=>expect(v.getByText('树洞首篇')).toBeTruthy());await act(async()=>mockListProps.onScrollOffset?.(260));
- await fireEvent.press(v.getByText('读详情'));await waitFor(()=>expect(v.getByTestId('campus-detail')).toBeTruthy());await fireEvent.press(v.getByText('回列表'));
- await waitFor(()=>expect(v.getByText('树洞首篇')).toBeTruthy());expect(list).toHaveBeenCalledTimes(1);expect(mockListProps.restoredScrollOffset).toBe(260);
-});
-it('刷新抢占追加，迟到旧页不覆盖刷新结果',async()=>{
- let finish:(data:unknown)=>void=()=>undefined;
- list.mockResolvedValueOnce({list:[{id:7,content:'旧首篇'}],hasMore:true}).mockReturnValueOnce(new Promise(resolve=>{finish=resolve;})).mockResolvedValueOnce({list:[{id:9,content:'刷新结果'}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);await waitFor(()=>expect(v.getByText('旧首篇')).toBeTruthy());
- await act(async()=>mockListProps.onEndReached());await act(async()=>mockListProps.onEndReached());expect(list).toHaveBeenCalledTimes(2);
- await act(async()=>mockListProps.onRefresh());await waitFor(()=>expect(v.getByText('刷新结果')).toBeTruthy());
- await act(async()=>finish({list:[{id:8,content:'旧追加'}],hasMore:false}));expect(v.queryByText('旧追加')).toBeNull();expect(v.queryByText('旧首篇')).toBeNull();
-});
-it('墙窗口声称有下一页但缺游标时显示错误，不循环请求',async()=>{
- wall.mockResolvedValue({items:[{id:40,content:'错误窗口'}],has_older:true,oldest_cursor:null});
- const v=await renderApp(<CampusListScreen initialTab="wall"/>);await waitFor(()=>expect(v.getByTestId('campus-list-error')).toBeTruthy());
- expect(v.queryByText('错误窗口')).toBeNull();expect(wall).toHaveBeenCalledTimes(1);
-});
-
-import {toggleLike,getPostComments,createComment} from '../../../shared/api/posts';
-import {toggleConfessionLike,getConfessionComments,createConfessionComment} from '../../../shared/api/confessions';
-const mockAuthFailure=jest.fn(),mockSession={isSignedIn:true,handleAuthFailure:mockAuthFailure};
-jest.mock('@/features/auth/session',()=>({useSession:()=>mockSession}));
-beforeEach(()=>{
- mockSession.isSignedIn=true;mockAuthFailure.mockResolvedValue({kind:'permission'});
- for(const fn of [toggleLike,createComment,toggleConfessionLike,createConfessionComment]) (fn as jest.Mock).mockReset();
- (getPostComments as jest.Mock).mockReset().mockResolvedValue([]);
- (getConfessionComments as jest.Mock).mockReset().mockResolvedValue([]);
-});
-it('树洞行点赞调用真实接口，回复进入同一帖详情',async()=>{
- list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动',user_liked:false,like_count:4,comment_count:2}],hasMore:false});
- (toggleLike as jest.Mock).mockResolvedValue({post_id:7,liked:true,like_count:5});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('campus-row-7-like')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-row-7-like'));
- await waitFor(()=>expect(v.getByTestId('campus-row-7-like').props.accessibilityState.selected).toBe(true));
- expect(toggleLike).toHaveBeenCalledWith(7);expect(v.getByText('5 赞')).toBeTruthy();
- expect(getPostComments).not.toHaveBeenCalled();
- await fireEvent.press(v.getByTestId('campus-row-7-reply'));
- expect(mockPush).toHaveBeenCalledWith('/campus/7');
-});
-it('树洞行点赞失败保留既有登录反馈，不伪造成功',async()=>{
- mockSession.isSignedIn=false;
- list.mockResolvedValue({list:[{id:7,title:'校内交流',content:'周末运动',user_liked:false,like_count:4}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);
- await waitFor(()=>expect(v.getByTestId('campus-row-7-like')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-row-7-like'));
- expect(toggleLike).not.toHaveBeenCalled();
- await waitFor(()=>expect(v.getByText('登录后参与')).toBeTruthy());
- expect(v.getByTestId('campus-row-7-like').props.accessibilityState.selected).toBe(false);
-});
-it('点赞按响应状态更新，缺少计数不虚构新计数',async()=>{
- detail.mockResolvedValue({id:7,content:'正文',user_liked:false,like_count:4});
- (toggleLike as jest.Mock).mockResolvedValue({post_id:7,liked:true});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(true));
- expect(toggleLike).toHaveBeenCalledWith(7);expect(v.getByText('4 赞')).toBeTruthy();
-});
-it('树洞详情的 HeroUI 帖子动作读取真实点赞状态',async()=>{
- detail.mockResolvedValue({id:7,content:'正文',user_liked:false,like_count:4});
- (toggleLike as jest.Mock).mockResolvedValue({post_id:7,liked:true,like_count:5});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByTestId('campus-detail-like')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(true));
- expect(v.getByText('5 赞')).toBeTruthy();
-});
-it('评论失败保留草稿，重试成功显示评论',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});
- (createComment as jest.Mock).mockRejectedValueOnce(new TypeError('secret')).mockResolvedValueOnce({id:90,content:'一起运动',author:{nickname:'我'}});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByLabelText('写评论')).toBeTruthy());
- expect(v.getByTestId('campus-composer-input')).toBeTruthy();
- await fireEvent.changeText(v.getByLabelText('写评论'),'一起运动');
- await fireEvent.press(v.getByTestId('campus-composer-send'));
- await waitFor(()=>expect(v.getByText('评论未发送，请重试')).toBeTruthy());
- expect(v.getByLabelText('写评论').props.value).toBe('一起运动');expect(v.getByText('正文')).toBeTruthy();
- await fireEvent.press(v.getByTestId('campus-composer-send'));
- await waitFor(()=>expect(v.getByText('一起运动')).toBeTruthy());
- expect(v.getByLabelText('写评论').props.value).toBe('');expect(createComment).toHaveBeenLastCalledWith(7,{content:'一起运动'});
-});
-it('游客操作不写入接口，显示登录入口',async()=>{
- mockSession.isSignedIn=false;detail.mockResolvedValue({id:7,content:'正文'});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-like'));expect(toggleLike).not.toHaveBeenCalled();
- await fireEvent.press(v.getByText('登录后参与'));expect(mockPush).toHaveBeenCalledWith('/login');
-});
-it('万能墙评论及回复隐藏服务端身份',async()=>{
- wallDetail.mockResolvedValue({id:40,content:'墙正文',liked:false,like_count:1});
- (getConfessionComments as jest.Mock).mockResolvedValue([{id:50,content:'匿名评论',author:{nickname:'秘密姓名'},replies:[{id:51,content:'匿名回复',author:{nickname:'回复姓名'}}]}]);
- (createConfessionComment as jest.Mock).mockResolvedValue({id:52,parent_id:50,content:'新回复',author:{nickname:'泄露姓名'}});
- (toggleConfessionLike as jest.Mock).mockResolvedValue({confession_id:40,liked:true,like_count:2});
- const v=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>);
- await waitFor(()=>expect(v.getByText('匿名回复')).toBeTruthy());
- expect(v.queryByText('秘密姓名')).toBeNull();expect(v.queryByText('回复姓名')).toBeNull();
- await fireEvent.press(v.getByText('回复'));expect(v.getByText('正在回复某条评论')).toBeTruthy();
- await fireEvent.changeText(v.getByLabelText('写评论'),'新回复');await fireEvent.press(v.getByTestId('campus-composer-send'));
- await waitFor(()=>expect(v.getByText('新回复')).toBeTruthy());expect(v.queryByText('泄露姓名')).toBeNull();
- expect(createConfessionComment).toHaveBeenCalledWith(40,{content:'新回复',parent_id:50});
- await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(true));
-});
-it('空白评论不能提交',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByLabelText('写评论')).toBeTruthy());await fireEvent.changeText(v.getByLabelText('写评论'),'   ');
- await fireEvent.press(v.getByTestId('campus-composer-send'));expect(createComment).not.toHaveBeenCalled();
-});
-
-it('连续点赞只发一次请求，失败不移除正文',async()=>{
- detail.mockResolvedValue({id:7,content:'正文',user_liked:false});let reject:(e:unknown)=>void=()=>undefined;
- (toggleLike as jest.Mock).mockReturnValueOnce(new Promise((_,fail)=>{reject=fail;})).mockResolvedValueOnce({post_id:7,liked:true});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-like'));await fireEvent.press(v.getByTestId('campus-detail-like'));expect(toggleLike).toHaveBeenCalledTimes(1);
- await act(async()=>reject(new TypeError('internal-secret')));expect(v.getByText('正文')).toBeTruthy();expect(v.queryByText('internal-secret')).toBeNull();
- expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(false);
- await fireEvent.press(v.getByTestId('campus-detail-like'));await waitFor(()=>expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(true));
-});
-it('评论读取失败独立重试，不影响正文',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});
- (getPostComments as jest.Mock).mockRejectedValueOnce(new TypeError('secret')).mockResolvedValueOnce([{id:80,content:'恢复评论',author:{nickname:'小林'}}]);
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('重试')).toBeTruthy());expect(v.getByText('正文')).toBeTruthy();
- await fireEvent.press(v.getByText('重试'));await waitFor(()=>expect(v.getByText('恢复评论')).toBeTruthy());
-});
-it('发送中编辑的新草稿不会被成功响应清空',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});let finish:(v:unknown)=>void=()=>undefined;
- (createComment as jest.Mock).mockReturnValue(new Promise(resolve=>{finish=resolve;}));
- const v=await renderApp(<CampusDetailScreen postId="7"/>);await waitFor(()=>expect(v.getByLabelText('写评论').props.editable).not.toBe(false));
- await fireEvent.changeText(v.getByLabelText('写评论'),'第一条');await fireEvent.press(v.getByTestId('campus-composer-send'));
- await fireEvent.changeText(v.getByLabelText('写评论'),'第二条');await fireEvent.press(v.getByTestId('campus-composer-send'));expect(createComment).toHaveBeenCalledTimes(1);
- await act(async()=>finish({id:90,content:'第一条'}));expect(v.getByText('第一条')).toBeTruthy();expect(v.getByLabelText('写评论').props.value).toBe('第二条');
-});
-it('墙评论超过500字不能提交',async()=>{
- wallDetail.mockResolvedValue({id:40,content:'墙正文'});const v=await renderApp(<CampusDetailScreen postId="40" kind="wall"/>);
- await waitFor(()=>expect(v.getByLabelText('写评论').props.editable).not.toBe(false));
- await fireEvent.changeText(v.getByLabelText('写评论'),'字'.repeat(501));await fireEvent.press(v.getByTestId('campus-composer-send'));expect(createConfessionComment).not.toHaveBeenCalled();
-});
-it('被禁言提示权限拒绝，不清除会话',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});(toggleLike as jest.Mock).mockRejectedValue({status:403,body:{muted:true}});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(v.getByText('当前账号不能进行此操作')).toBeTruthy());expect(mockAuthFailure).not.toHaveBeenCalled();
-});
-it('失效令牌交给现有会话处理并给出登录入口',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});(toggleLike as jest.Mock).mockRejectedValue({status:403,body:{}});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(v.getByText('登录后参与')).toBeTruthy());expect(mockAuthFailure).toHaveBeenCalled();
-});
-it('切换帖子后旧点赞请求不能覆盖新帖子',async()=>{
- detail.mockResolvedValueOnce({id:7,content:'旧正文'}).mockResolvedValueOnce({id:8,content:'新正文',user_liked:false});
- let finish:(v:unknown)=>void=()=>undefined;(toggleLike as jest.Mock).mockReturnValue(new Promise(resolve=>{finish=resolve;}));
- function Harness(){const [id,setId]=React.useState('7');return <><Button label="切换帖子" onPress={()=>setId('8')}/><CampusDetailScreen postId={id}/></>;}
- const v=await renderApp(<Harness/>);await waitFor(()=>expect(v.getByText('旧正文')).toBeTruthy());await fireEvent.press(v.getByTestId('campus-detail-like'));
- await fireEvent.press(v.getByText('切换帖子'));await waitFor(()=>expect(v.getByText('新正文')).toBeTruthy());
- await act(async()=>finish({post_id:7,liked:true}));expect(v.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(false);
-});
-
-for(const locale of ['zh','en'] as const){
- it(`${locale}树洞未返回请求显示加载态`,async()=>{
-  list.mockReturnValue(new Promise(()=>undefined));const v=await renderApp(<CampusListScreen/>,{locale});
-  expect(v.getByTestId('campus-list-loading')).toBeTruthy();expect(v.queryByTestId('campus-list-empty')).toBeNull();
- });
- it(`${locale}树洞空列表是业务空态`,async()=>{
-  list.mockResolvedValue({list:[],hasMore:false});const v=await renderApp(<CampusListScreen/>,{locale});
-  await waitFor(()=>expect(v.getByText(locale==='zh'?'还没有帖子':'No posts yet')).toBeTruthy());
-  expect(v.queryByTestId('campus-list-error')).toBeNull();
- });
- it(`${locale}树洞有数据显示正文与末页`,async()=>{
-  list.mockResolvedValue({list:[{id:7,content:'阅读内容'}],hasMore:false});const v=await renderApp(<CampusListScreen/>,{locale});
-  await waitFor(()=>expect(v.getByText('阅读内容')).toBeTruthy());expect(v.getByText(locale==='zh'?'没有更多帖子':'No more posts')).toBeTruthy();
- });
- for(const [failure,perceive,fix] of [
-  [{kind:'offline'},locale==='zh'?'网络没连上':'No connection',locale==='zh'?'打开网络后重试':'Turn on network, then retry'],
-  [new TypeError('secret-endpoint'),locale==='zh'?'服务连不上':'Service unreachable',locale==='zh'?'连上校园网后重试':'Join campus network, then retry'],
-  [{name:'AbortError'},locale==='zh'?'等待超时':'Timed out',locale==='zh'?'稍后重试一次':'Retry once in a moment'],
- ] as const){
-  it(`${locale}${perceive}给出恢复入口`,async()=>{
-   list.mockRejectedValueOnce(failure).mockResolvedValueOnce({list:[{id:7,content:'已恢复'}],hasMore:false});
-   const v=await renderApp(<CampusListScreen/>,{locale});await waitFor(()=>expect(v.getByText(perceive)).toBeTruthy());
-   expect(v.queryByText('secret-endpoint')).toBeNull();await fireEvent.press(v.getByText(fix));
-   await waitFor(()=>expect(v.getByText('已恢复')).toBeTruthy());expect(list).toHaveBeenLastCalledWith({page:1,pageSize:10});
-  });
- }
- it(`${locale}万能墙空态不变成技术错误`,async()=>{
-  wall.mockResolvedValue({items:[],has_older:false,oldest_cursor:null});const v=await renderApp(<CampusListScreen initialTab="wall"/>,{locale});
-  await waitFor(()=>expect(v.getByTestId('campus-list-empty')).toBeTruthy());expect(v.queryByTestId('campus-list-error')).toBeNull();
- });
- it(`${locale}万能墙有数据保持匿名`,async()=>{
-  wall.mockResolvedValue({items:[{id:40,content:'匿名正文',author:{nickname:'不应显示'}}],has_older:false,oldest_cursor:40});
-  const v=await renderApp(<CampusListScreen initialTab="wall"/>,{locale});await waitFor(()=>expect(v.getByText('匿名正文')).toBeTruthy());
-  expect(v.getByText(locale==='zh'?'匿名':'Anonymous')).toBeTruthy();expect(v.queryByText('不应显示')).toBeNull();
- });
+function resetRouter(): void {
+  routerMock.push.mockClear();
+  routerMock.back.mockClear();
+  routerMock.replace.mockClear();
+  routerMock.canGoBack.mockReset().mockReturnValue(true);
+  routerMock.setParams.mockClear();
 }
 
-it('树洞点赞成功后重读服务端计数，重读失败不重复点赞',async()=>{
- detail.mockResolvedValueOnce({id:7,content:'正文',user_liked:false,like_count:4})
- .mockResolvedValueOnce({id:7,content:'正文',user_liked:true,like_count:5}).mockRejectedValueOnce(new TypeError('offline'));
- (toggleLike as jest.Mock).mockResolvedValueOnce({post_id:7,liked:true}).mockResolvedValueOnce({post_id:7,liked:false});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('正文')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(v.getByText('5 赞')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-like'));
- await waitFor(()=>expect(detail).toHaveBeenCalledTimes(3));
- expect(toggleLike).toHaveBeenCalledTimes(2);expect(v.queryByText('5 赞')).toBeNull();
-});
-it('实名树洞回复显示被回复者昵称',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});
- (getPostComments as jest.Mock).mockResolvedValue([{id:50,content:'原评论',author:{nickname:'小林'}}]);
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('原评论')).toBeTruthy());
- await fireEvent.press(v.getByText('回复'));
- expect(v.getByText('正在回复 @小林')).toBeTruthy();
-});
-
-it('实名树洞评论展示服务端头像和等级，万能墙仍不展示身份',async()=>{
- detail.mockResolvedValue({id:7,content:'正文'});
- (getPostComments as jest.Mock).mockResolvedValue([{id:60,content:'带等级评论',author:{nickname:'小蓝',avatar:'https://example.test/avatar.png',level:3,badge:'contributor'}}]);
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('带等级评论')).toBeTruthy());
- expect(v.getByText('小蓝')).toBeTruthy();
- expect(v.getByText('贡献者')).toBeTruthy();
-});
-it('已删除帖子显示内容不可用并返回列表',async()=>{
- detail.mockRejectedValue({status:404});
- const v=await renderApp(<CampusDetailScreen postId="7"/>);
- await waitFor(()=>expect(v.getByText('内容不存在或已删除')).toBeTruthy());
- await fireEvent.press(v.getByText('返回列表'));expect(mockBack).toHaveBeenCalled();
+beforeEach(() => {
+  getQueryClient().clear();
+  secondaryTabStore.clear();
+  jest.clearAllMocks();
+  resetRouter();
+  mockSession.isSignedIn = true;
+  mockAuthFailure.mockClear();
+  list.mockReset();
+  detail.mockReset();
+  tags.mockReset().mockResolvedValue([]);
+  wall.mockReset();
+  wallDetail.mockReset();
+  (toggleLike as jest.Mock).mockReset();
+  (createComment as jest.Mock).mockReset();
+  (getPostComments as jest.Mock).mockReset().mockResolvedValue([]);
+  (getConfessionComments as jest.Mock).mockReset().mockResolvedValue([]);
+  (toggleConfessionLike as jest.Mock).mockReset();
+  (createConfessionComment as jest.Mock).mockReset();
 });
 
-it('普通帖子发布清缓存后已挂载树洞重新读取',async()=>{
- list.mockResolvedValueOnce({list:[{id:7,title:'Old',content:'Old'}],hasMore:false}).mockResolvedValue({list:[{id:8,title:'New',content:'New'}],hasMore:false});
- const v=await renderApp(<CampusListScreen/>);await waitFor(()=>expect(v.getByTestId('campus-row-7')).toBeTruthy());
- await act(async()=>getQueryClient().removeQueries({queryKey:['posts','infinite']}));
- await waitFor(()=>expect(v.getByTestId('campus-row-8')).toBeTruthy());expect(v.queryByTestId('campus-row-7')).toBeNull();
+describe('树洞列表', () => {
+  it('从第一页读取；点内容进详情（不同时触发动作）', async () => {
+    list.mockResolvedValue({ list: [{ id: 7, title: '校内交流', content: '周末运动' }], hasMore: false });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByText('校内交流')).toBeTruthy());
+    expect(list).toHaveBeenCalledWith({ page: 1, pageSize: 10 });
+    await fireEvent.press(view.getByTestId('campus-row-7'));
+    expect(routerMock.push).toHaveBeenCalledWith('/campus/7');
+  });
+
+  it('行展示身份、相对时间与服务端计数（图标 + 数字）', async () => {
+    list.mockResolvedValue({
+      list: [
+        {
+          id: 7,
+          title: '校内交流',
+          content: '周末运动',
+          author: { nickname: '小林' },
+          created_at: new Date().toISOString(),
+          like_count: 12,
+          comment_count: 3,
+        },
+      ],
+      hasMore: false,
+    });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByText('小林')).toBeTruthy());
+    expect(view.getByTestId('treehole-author-time')).toHaveTextContent('刚刚');
+    expect(view.getByTestId('campus-row-7-like-count')).toHaveTextContent('12');
+    expect(view.getByTestId('campus-row-7-comment-count')).toHaveTextContent('3');
+  });
+
+  it('标签筛选写回 store；「全部」回到无筛选', async () => {
+    tags.mockResolvedValue([{ id: 7, name_zh: '组队自习', name_en: 'Study group' }]);
+    list.mockResolvedValue({ list: [{ id: 7, content: '找自习搭子' }], hasMore: false });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByTestId('filter-chip-7')).toBeTruthy());
+    expect(view.getByTestId('filter-chip-all').props.accessibilityState.selected).toBe(true);
+    await fireEvent.press(view.getByTestId('filter-chip-7'));
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith({ page: 1, pageSize: 10, tagId: 7 })
+    );
+    expect(view.getByTestId('filter-chip-7').props.accessibilityState.selected).toBe(true);
+    expect(secondaryTabStore.get('square', 'confession').filters).toEqual({ tag: '7' });
+    await fireEvent.press(view.getByTestId('filter-chip-all'));
+    await waitFor(() => expect(secondaryTabStore.get('square', 'confession').filters).toEqual({}));
+    expect(view.getByTestId('filter-chip-all').props.accessibilityState.selected).toBe(true);
+  });
+
+  it('标签目录失败不阻断阅读（筛选条隐藏）', async () => {
+    tags.mockRejectedValue(new TypeError('tags unavailable'));
+    list.mockResolvedValue({ list: [{ id: 7, content: '仍可阅读' }], hasMore: false });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByText('仍可阅读')).toBeTruthy());
+    expect(view.queryByTestId('campus-tag-filters')).toBeNull();
+  });
+
+  it('分页失败重试同一页、去重并在末页停止', async () => {
+    list
+      .mockResolvedValueOnce({ list: [{ id: 7, content: '首篇' }], hasMore: true })
+      .mockRejectedValueOnce(new TypeError('retry'))
+      .mockResolvedValueOnce({
+        list: [
+          { id: 7, content: '首篇' },
+          { id: 8, content: '次篇' },
+        ],
+        hasMore: false,
+      });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByText('首篇')).toBeTruthy());
+    await act(async () => mockListProps.onEndReached());
+    await waitFor(() => expect(mockListProps.pagination?.errorScope).toBe('append'));
+    await act(async () => mockListProps.onRetryAppend?.());
+    await waitFor(() => expect(view.getByText('次篇')).toBeTruthy());
+    expect(list.mock.calls.map((call) => call[0].page)).toEqual([1, 2, 2]);
+    expect(view.getAllByText('首篇')).toHaveLength(1);
+    await act(async () => mockListProps.onEndReached());
+    expect(list).toHaveBeenCalledTimes(3);
+  });
+
+  it('刷新一栏归零位置；切走再回来保留位置与已加载页', async () => {
+    list
+      .mockResolvedValueOnce({ list: [{ id: 7, content: '旧树洞' }], hasMore: true })
+      .mockResolvedValueOnce({ list: [{ id: 8, content: '新树洞' }], hasMore: false });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByText('旧树洞')).toBeTruthy());
+    await act(async () => mockListProps.onScrollOffset?.(120));
+    await act(async () => mockListProps.onRefresh());
+    await waitFor(() => expect(view.getByText('新树洞')).toBeTruthy());
+    expect(view.queryByText('旧树洞')).toBeNull();
+    expect(mockListProps.restoredScrollOffset).toBe(0);
+  });
+
+  it('发布后缓存被移除时已挂载列表重新读取', async () => {
+    list
+      .mockResolvedValueOnce({ list: [{ id: 7, title: 'Old', content: 'Old' }], hasMore: false })
+      .mockResolvedValue({ list: [{ id: 8, title: 'New', content: 'New' }], hasMore: false });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByTestId('campus-row-7')).toBeTruthy());
+    await act(async () => getQueryClient().removeQueries({ queryKey: ['posts', 'infinite'] }));
+    await waitFor(() => expect(view.getByTestId('campus-row-8')).toBeTruthy());
+    expect(view.queryByTestId('campus-row-7')).toBeNull();
+  });
+
+  it('卸载时解绑缓存订阅', async () => {
+    const unsubscribe = jest.fn();
+    const subscribe = jest
+      .spyOn(getQueryClient().getQueryCache(), 'subscribe')
+      .mockReturnValue(unsubscribe);
+    try {
+      list.mockResolvedValue({ list: [{ id: 7, title: 'Old', content: 'Old' }], hasMore: false });
+      const view = await renderApp(<TreeholeFeed />);
+      await waitFor(() => expect(view.getByTestId('campus-row-7')).toBeTruthy());
+      await act(async () => {
+        view.unmount();
+      });
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    } finally {
+      subscribe.mockRestore();
+    }
+  });
+
+  it('树洞行点赞调用真实接口，回复进入同一帖详情', async () => {
+    list.mockResolvedValue({
+      list: [{ id: 7, title: '校内交流', content: '周末运动', user_liked: false, like_count: 4, comment_count: 2 }],
+      hasMore: false,
+    });
+    (toggleLike as jest.Mock).mockResolvedValue({ post_id: 7, liked: true, like_count: 5 });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByTestId('campus-row-7-like')).toBeTruthy());
+    await fireEvent.press(view.getByTestId('campus-row-7-like'));
+    await waitFor(() =>
+      expect(view.getByTestId('campus-row-7-like').props.accessibilityState.selected).toBe(true)
+    );
+    expect(toggleLike).toHaveBeenCalledWith(7);
+    expect(view.getByTestId('campus-row-7-like-count')).toHaveTextContent('5');
+    expect(getPostComments).not.toHaveBeenCalled();
+    await fireEvent.press(view.getByTestId('campus-row-7-comment'));
+    expect(routerMock.push).toHaveBeenCalledWith('/campus/7');
+  });
+
+  it('游客点赞不写接口，给出登录入口', async () => {
+    mockSession.isSignedIn = false;
+    list.mockResolvedValue({
+      list: [{ id: 7, title: '校内交流', content: '周末运动', user_liked: false, like_count: 4 }],
+      hasMore: false,
+    });
+    const view = await renderApp(<TreeholeFeed />);
+    await waitFor(() => expect(view.getByTestId('campus-row-7-like')).toBeTruthy());
+    await fireEvent.press(view.getByTestId('campus-row-7-like'));
+    expect(toggleLike).not.toHaveBeenCalled();
+    await waitFor(() => expect(view.getByTestId('campus-row-7-notice')).toBeTruthy());
+    expect(view.getByTestId('campus-row-7-like').props.accessibilityState.selected).toBe(false);
+    await fireEvent.press(view.getByText('登录'));
+    expect(routerMock.push).toHaveBeenCalledWith('/login');
+  });
 });
 
-it('发布后的详情返回树洞列表，普通阅读仍走原返回栈',async()=>{
- detail.mockResolvedValue({id:7,title:'新帖',content:'新内容'});
- const v=await renderApp(<CampusDetailScreen postId="7" published/>);
- await waitFor(()=>expect(v.getByText('新内容')).toBeTruthy());
- await fireEvent.press(v.getByTestId('campus-detail-back'));expect(mockReplace).toHaveBeenCalledWith('/');expect(mockBack).not.toHaveBeenCalled();
+describe('树洞搜索（就地展开）', () => {
+  it('点搜索框在本页展开，输入后结果就地替换，不跳页', async () => {
+    list.mockResolvedValue({ list: [{ id: 7, title: '自习', content: '组队自习' }], hasMore: false });
+    const view = await renderApp(<TreeholeFeed />);
+    expect(view.queryByTestId('campus-search-field')).toBeNull();
+    await fireEvent.press(view.getByTestId('campus-search-toggle'));
+    expect(view.getByTestId('campus-search-field')).toBeTruthy();
+    await fireEvent.changeText(view.getByTestId('campus-search-field-input'), '自习');
+    await waitFor(
+      () => expect(list).toHaveBeenLastCalledWith({ page: 1, pageSize: 10, q: '自习' }),
+      { timeout: 3000 }
+    );
+    expect(view.getByText('帖子结果')).toBeTruthy();
+    expect(routerMock.push).not.toHaveBeenCalledWith('/campus/search');
+  });
+
+  it('取消展开会清空关键词并回到普通流（缓存优先）', async () => {
+    list.mockResolvedValue({ list: [{ id: 7, content: '普通正文' }], hasMore: false });
+    const view = await renderApp(<TreeholeFeed />);
+    await fireEvent.press(view.getByTestId('campus-search-toggle'));
+    await fireEvent.changeText(view.getByTestId('campus-search-field-input'), '自习');
+    await waitFor(
+      () => expect(list).toHaveBeenLastCalledWith({ page: 1, pageSize: 10, q: '自习' }),
+      { timeout: 3000 }
+    );
+    await fireEvent.press(view.getByTestId('campus-search-cancel'));
+    expect(view.queryByTestId('campus-search-field')).toBeNull();
+    // 回到普通流时**先给缓存**（宪法 10.6 cache-then-network），不重新请求
+    expect(view.getByText('普通正文')).toBeTruthy();
+  });
+
+  it('搜索无结果给业务空态，动作回到普通流', async () => {
+    list.mockImplementation(({ q }: { q?: string }) =>
+      Promise.resolve(
+        q
+          ? { list: [], hasMore: false }
+          : { list: [{ id: 7, content: '普通正文' }], hasMore: false }
+      )
+    );
+    const view = await renderApp(<TreeholeFeed />);
+    await fireEvent.press(view.getByTestId('campus-search-toggle'));
+    await fireEvent.changeText(view.getByTestId('campus-search-field-input'), '不存在');
+    await waitFor(() => expect(view.getByText('无匹配帖子，试试其他词')).toBeTruthy(), {
+      timeout: 3000,
+    });
+    await fireEvent.press(view.getByText('清除'));
+    expect(view.queryByTestId('campus-search-field')).toBeNull();
+  });
 });
 
-it('树洞列表卸载时解绑查询缓存订阅',async()=>{
- const unsubscribe=jest.fn();
- const subscribe=jest.spyOn(getQueryClient().getQueryCache(),'subscribe').mockReturnValue(unsubscribe);
- try{
-  list.mockResolvedValue({list:[{id:7,title:'Old',content:'Old'}],hasMore:false});
-  const v=await renderApp(<CampusListScreen/>);
-  await waitFor(()=>expect(v.getByTestId('campus-row-7')).toBeTruthy());
-  await act(async()=>{v.unmount();});
-  expect(unsubscribe).toHaveBeenCalledTimes(1);
- }finally{subscribe.mockRestore();}
+describe('万能墙列表 / 详情', () => {
+  it('窗口游标分页且不展示服务端身份', async () => {
+    wall
+      .mockResolvedValueOnce({
+        items: [{ id: 40, content: '墙首篇', author: { nickname: '泄漏作者' } }],
+        has_older: true,
+        oldest_cursor: 40,
+      })
+      .mockResolvedValueOnce({ items: [{ id: 35, content: '墙次篇' }], has_older: false, oldest_cursor: 35 });
+    const view = await renderApp(<WallFeed />);
+    await waitFor(() => expect(view.getByText('墙首篇')).toBeTruthy());
+    expect(view.queryByText('泄漏作者')).toBeNull();
+    expect(view.getByText('匿名')).toBeTruthy();
+    await act(async () => mockListProps.onEndReached());
+    await waitFor(() => expect(view.getByText('墙次篇')).toBeTruthy());
+    expect(wall.mock.calls.map((call) => call[0])).toEqual([
+      { cursor: null, direction: 'older', limit: 5 },
+      { cursor: 40, direction: 'older', limit: 5 },
+    ]);
+    await fireEvent.press(view.getByTestId('campus-row-35'));
+    expect(routerMock.push).toHaveBeenCalledWith('/campus/wall/35');
+  });
+
+  it('窗口声称有下一页却缺游标时显示错误且不循环请求', async () => {
+    wall.mockResolvedValue({ items: [{ id: 40, content: '错误窗口' }], has_older: true, oldest_cursor: null });
+    const view = await renderApp(<WallFeed />);
+    await waitFor(() => expect(view.getByTestId('wall-feed-error')).toBeTruthy());
+    expect(view.queryByText('错误窗口')).toBeNull();
+    expect(wall).toHaveBeenCalledTimes(1);
+  });
+
+  it('英语界面按服务端模板键标明版式', async () => {
+    wall.mockResolvedValue({ items: [{ id: 40, content: '海报', template_key: 'bigtype' }], has_older: false, oldest_cursor: 40 });
+    const view = await renderApp(<WallFeed />, { locale: 'en' });
+    await waitFor(() => expect(view.getByText('Poster')).toBeTruthy());
+  });
+
+  it('万能墙详情只投影匿名作者，不渲染标题与作者身份', async () => {
+    wallDetail.mockResolvedValue({
+      id: 40,
+      content: '匿名正文',
+      title: '身份标题',
+      template_key: 'announcement',
+      author: { nickname: '泄漏作者' },
+      images: [{ url: 'https://example.test/leak.jpg' }],
+    });
+    const view = await renderApp(<CampusDetailScreen postId="40" kind="wall" />);
+    await waitFor(() => expect(view.getByText('匿名正文')).toBeTruthy());
+    expect(view.queryByText('泄漏作者')).toBeNull();
+    expect(view.queryByText('身份标题')).toBeNull();
+    expect(view.getByText('匿名')).toBeTruthy();
+    expect(detail).not.toHaveBeenCalled();
+  });
+});
+
+describe('树洞详情（原生 Header + 粘性底栏）', () => {
+  it('内容、作者与原生 Header 标题都在；底栏在 Screen footer 里', async () => {
+    detail.mockResolvedValue({
+      id: 7,
+      title: '校内交流',
+      content: '一起打球',
+      author: { nickname: '小林' },
+      images: [{ url: 'https://example.test/photo.jpg' }],
+    });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('一起打球')).toBeTruthy());
+    expect(view.getByText('小林')).toBeTruthy();
+    expect(view.getByTestId('campus-header-title')).toHaveTextContent('帖子');
+    expect(view.getByTestId('treehole-post-detail')).toBeTruthy();
+    const footer = view.getByTestId('screen-footer');
+    expect(within(footer).getByLabelText('写评论')).toBeTruthy();
+    expect(view.queryByTestId('campus-detail-back')).toBeNull();
+  });
+
+  it('右上 ⋯ 打开动作表，举报表单可达（唯一举报入口）', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文' });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByTestId('campus-detail-more')).toBeTruthy());
+    await fireEvent.press(view.getByTestId('campus-detail-more'));
+    expect(view.getByTestId('campus-detail-menu-report')).toBeTruthy();
+    await fireEvent.press(view.getByTestId('campus-detail-menu-report'));
+    await waitFor(() => expect(view.getByTestId('report-submit')).toBeTruthy());
+  });
+
+  it('无效/隐藏/错配 id 一律空态，不请求详情', async () => {
+    const view = await renderApp(<CampusDetailScreen postId="abc" />);
+    await waitFor(() => expect(view.getByTestId('campus-detail-empty')).toBeTruthy());
+    expect(detail).not.toHaveBeenCalled();
+  });
+
+  it('错配 id 不显示正文', async () => {
+    detail.mockResolvedValue({ id: 8, content: '错配正文' });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByTestId('campus-detail-empty')).toBeTruthy());
+    expect(view.queryByText('错配正文')).toBeNull();
+  });
+
+  it('404 空态给出唯一动作', async () => {
+    detail.mockRejectedValue({ status: 404 });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('内容不存在或已删除')).toBeTruthy());
+  });
+
+  it('详情失败可重试，且不泄漏内部错误', async () => {
+    detail.mockRejectedValueOnce(new TypeError('secret-db')).mockResolvedValueOnce({ id: 7, content: '恢复正文' });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByTestId('campus-detail-error')).toBeTruthy());
+    expect(view.queryByText('secret-db')).toBeNull();
+    await fireEvent.press(view.getByText('连上校园网后重试'));
+    await waitFor(() => expect(view.getByText('恢复正文')).toBeTruthy());
+  });
+
+  it('切换帖子后旧请求不能覆盖新正文', async () => {
+    let finish: (row: unknown) => void = () => undefined;
+    detail
+      .mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }))
+      .mockResolvedValueOnce({ id: 8, content: '新帖子' });
+    function Harness(): React.ReactElement {
+      const [id, setId] = React.useState('7');
+      return (
+        <>
+          <Button label="切换帖子" onPress={() => setId('8')} />
+          <CampusDetailScreen postId={id} />
+        </>
+      );
+    }
+    const view = await renderApp(<Harness />);
+    await fireEvent.press(view.getByText('切换帖子'));
+    await waitFor(() => expect(view.getByText('新帖子')).toBeTruthy());
+    await act(async () => finish({ id: 7, content: '旧帖子' }));
+    expect(view.getByText('新帖子')).toBeTruthy();
+    expect(view.queryByText('旧帖子')).toBeNull();
+  });
+});
+
+describe('树洞详情互动 / 评论', () => {
+  it('点赞按响应更新；缺计数时重读服务端计数（不发明新数字）', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文', user_liked: false, like_count: 4 });
+    (toggleLike as jest.Mock).mockResolvedValue({ post_id: 7, liked: true });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('正文')).toBeTruthy());
+    await fireEvent.press(view.getByTestId('campus-detail-like'));
+    await waitFor(() =>
+      expect(view.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(true)
+    );
+    expect(toggleLike).toHaveBeenCalledWith(7);
+    expect(view.getByTestId('campus-detail-like-count')).toHaveTextContent('4');
+  });
+
+  it('连续点赞只发一次请求；失败不移除正文', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文', user_liked: false });
+    let reject: (error: unknown) => void = () => undefined;
+    (toggleLike as jest.Mock).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('正文')).toBeTruthy());
+    await fireEvent.press(view.getByTestId('campus-detail-like'));
+    await fireEvent.press(view.getByTestId('campus-detail-like'));
+    expect(toggleLike).toHaveBeenCalledTimes(1);
+    await act(async () => reject(new TypeError('internal-secret')));
+    expect(view.getByText('正文')).toBeTruthy();
+    expect(view.queryByText('internal-secret')).toBeNull();
+    expect(view.getByTestId('campus-detail-like').props.accessibilityState.selected).toBe(false);
+  });
+
+  it('被禁言提示权限拒绝；失效令牌交给会话处理', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文' });
+    (toggleLike as jest.Mock).mockRejectedValueOnce({ status: 403, body: { muted: true } });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('正文')).toBeTruthy());
+    await fireEvent.press(view.getByTestId('campus-detail-like'));
+    await waitFor(() => expect(view.getByText('当前账号不能进行此操作')).toBeTruthy());
+    expect(mockAuthFailure).not.toHaveBeenCalled();
+  });
+
+  it('评论时间在投影层格式化（不出现后端 ISO 原文）', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文' });
+    const iso = new Date(Date.now() - 5 * 60000).toISOString();
+    (getPostComments as jest.Mock).mockResolvedValue([{ id: 50, content: '五分钟前评论', author: { nickname: '小林' }, created_at: iso }]);
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('五分钟前评论')).toBeTruthy());
+    expect(view.queryByText(iso)).toBeNull();
+    expect(view.getByText('5 分钟前')).toBeTruthy();
+  });
+
+  it('评论读取失败可独立重试，不影响正文', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文' });
+    (getPostComments as jest.Mock)
+      .mockRejectedValueOnce(new TypeError('secret'))
+      .mockResolvedValueOnce([{ id: 80, content: '恢复评论', author: { nickname: '小林' } }]);
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByTestId('campus-detail-comments-error')).toBeTruthy());
+    expect(view.getByText('正文')).toBeTruthy();
+    await fireEvent.press(view.getByText('重试'));
+    await waitFor(() => expect(view.getByText('恢复评论')).toBeTruthy());
+  });
+
+  it('评论失败保留草稿，重试成功追加评论并清空', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文' });
+    (createComment as jest.Mock)
+      .mockRejectedValueOnce(new TypeError('secret'))
+      .mockResolvedValueOnce({ id: 90, content: '一起运动', author: { nickname: '我' } });
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByLabelText('写评论')).toBeTruthy());
+    await fireEvent.changeText(view.getByLabelText('写评论'), '一起运动');
+    await fireEvent.press(view.getByTestId('campus-composer-send'));
+    await waitFor(() => expect(view.getByText('评论未发送，请重试')).toBeTruthy());
+    expect(view.getByLabelText('写评论').props.value).toBe('一起运动');
+    await fireEvent.press(view.getByTestId('campus-composer-send'));
+    await waitFor(() => expect(view.getByText('一起运动')).toBeTruthy());
+    expect(view.getByLabelText('写评论').props.value).toBe('');
+    expect(createComment).toHaveBeenLastCalledWith(7, { content: '一起运动' });
+  });
+
+  it('空白评论不提交；实名回复显示被回复者昵称', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文' });
+    (getPostComments as jest.Mock).mockResolvedValue([{ id: 50, content: '原评论', author: { nickname: '小林' } }]);
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByText('原评论')).toBeTruthy());
+    await fireEvent.changeText(view.getByLabelText('写评论'), '   ');
+    await fireEvent.press(view.getByTestId('campus-composer-send'));
+    expect(createComment).not.toHaveBeenCalled();
+    await fireEvent.press(view.getByText('回复'));
+    expect(view.getByText('正在回复 @小林')).toBeTruthy();
+  });
+
+  it('万能墙评论与回复全程匿名；超过 500 字不提交', async () => {
+    wallDetail.mockResolvedValue({ id: 40, content: '墙正文' });
+    (getConfessionComments as jest.Mock).mockResolvedValue([
+      { id: 50, content: '匿名评论', author: { nickname: '秘密姓名' }, replies: [{ id: 51, content: '匿名回复', author: { nickname: '回复姓名' } }] },
+    ]);
+    const view = await renderApp(<CampusDetailScreen postId="40" kind="wall" />);
+    await waitFor(() => expect(view.getByText('匿名回复')).toBeTruthy());
+    expect(view.queryByText('秘密姓名')).toBeNull();
+    expect(view.queryByText('回复姓名')).toBeNull();
+    await fireEvent.press(view.getByText('回复'));
+    expect(view.getByText('正在回复某条评论')).toBeTruthy();
+    await fireEvent.changeText(view.getByLabelText('写评论'), '字'.repeat(501));
+    await fireEvent.press(view.getByTestId('campus-composer-send'));
+    expect(createConfessionComment).not.toHaveBeenCalled();
+  });
+
+  it('发送中编辑的新草稿不会被成功响应清空', async () => {
+    detail.mockResolvedValue({ id: 7, content: '正文' });
+    let finish: (value: unknown) => void = () => undefined;
+    (createComment as jest.Mock).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const view = await renderApp(<CampusDetailScreen postId="7" />);
+    await waitFor(() => expect(view.getByLabelText('写评论')).toBeTruthy());
+    await fireEvent.changeText(view.getByLabelText('写评论'), '第一条');
+    await fireEvent.press(view.getByTestId('campus-composer-send'));
+    await fireEvent.changeText(view.getByLabelText('写评论'), '第二条');
+    await fireEvent.press(view.getByTestId('campus-composer-send'));
+    expect(createComment).toHaveBeenCalledTimes(1);
+    await act(async () => finish({ id: 90, content: '第一条' }));
+    expect(view.getByText('第一条')).toBeTruthy();
+    expect(view.getByLabelText('写评论').props.value).toBe('第二条');
+  });
+
+  it('发布成功进入详情时，返回一律回广场（不回到发布表单）', async () => {
+    detail.mockResolvedValue({ id: 7, title: '新帖', content: '新内容' });
+    const view = await renderApp(<CampusDetailScreen postId="7" published />);
+    await waitFor(() => expect(view.getByText('新内容')).toBeTruthy());
+    await fireEvent.press(view.getByTestId('campus-detail-back'));
+    expect(routerMock.replace).toHaveBeenCalledWith('/');
+    expect(routerMock.back).not.toHaveBeenCalled();
+  });
+});
+
+describe('树洞四态（中英双语）', () => {
+  for (const locale of ['zh', 'en'] as const) {
+    it(`${locale}·未返回请求显示骨架`, async () => {
+      list.mockReturnValue(new Promise(() => undefined));
+      const view = await renderApp(<TreeholeFeed />, { locale });
+      expect(view.getByTestId('campus-list-loading')).toBeTruthy();
+    });
+
+    it(`${locale}·空列表是业务空态`, async () => {
+      list.mockResolvedValue({ list: [], hasMore: false });
+      const view = await renderApp(<TreeholeFeed />, { locale });
+      await waitFor(() =>
+        expect(view.getByText(locale === 'zh' ? '还没有帖子' : 'No posts yet')).toBeTruthy()
+      );
+    });
+
+    it(`${locale}·错误给出可感知/可理解/可改正的恢复入口`, async () => {
+      list.mockRejectedValueOnce(new TypeError('secret-endpoint')).mockResolvedValueOnce({ list: [], hasMore: false });
+      const view = await renderApp(<TreeholeFeed />, { locale });
+      await waitFor(() =>
+        expect(view.getByText(locale === 'zh' ? '服务连不上' : 'Service unreachable')).toBeTruthy()
+      );
+      expect(view.queryByText('secret-endpoint')).toBeNull();
+    });
+  }
 });

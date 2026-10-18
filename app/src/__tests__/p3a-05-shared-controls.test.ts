@@ -11,17 +11,21 @@ const SRC = path.resolve(__dirname, '..');
 const read = (...parts: string[]): string => fs.readFileSync(path.join(SRC, ...parts), 'utf8');
 
 describe('P3A-05 代表页面复用共享控件', () => {
-  it('广场用唯一 TopTabStrip 承接树洞和万能墙的二级导航', () => {
-    const source = read('features', 'campus', 'CampusScreens.tsx');
-    expect(source).toContain("import {TopTabStrip} from '@/components/ui/TopTabStrip'");
-    expect(source).toContain("getSecondaryTabs('square')");
+  it('广场用唯一 TopTabStrip 承接 7 个同页模块（集合来自注册表）', () => {
+    const home = read('features', 'square', 'SquareHome.tsx');
+    expect(home).toContain("from '@/components/ui/TopTabStrip'");
+    expect(home).toContain('SQUARE_TABS');
+    // ⛔ 集合不得在页面里再写一份（P2A-03 的源码扫描会拦）
+    expect(home).not.toContain("labelKey: 'secondary.confession'");
   });
 
-  it('广场搜索页复用 SearchField 的全页检索与读屏语义', () => {
-    const source = read('features', 'campus', 'CampusSearchScreen.tsx');
-    expect(source).toContain("import {SearchField} from '@/components/ui/SearchField'");
-    expect(source).toContain('appearance="full"');
-    expect(source).toContain('testID="campus-search-field"');
+  it('树洞搜索复用 SearchField 的检索语义（就地展开，不再有独立搜索页）', () => {
+    const bar = read('features', 'campus', 'TreeholeSearchBar.tsx');
+    const feed = read('features', 'campus', 'TreeholeFeed.tsx');
+    expect(bar).toContain("from '@/components/ui/SearchField'");
+    expect(bar).toContain('appearance="full"');
+    expect(bar).toContain('autoFocus');
+    expect(feed).toContain('TreeholeSearchBar');
   });
 
   it('参数化发布描述符经 PublishMedia 复用唯一 MediaPicker，并保留各域额度', () => {

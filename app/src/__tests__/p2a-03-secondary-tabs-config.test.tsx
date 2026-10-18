@@ -55,8 +55,16 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
   });
 
   describe('TC-P2A-03-2A · 「广场」是唯一已定集合', () => {
-    it('恰好两项，顺序与宪法 4.1.1 一致（树洞 / 万能墙）', () => {
-      expect(getSecondaryTabs('square').map((tab) => tab.key)).toEqual(['confession', 'wall']);
+    it('恰好七项（所有者 2026-10-12 裁决：广场同页 7 个模块），前两项是树洞 / 万能墙', () => {
+      expect(getSecondaryTabs('square').map((tab) => tab.key)).toEqual([
+        'confession',
+        'wall',
+        'canteen',
+        'market',
+        'errand',
+        'guides',
+        'clubs',
+      ]);
       expect(hasSecondaryTabs('square')).toBe(true);
     });
 
