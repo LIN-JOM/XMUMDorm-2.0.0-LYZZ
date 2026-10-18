@@ -12,7 +12,7 @@
  */
 
 import * as React from 'react';
-import { TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@/design-system/theme';
 import { Text } from './Text';
@@ -63,53 +63,62 @@ export function OtpInput({
         {label}
       </Text>
 
-      <View style={{ flexDirection: 'row', gap: theme.space('space_2') }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {digits.map((digit, index) => (
-          <View
-            // 展示格是位置固定的装饰，index 作为 key 在这里是稳定的
-            key={`otp-slot-${index}`}
-            style={{
-              flex: 1,
-              minHeight: theme.space('space_12'),
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: theme.radius('radius_medium'),
-              borderWidth: theme.borderWidth('border_width_hairline'),
-              borderColor: theme.color[
-                hasError ? 'state-danger' : digit === '' ? 'border-subtle' : 'border-strong'
-              ].value,
-              backgroundColor: theme.color['bg-sunken'].value,
-            }}
-          >
-            <Text role="title" colorToken="text-primary">
-              {digit}
-            </Text>
-          </View>
-        ))}
-      </View>
+      <View style={{ position: 'relative' }}>
+        <View
+          style={{ flexDirection: 'row', gap: theme.space('space_2') }}
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {digits.map((digit, index) => (
+            <View
+              // 展示格是位置固定的装饰，index 作为 key 在这里是稳定的
+              key={`otp-slot-${index}`}
+              style={{
+                flex: 1,
+                minHeight: theme.space('space_12'),
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: theme.radius('radius_medium'),
+                borderWidth: theme.borderWidth('border_width_hairline'),
+                borderColor: theme.color[
+                  hasError ? 'state-danger' : digit === '' ? 'border-subtle' : 'border-strong'
+                ].value,
+                backgroundColor: theme.color['bg-sunken'].value,
+              }}
+            >
+              <Text role="title" colorToken="text-primary">
+                {digit}
+              </Text>
+            </View>
+          ))}
+        </View>
 
-      {/* 真实输入框：透明覆盖在展示格之上，负责键盘/粘贴/自动填充与 a11y */}
-      <TextInput
-        testID={testID}
-        value={value}
-        onChangeText={(raw) => onChangeText?.(normalizeOtp(raw, length))}
-        editable={!disabled}
-        keyboardType="number-pad"
-        maxLength={length}
-        textContentType={autoComplete === 'one-time-code' ? 'oneTimeCode' : 'none'}
-        autoComplete={autoComplete === 'one-time-code' ? 'sms-otp' : 'off'}
-        allowFontScaling
-        accessibilityLabel={
-          hasError ? `${otpAnnouncement(label, value, length)}，${errorText}` : otpAnnouncement(label, value, length)
-        }
-        accessibilityState={{ disabled }}
-        style={{
-          // 视觉为 0 高度（值由上面的展示格呈现），但仍可聚焦与输入
-          height: theme.space('space_1'),
-          opacity: 0,
-          color: theme.color['text-primary'].value,
-        }}
-      />
+        {/* 真实输入框：透明覆盖在展示格之上，负责键盘/粘贴/自动填充与 a11y */}
+        <TextInput
+          testID={testID}
+          value={value}
+          onChangeText={(raw) => onChangeText?.(normalizeOtp(raw, length))}
+          editable={!disabled}
+          keyboardType="number-pad"
+          maxLength={length}
+          textContentType={autoComplete === 'one-time-code' ? 'oneTimeCode' : 'none'}
+          autoComplete={autoComplete === 'one-time-code' ? 'sms-otp' : 'off'}
+          caretHidden
+          underlineColorAndroid="transparent"
+          allowFontScaling
+          accessibilityLabel={
+            hasError ? `${otpAnnouncement(label, value, length)}，${errorText}` : otpAnnouncement(label, value, length)
+          }
+          accessibilityState={{ disabled }}
+          style={{
+            // 保留完整原生命中区域；只隐藏文字，不能把输入框缩小或整体透明化。
+            ...StyleSheet.absoluteFill,
+            color: 'transparent',
+            backgroundColor: 'transparent',
+          }}
+        />
+      </View>
 
       {hasError ? (
         <Text role="caption" colorToken="text-danger">

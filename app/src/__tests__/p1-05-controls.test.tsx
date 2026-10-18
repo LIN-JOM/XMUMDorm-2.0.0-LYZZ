@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import * as React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 
 import { ThemeProvider } from '@/design-system/theme';
 
@@ -322,6 +322,30 @@ describe('TC-P1-05-11A · C19 OtpInput：归一化与播报', () => {
   it('真实输入框只有**一个**（粘贴与系统自动填充都靠它）', async () => {
     const { getByTestId } = await wrap(<OtpInput label="验证码" value="12" testID="otp" />);
     expect(getByTestId('otp').props.maxLength).toBe(6);
+  });
+
+  it('粘贴验证码后回显数字，并保留系统自动填充提示', async () => {
+    function OtpHarness(): React.ReactElement {
+      const [value, setValue] = React.useState('');
+      return <OtpInput label="验证码" value={value} onChangeText={setValue} testID="otp" />;
+    }
+    const view = await wrap(<OtpHarness />);
+    const user = userEvent.setup();
+    await user.paste(view.getByTestId('otp'), '123456');
+    expect(view.getByTestId('otp')).toHaveProp('value', '123456');
+    expect(view.getByTestId('otp')).toHaveProp('textContentType', 'oneTimeCode');
+    expect(view.getByTestId('otp')).toHaveProp('autoComplete', 'sms-otp');
+    expect(view.getByText('6', { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it('禁用时不能输入或粘贴验证码', async () => {
+    const onChangeText = jest.fn();
+    const view = await wrap(<OtpInput label="验证码" value="" disabled onChangeText={onChangeText} testID="otp" />);
+    const user = userEvent.setup();
+    expect(view.getByTestId('otp')).toBeDisabled();
+    await user.type(view.getByTestId('otp'), '123456');
+    await user.paste(view.getByTestId('otp'), '123456');
+    expect(onChangeText).not.toHaveBeenCalled();
   });
 });
 
