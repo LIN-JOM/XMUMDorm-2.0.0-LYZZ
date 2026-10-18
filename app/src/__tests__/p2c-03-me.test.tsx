@@ -39,6 +39,29 @@ const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
 }));
+
+/**
+ * pager 的**原生容器**替身（⛔ 不是业务替身）。
+ *
+ * 为什么要替：真机上翻页靠原生手势，Jest 里既没有手势也没有原生实例，
+ * 而 `setPage` 是 `PagerView` 类的**实例字段**（不在 prototype 上）→ 外部 spy 不到。
+ * 替身只替换"那个原生容器"：children 照常渲染，被测的**是我们接的线**
+ * （点 Tab 是否调用了翻页、翻页回调是否回写了选中态）。
+ */
+jest.mock('react-native-pager-view', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const setPage = jest.fn();
+  class MockPagerView extends React.Component<Record<string, unknown>> {
+    static lastProps: Record<string, unknown> = {};
+    setPage = setPage;
+    render(): React.ReactElement {
+      MockPagerView.lastProps = this.props;
+      return React.createElement(View, { testID: 'me-content-pager' }, this.props.children as never);
+    }
+  }
+  return { __esModule: true, default: MockPagerView, __setPage: setPage, __MockPagerView: MockPagerView };
+});
 jest.mock('../../../shared/api/users', () => ({ getMe: jest.fn() }));
 jest.mock('../../../shared/api/todos', () => ({ getTodayTodos: jest.fn() }));
 jest.mock('../../../shared/api/schedule', () => ({ getScheduleWeek: jest.fn() }));
@@ -220,6 +243,31 @@ describe('P2C-03 M-01 我的仪表盘', () => {
       expect(view.queryByTestId('me-entry-posts')).toBeNull();
       expect(view.queryByTestId('me-entry-settings')).toBeNull();
       expect(view.queryByTestId('me-entry-about')).toBeNull();
+    });
+  });
+
+  describe('TC-P2C-03-4B · Tab 条与 pager 双向同步', () => {
+    it('点 Tab 翻页；pager 翻页回调回写 Tab 条选中', async () => {
+      const view = await renderApp(<MeScreen />);
+      await waitFor(() => expect(view.getByTestId('me-content-tabs')).toBeTruthy());
+
+      const pager = require('react-native-pager-view') as {
+        __setPage: jest.Mock;
+        __MockPagerView: { lastProps: { onPageSelected?: (e: { nativeEvent: { position: number } }) => void } };
+      };
+
+      // 正向：点「二手」（第 1 页）
+      fireEvent.press(view.getByTestId('top-tab-marketplace'));
+      expect(pager.__setPage).toHaveBeenCalledWith(1);
+
+      // 反向：pager 滑到第 2 页 → Tab 条选中「跑腿」
+      const onPageSelected = pager.__MockPagerView.lastProps.onPageSelected;
+      expect(typeof onPageSelected).toBe('function');
+      onPageSelected?.({ nativeEvent: { position: 2 } });
+      await waitFor(() =>
+        expect(view.getByTestId('top-tab-errands').props.accessibilityState).toEqual({ selected: true })
+      );
+      expect(view.getByTestId('top-tab-posts').props.accessibilityState).toEqual({ selected: false });
     });
   });
 
