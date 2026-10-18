@@ -1,5 +1,12 @@
 const expoPreset = require('jest-expo/android/jest-preset');
 
+// 单测固定在同一时区下跑：CI 是 UTC、开发机多为 +08，而 `Intl.DateTimeFormat`
+// 会把同一份 ISO 时间渲染成不同的本地字符串 —— 断言「本地绿、CI 红」就是这么来的
+// （p2x-bing-market-errand-errand-ui 曾写死 `2026/10/16 20:00`）。
+// 这里在 Jest 派发 worker **之前**钉住时区，worker 会继承父进程的环境变量；
+// 断言里从此可以写死本地时间的字面量，任何机器结果一致。
+process.env.TZ = 'Asia/Singapore';
+
 module.exports = {
   preset: 'jest-expo/android',
   // 见 app/jest/resolver.js 的注释：串起 worklets 的扩展名过滤与 RN 官方解析器
