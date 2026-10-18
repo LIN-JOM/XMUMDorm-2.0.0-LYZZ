@@ -249,7 +249,10 @@ describe('P2C-03 M-01 我的仪表盘', () => {
   describe('TC-P2C-03-4B · Tab 条与 pager 双向同步', () => {
     it('点 Tab 翻页；pager 翻页回调回写 Tab 条选中', async () => {
       const view = await renderApp(<MeScreen />);
-      await waitFor(() => expect(view.getByTestId('me-content-tabs')).toBeTruthy());
+      // ⚠️ 与 4A 同口径：先等资料卡（它跟着 profile 取数），Tab 区是同步渲染的，
+      //    再包一层 waitFor 会在机器负载高时撞默认 1000ms 超时（实测连跑时偶发）。
+      await waitFor(() => expect(view.getByTestId('me-profile')).toBeTruthy());
+      expect(view.getByTestId('me-content-tabs')).toBeTruthy();
 
       const pager = require('react-native-pager-view') as {
         __setPage: jest.Mock;
