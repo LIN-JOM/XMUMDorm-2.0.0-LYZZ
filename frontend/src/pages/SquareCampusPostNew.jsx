@@ -11,6 +11,7 @@ import NeoTextarea from '../components/retroui/Textarea';
 import NeoSelect from '../components/retroui/Select';
 import NeoCard from '../components/retroui/Card';
 import NeoTab from '../components/retroui/Tab';
+import { buildCampusPostContent } from './campusPostAttribution';
 
 export default function SquareCampusPostNew() {
   const { lang } = useLanguage();
@@ -22,6 +23,8 @@ export default function SquareCampusPostNew() {
   const [orgId, setOrgId] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [originType, setOriginType] = useState('original');
+  const [sourceNote, setSourceNote] = useState('');
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +67,7 @@ export default function SquareCampusPostNew() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!orgId || !title.trim() || !content.trim()) return;
+    if (!orgId || !title.trim() || !content.trim() || (originType === 'repost' && !sourceNote.trim())) return;
     setSubmitting(true);
     setError('');
     try {
@@ -72,7 +75,7 @@ export default function SquareCampusPostNew() {
         organization_id: parseInt(orgId, 10),
         feed_tab: tab,
         title: title.trim(),
-        content: content.trim(),
+        content: buildCampusPostContent(content, originType, sourceNote),
       }, files.length > 0 ? files : null);
       navigate('/about', { replace: true });
     } catch (err) {
@@ -135,6 +138,40 @@ export default function SquareCampusPostNew() {
                   ))}
                 </NeoSelect>
               </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-black">
+                  {isEn ? 'Content declaration' : '内容声明'}
+                </label>
+                <NeoSelect
+                  className="w-full"
+                  value={originType}
+                  onChange={(e) => {
+                    setOriginType(e.target.value);
+                    if (e.target.value === 'original') setSourceNote('');
+                  }}
+                >
+                  <option value="original">{isEn ? 'Original' : '原创'}</option>
+                  <option value="repost">{isEn ? 'Repost' : '转载'}</option>
+                </NeoSelect>
+              </div>
+
+              {originType === 'repost' ? (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-black">
+                    {isEn ? 'Source' : '转载来源'}
+                  </label>
+                  <NeoInput
+                    type="text"
+                    className="w-full"
+                    placeholder={isEn ? 'Group, organization, or original author' : '群聊、组织或原作者'}
+                    value={sourceNote}
+                    onChange={(e) => setSourceNote(e.target.value)}
+                    maxLength={100}
+                    required
+                  />
+                </div>
+              ) : null}
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-black">
@@ -205,7 +242,7 @@ export default function SquareCampusPostNew() {
               <NeoButton
                 type="submit"
                 variant="default"
-                disabled={submitting || !title.trim() || !content.trim() || !orgId}
+                disabled={submitting || !title.trim() || !content.trim() || !orgId || (originType === 'repost' && !sourceNote.trim())}
               >
                 {submitting ? (isEn ? 'Publishing...' : '发布中...') : (isEn ? 'Publish' : '发布')}
               </NeoButton>
