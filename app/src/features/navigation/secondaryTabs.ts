@@ -24,12 +24,29 @@ export type SecondaryTabDefinition = {
 /** 一级格 → 该格的二级 Tab 集合（空数组 = 该格没有二级 Tab，不显示 Tab 条） */
 export type SecondaryTabRegistry = Record<string, readonly SecondaryTabDefinition[]>;
 
+/**
+ * 「广场」的模块集合 —— **唯一真源**（2026-10-18 收敛）。
+ *
+ * 所有者 2026-10-12 裁决（骨架规范 §1 顶部横幅 / D-1）：广场首页把
+ * 树洞 / 万能墙 / 食堂 / 集市 / 跑腿 / 攻略 / 社团 做成**顶部可横滑的同页模块**。
+ * 旧实现把这份集合**又硬编码在 `SquareHome.tsx` 里一份**（7 项 vs 2 项两份定义），
+ * 现在只保留这里一份 —— 页面通过 `getSecondaryTabs('square')` / `SQUARE_TABS` 消费。
+ *
+ * ⛔ 不要把模块集合再写回页面：P2A-03 的源码扫描会让它显式失败。
+ */
+export const SQUARE_TABS = [
+  // 宪法 4.1.1：树洞与万能墙互斥，各自保留分页/排序，只允许导航层合并
+  { key: 'confession', labelKey: 'secondary.confession' },
+  { key: 'wall', labelKey: 'secondary.wall' },
+  { key: 'canteen', labelKey: 'canteen.title' },
+  { key: 'market', labelKey: 'screen.market.title' },
+  { key: 'errand', labelKey: 'screen.errand.title' },
+  { key: 'guides', labelKey: 'square.guides.title' },
+  { key: 'clubs', labelKey: 'clubs.title' },
+] as const satisfies readonly SecondaryTabDefinition[];
+
 export const SECONDARY_TABS: SecondaryTabRegistry = {
-  // ✅ 已定：宪法 4.1.1（万能墙强制匿名、树洞非匿名 → 只允许导航层合并）
-  square: [
-    { key: 'confession', labelKey: 'secondary.confession' },
-    { key: 'wall', labelKey: 'secondary.wall' },
-  ],
+  square: SQUARE_TABS,
   // ⏳ 待确认 C-04：工具的二级集合
   tools: [],
   // ⏳ 待确认 C-05：我的是否也用二级 Tab

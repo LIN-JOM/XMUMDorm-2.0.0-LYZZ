@@ -53,14 +53,12 @@ describe('首页同页模块 Tab', () => {
     }
   });
 
-  it('保留树洞、万能墙和树洞搜索入口', async () => {
+  it('保留树洞、万能墙模块（搜索已改为树洞模块内就地展开，⛔ 不再有第二个搜索入口）', async () => {
     const view = await renderApp(<SquareHome tabBarHeight={60} />);
     expect(view.getByTestId('feed-confession')).toBeTruthy();
-    await fireEvent.press(view.getByTestId('square-campus-search'));
-    expect(mockPush).toHaveBeenCalledWith('/campus/search');
+    expect(view.queryByTestId('square-campus-search')).toBeNull();
     await fireEvent.press(view.getByTestId('top-tab-wall'));
     expect(view.getByTestId('feed-wall')).toBeTruthy();
-    expect(view.queryByTestId('square-campus-search')).toBeNull();
   });
 
   it('切换后保留输入，隐藏模块不进入读屏或可见元素树', async () => {

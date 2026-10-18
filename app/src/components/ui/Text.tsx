@@ -52,6 +52,8 @@ export type TextProps = {
   testID?: string;
   /** 无障碍角色（默认按 role 推断） */
   accessibilityRole?: RNTextProps['accessibilityRole'];
+  /** 内容变化时的读屏播报级别（计数器 / 位置指示这类会变的文字） */
+  accessibilityLiveRegion?: RNTextProps['accessibilityLiveRegion'];
 };
 
 export function Text({
@@ -65,6 +67,7 @@ export function Text({
   style,
   testID,
   accessibilityRole = 'text',
+  accessibilityLiveRegion,
 }: TextProps): React.ReactElement {
   const theme = useTheme();
   const token: ColorToken | undefined = theme.color[colorToken];
@@ -83,6 +86,7 @@ export function Text({
     <RNText
       testID={testID}
       accessibilityRole={accessibilityRole}
+      accessibilityLiveRegion={accessibilityLiveRegion}
       numberOfLines={numberOfLines}
       // 2.5-7：显式开启（RN 默认就是 true，写出来是为了"这是我们的决定"）
       allowFontScaling

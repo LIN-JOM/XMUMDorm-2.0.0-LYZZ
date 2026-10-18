@@ -503,13 +503,14 @@ describe('TC-P1-17-6A · S-10 菜品详情', () => {
 });
 
 describe('TC-P1-17-7A · 入口与结构约束', () => {
-  it('`S-01` 服务入口能进食堂（出口门 E2：路由可进入）', async () => {
-    const SquareScreen = require('../app/(tabs)/index').default as () => React.ReactElement;
-    const view = await renderApp(<SquareScreen />);
-    await waitFor(() => expect(view.getByTestId('square-services')).toBeTruthy());
-    const user = require('@testing-library/react-native').userEvent.setup();
-    await user.press(view.getByTestId('square-services-canteen'));
-    expect(routerState.pushed[0]).toBe('/canteen');
+  it('`S-01` 服务入口能进食堂（出口门 E2：入口已收进广场同页模块）', () => {
+    // 所有者 2026-10-12 裁决：食堂由"独立路由 push"改为"广场首页同页模块"。
+    // 入口判据因此变成"首页接线正确"（点击行为由 p3a5-square-integration 的模块用例覆盖）。
+    const screen = stripComments(readApp('(tabs)/index.tsx'));
+    expect(screen).toContain('SquareHome');
+    const home = stripComments(readSquare('SquareHome.tsx'));
+    expect(home).toContain('SQUARE_TABS');
+    expect(home).toContain("case 'canteen': return <CanteenHome embedded />");
   });
 
   it('四个路由文件都在', () => {

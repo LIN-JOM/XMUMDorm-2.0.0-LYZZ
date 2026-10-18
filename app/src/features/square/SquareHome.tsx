@@ -3,9 +3,7 @@ import { ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent } f
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
 import { TopTabStrip } from '@/components/ui/TopTabStrip';
-import { Button } from '@/components/ui/Button';
-import { useI18n } from '@/i18n';
-import type { SecondaryTabDefinition } from '@/features/navigation/secondaryTabs';
+import { SQUARE_TABS } from '@/features/navigation/secondaryTabs';
 import { CampusFeed } from '@/features/campus/CampusScreens';
 import { MarketListScreen } from '@/features/marketplace/MarketScreens';
 import { ErrandListScreen } from '@/features/errand/ErrandScreens';
@@ -13,16 +11,12 @@ import { GuidesListScreen } from '@/features/guides/GuidesScreens';
 import { ClubDiscoveryScreen } from '@/features/clubs/ClubScreens';
 import { CanteenHome } from './CanteenHome';
 
-const TABS = [
-  { key: 'confession', labelKey: 'secondary.confession' },
-  { key: 'wall', labelKey: 'secondary.wall' },
-  { key: 'canteen', labelKey: 'canteen.title' },
-  { key: 'market', labelKey: 'screen.market.title' },
-  { key: 'errand', labelKey: 'screen.errand.title' },
-  { key: 'guides', labelKey: 'square.guides.title' },
-  { key: 'clubs', labelKey: 'clubs.title' },
-] as const satisfies readonly SecondaryTabDefinition[];
-type HomeTab = typeof TABS[number]['key'];
+/**
+ * ⚠️ 集合来自 `secondaryTabs.ts` 的**唯一真源**（`SQUARE_TABS`），⛔ 不在这里再写一份。
+ * 旧实现把 7 个模块硬编码在本文件里，与注册表的 2 项形成"两份定义"（P0-1）。
+ */
+const TABS = SQUARE_TABS;
+type HomeTab = (typeof SQUARE_TABS)[number]['key'];
 
 function readTab(value: unknown): HomeTab {
   return TABS.find(tab => tab.key === value)?.key ?? 'confession';
@@ -135,17 +129,13 @@ export function SquareHome({ tabBarHeight }: { tabBarHeight: number }): React.Re
 }
 
 function ModuleContent({ tab }: { tab: HomeTab }): React.ReactElement {
-  const { t } = useI18n();
-  const router = useRouter();
   switch (tab) {
     case 'canteen': return <CanteenHome embedded />;
     case 'market': return <MarketListScreen embedded />;
     case 'errand': return <ErrandListScreen embedded />;
     case 'guides': return <GuidesListScreen embedded />;
     case 'clubs': return <ClubDiscoveryScreen embedded />;
-    default: return <>
-      {tab === 'confession' ? <Button testID="square-campus-search" label={t('screen.campus.search.title')} onPress={() => router.push('/campus/search' as never)} /> : null}
-      <CampusFeed kind={tab} />
-    </>;
+    // 树洞 / 万能墙：模块入口统一由 `CampusFeed` 决定（⛔ 不再有第二个搜索入口/发布入口）
+    default: return <CampusFeed kind={tab} />;
   }
 }

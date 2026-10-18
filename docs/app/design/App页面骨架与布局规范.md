@@ -266,8 +266,8 @@
 | 部件 | 口径 |
 |---|---|
 | **列表（`FlashList`/`LegendList`）** | 首项与末项的留白用 insets **注入 `contentContainerStyle`**；⛔ 不得用"末尾塞一个空白 item"糊 |
-| **粘性底栏（如报名/输入条）** | 高度 = 内容高度 + bottom inset（**唯一叠加处**，且此时该屏不再有 Tab 栏） |
-| **聊天/评论输入条** | 同 S6：键盘高度 + bottom inset 合并；键盘收起时输入条回到 Tab 栏之上 |
+| **粘性底栏（如报名/输入条）** | 高度 = 内容高度 + bottom inset（**唯一叠加处**，且此时该屏不再有 Tab 栏）。✅ **2026-10-18 起统一由 `Screen` 的 `footer` 槽实现**（`resolveFooterBottomPadding`：键盘弹出→键盘高度，收起→`insets.bottom`），页面⛔ 不得自己算；同时内容区不再叠加键盘 padding（避免双倍） |
+| **聊天/评论输入条** | 同 S6：键盘高度 + bottom inset 合并；键盘收起时输入条回到 Tab 栏之上。✅ 树洞详情即 `Screen footer` + `O08 InputSheet` 的第一个消费者 |
 | **全屏 WebView（T-05）** | **必须把 insets 传给内嵌页**（顶部不让状态栏压住、底部不让手势条压住）；⛔ 内嵌页不得自绘状态栏背景（会出现双层条） |
 | **启动页** | logo 必须在**安全区内居中**（挖孔机型不得遮挡） |
 | **模态/Sheet** | 顶部 sheet 手柄与底部按钮区各自消费 insets |

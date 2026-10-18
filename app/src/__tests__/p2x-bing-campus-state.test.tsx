@@ -7,8 +7,8 @@ const confession = {primaryTab:'square',secondaryTab:'confession'};
 
 describe('丙：校园两栏状态复核', () => {
   afterEach(() => secondaryTabStore.clear());
-  it('既有校园集合包含两个互斥导航键', () => {
-    expect(getSecondaryTabs('square').map(tab => tab.key)).toEqual(['confession','wall']);
+  it('广场模块集合保留两个互斥导航键（树洞 / 万能墙）在前两位', () => {
+    expect(getSecondaryTabs('square').map(tab => tab.key).slice(0, 2)).toEqual(['confession','wall']);
   });
   it('应用单例在两栏独立挂载和返回时恢复位置、筛选及游标', async () => {
     const a = await renderHook(() => useListPagination({scope:wall}));
