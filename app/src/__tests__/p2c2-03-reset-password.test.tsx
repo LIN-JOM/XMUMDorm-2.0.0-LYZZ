@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import * as React from 'react';
+import { StyleSheet } from 'react-native';
 import { userEvent, waitFor } from '@testing-library/react-native';
 
 import { renderApp } from './helpers/renderApp';
@@ -98,6 +99,30 @@ describe('P2C2-03 A-04 找回密码', () => {
   });
 
   describe('TC-P2C2-03-3A · 页面：两步是"发过码才长出来"的', () => {
+    it('发码后验证码的触摸区域覆盖展示格，输入六位验证码后可提交重置', async () => {
+      const view = await renderApp(<ResetPasswordScreen />);
+      const user = userEvent.setup();
+      await user.type(view.getByTestId('reset-email'), 'student@xmu.edu.my');
+      await user.press(view.getByTestId('reset-send-code'));
+      const code = await view.findByTestId('reset-code');
+
+      // 真正接收键盘输入的控件必须覆盖可见格子，不能缩成格子下方的透明细条。
+      expect(code).toHaveStyle({ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 });
+      expect(StyleSheet.flatten(code.props.style).opacity ?? 1).toBeGreaterThan(0);
+      expect(code).toBeEnabled();
+      await user.type(code, '111222');
+      expect(view.getByTestId('reset-code')).toHaveProp('value', '111222');
+      await user.type(view.getByTestId('reset-form-newPassword'), 'new-password');
+      await user.press(view.getByTestId('reset-form-submit'));
+
+      await waitFor(() => expect(api.resetPassword).toHaveBeenCalledWith({
+        email: 'student@xmu.edu.my',
+        verification_code: '111222',
+        new_password: 'new-password',
+      }));
+      await waitFor(() => expect(routerState.replaced).toContain('/login'));
+    });
+
     it('初始只有邮箱与发码按钮 —— **没有**验证码/新密码字段', async () => {
       const view = await renderApp(
         <ToastProvider>
