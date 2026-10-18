@@ -5,8 +5,9 @@
  * 结构：本组件只画内容行；顶部 inset 与底色由 `Screen.header` 施加（宪法 17.1-S2）。
  *
  * 校徽两个变体：
- *   · 亮色主题 → `xmu-emblem.png`（官方墨色 #112D66，透明底）；
+ *   · 亮色主题 → `xmu-emblem.png`（官方墨色，透明底）；
  *   · 暗色主题 → `xmu-emblem-light.png`（反白），因为深藏青线稿在暗色画布上对比度只有 1.39:1。
+ *   ⚠️ 具体色值与来源见 `app/assets/brand/SOURCE.md`（⛔ 本文件不写颜色字面量）。
  */
 
 import * as React from 'react';
