@@ -172,6 +172,7 @@ export const en: Record<MessageKey, string> = {
   'timetable.importHint': 'Timetable wrong? Import it again',
   'timetable.semesterNote': 'Weeks follow the campus time zone',
   'timetable.courseInfo': '{name} · {when} · {venue}',
+  'timetable.noVenue': 'Venue TBD',
 
   // Weekdays (backend `day_of_week`: 1=Mon … 7=Sun)
   'weekday.1': 'Mon',

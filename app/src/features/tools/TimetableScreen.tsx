@@ -23,7 +23,14 @@ import { useI18n } from '@/i18n';
 import { timetableIdentity } from './cacheIdentity';
 import { shouldHighlightToday, todayWeekday, useTimetableWeek, weekHasMeetings, type TimetableMeeting, type TimetableWeek } from './timetable';
 import { toToolsError } from './requestError';
-import { courseAccent, VISIBLE_WEEKDAYS, weekdayTimetableWeek, type CourseAccent } from './timetableView';
+import {
+  FALLBACK_COURSE_ACCENT,
+  VISIBLE_WEEKDAYS,
+  courseAccentMap,
+  courseKey,
+  weekdayTimetableWeek,
+  type CourseAccent,
+} from './timetableView';
 
 export type TimetableRenderProps = {
   week: TimetableWeek;
@@ -82,6 +89,13 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
     }
   });
   const shown = timetable.week ? weekdayTimetableWeek(timetable.week) : null;
+  // 本周课程 → 课程色（同课同色、异课异色）；`null` 时兜底调色板第一色
+  const accents = React.useMemo(() => (shown === null ? null : courseAccentMap(shown)), [shown]);
+  const resolveAccent = React.useCallback(
+    (meeting: TimetableMeeting): CourseAccent =>
+      accents?.get(courseKey(meeting)) ?? FALLBACK_COURSE_ACCENT,
+    [accents]
+  );
   const hasData = shown !== null && weekHasMeetings(shown);
   const totalWeeks = shown?.totalWeeks ?? FALLBACK_TOTAL_WEEKS;
   const highlight = shouldHighlightToday(week, shown?.currentWeek ?? null) ? todayWeekday() : null;
@@ -99,7 +113,7 @@ function OwnedTimetableScreen({ renderGrid, legacyControls }: { renderGrid: (pro
         <ErrorState testID="timetable-error" error={timetable.error} onAction={timetable.reload} /> : !shown || !weekHasMeetings(shown) ?
           <EmptyState testID="timetable-empty" kind="firstRun" title={t('timetable.empty')} actionLabel={t('import.title')} onAction={() => router.push('/tools/schedule-import')} /> :
           <View style={{ flex: 1 }}>{renderGrid({ week: shown, visibleWeekdays: VISIBLE_WEEKDAYS,
-            getCourseAccent: courseAccent, highlightWeekday: highlight, testID: 'timetable-grid',
+            getCourseAccent: resolveAccent, highlightWeekday: highlight, testID: 'timetable-grid',
             onPressMeeting: (meeting) => toast.show({ message: t('timetable.courseInfo', {
               name: meeting.courseName ?? meeting.courseCode, when: [meeting.startTime, meeting.endTime].filter(Boolean).join('-'), venue: meeting.venue ?? '',
             }), tone: 'info' }),

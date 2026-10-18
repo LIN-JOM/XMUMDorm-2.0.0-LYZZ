@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { TimetableScreen, type TimetableRenderProps } from '@/features/tools/TimetableScreen';
-import { courseAccent, weekdayTimetableWeek } from '@/features/tools/timetableView';
+import { courseAccentMap, weekdayTimetableWeek } from '@/features/tools/timetableView';
 import { normalizeTimetableWeek, safeTimetableWeekCount, timetableCacheKey } from '@/features/tools/timetable';
 import { clearNamespace, setItem } from '@/shared/storage';
 
@@ -18,11 +18,12 @@ let gridProps: TimetableRenderProps | undefined;
 function grid(props: TimetableRenderProps) { gridProps = props; return <View testID="grid-probe" />; }
 beforeEach(async () => { await clearNamespace(); gridProps = undefined; api.getScheduleWeek.mockReset().mockImplementation(async (week: number) => payload(week)); });
 
-it('maps course identity to a stable brand or accent token independently of week, venue and order', () => {
-  const meeting = normalizeTimetableWeek(payload(1))!.days[1][0];
-  expect(courseAccent(meeting)).toBe(courseAccent({ ...meeting, venue: 'Changed', dayOfWeek: 5, startTime: '17:00' }));
-  expect(courseAccent({ ...meeting, courseCode: ' cs101 ' })).toBe(courseAccent(meeting));
-  expect(['bg-brand-soft', 'bg-accent-soft']).toContain(courseAccent(meeting));
+it('assigns every course in the week a stable course accent (2026-10-18 redesign)', () => {
+  const week = normalizeTimetableWeek(payload(1))!;
+  const map = courseAccentMap(week);
+  expect(map.get('CS101')).toBeDefined();
+  expect(courseAccentMap(week).get('CS101')).toEqual(map.get('CS101'));
+  expect(map.size).toBe(1);
 });
 
 it('retains Friday and removes both weekend buckets from grid input without mutating the cache', () => {

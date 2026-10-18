@@ -178,6 +178,7 @@ export const zh = {
   'timetable.importHint': '课表不对？可以重新导入',
   'timetable.semesterNote': '周次按学校所在地时区计算',
   'timetable.courseInfo': '{name} · {when} · {venue}',
+  'timetable.noVenue': '地点待定',
 
   // ── 星期（后端的 `day_of_week`：1=周一 … 7=周日）────────────────────
   'weekday.1': '周一',
