@@ -8,7 +8,9 @@ const IDENTITY_KIND = 'dorm:moodle:identity';
 export function inspectMoodleIdentity(root: Pick<Document, 'querySelector'>, origin: string, userId: unknown):
   { status: 'confirmed'; userId: number } | { status: 'expired' | 'unknown' | 'wrong-origin' } {
   if (origin !== 'https://l.xmu.edu.my') return { status: 'wrong-origin' };
-  if (root.querySelector('input[type=password]') || root.querySelector('.usermenu .login')) return { status: 'expired' };
+  // A password field or the guest menu proves we are NOT the signed-in workspace.
+  // The probe carries no history, so it cannot claim "expired"; the session layer owns that.
+  if (root.querySelector('input[type=password]') || root.querySelector('.usermenu .login')) return { status: 'unknown' };
   if (!root.querySelector('[data-region=usermenu] .usermenu #user-menu-toggle')
     || typeof userId !== 'number' || !Number.isSafeInteger(userId) || userId <= 0) return { status: 'unknown' };
   return { status: 'confirmed', userId };
