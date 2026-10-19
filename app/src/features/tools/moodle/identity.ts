@@ -4,7 +4,8 @@ export type MoodleIdentityResult = { requestId: string } & (
 );
 const IDENTITY_KIND = 'dorm:moodle:identity';
 
-/** Moodle 4.5 exposes userId, not userid. A positive guest ID alone is insufficient. */
+/** Moodle 4.5 exposes userId, not userid. A positive guest ID alone is insufficient.
+ * ⚠️ 本函数会被 `toString()` 注入 WebView，必须自包含：域名与选择器字面量只能内联。 */
 export function inspectMoodleIdentity(root: Pick<Document, 'querySelector'>, origin: string, userId: unknown):
   { status: 'confirmed'; userId: number } | { status: 'expired' | 'unknown' | 'wrong-origin' } {
   if (origin !== 'https://l.xmu.edu.my') return { status: 'wrong-origin' };

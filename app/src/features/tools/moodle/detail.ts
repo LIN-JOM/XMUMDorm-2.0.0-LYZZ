@@ -21,7 +21,8 @@ export type MoodleDetailResult = { requestId: string } &
   ({ status: 'success'; data: MoodleDetail } | { status: MoodleDetailFailure });
 const DETAIL_KIND = 'dorm:moodle:detail';
 
-/** Strict read paths. Unknown or duplicate parameters are rejected, never silently stripped. */
+/** Strict read paths. Unknown or duplicate parameters are rejected, never silently stripped.
+ * ⚠️ 本函数会被 `toString()` 注入 WebView，必须自包含：域名与路径字面量只能内联，不能改成模块常量。 */
 export function safeMoodleReadUrl(value: unknown, file = false): string | null {
   if (typeof value !== 'string' || value.length > 2048) return null;
   try {

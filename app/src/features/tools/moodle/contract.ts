@@ -73,6 +73,7 @@ export function parseMoodleResponse<M extends MoodleMethod>(method: M, data: unk
 /**
  * This function is also the page-side projection injected into WebView.
  * Keep every helper inside it and avoid syntax that Babel rewrites to imported helpers.
+ * ⚠️ 注入 WebView 的函数必须自包含：域名与 URL 白名单等字面量只能内联，不能改成模块常量。
  * It returns new whitelist objects; it never forwards the raw response or credentials.
  */
 export function parseMoodleResponse(method: MoodleMethod, data: unknown): MoodleResponse | null {
