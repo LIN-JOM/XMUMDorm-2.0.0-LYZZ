@@ -29,6 +29,17 @@ it('p3y3 makes protection values configurable and avoids past reminder triggers'
     .toEqual([{ id: 'moodle:1:2', fireAt: now + 4 * 60000 }]);
 });
 
+it('p3y3 keeps non-deadline modules out of the unset bucket', () => {
+  const mixed = [
+    { ...modules[0], id: 201, type: 'forum', name: 'Forum', url: 'https://l.xmu.edu.my/mod/forum/view.php?id=201' },
+    { ...modules[0], id: 202, type: 'resource', name: 'Notes', url: 'https://l.xmu.edu.my/mod/resource/view.php?id=202' },
+    { ...modules[0], id: 203, type: 'assign', name: 'No deadline assignment' },
+    { ...modules[0], id: 204, type: 'quiz', name: 'No deadline quiz', url: 'https://l.xmu.edu.my/mod/quiz/view.php?id=204' },
+  ];
+  const buckets = partitionMoodleDeadlines([{ courseId: 1, sections: [], modules: mixed }], [], now);
+  expect(buckets.unset.map((item) => item.module.id)).toEqual([203, 204]);
+});
+
 it('p3y3 excludes inaccessible unselected and unresolved module events', () => {
   const protectedStates = [{ ...states[0], modules: modules.map((item) => ({ ...item, userVisible: item.id !== 101 })) }];
   const buckets = partitionMoodleDeadlines(protectedStates,
