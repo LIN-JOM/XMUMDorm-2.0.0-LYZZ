@@ -3,20 +3,14 @@
  *
  * 测什么：
  *   S-4 纯规则：profile 载荷 → 行（缺 id 丢掉）、正文摘要截断、去重合并、本地移除、图片 URL 归一化；
- *   S-1 页面：空态是 `firstRun`（引导发布）、错误态与空态不是一回事、删帖后**立刻消失**；
- *   S-5 结构约束：入口账本已随本任务更新（`posts` 落地了）。
+ * ⚠️ 页面用例已迁往 `p2c-07-me-content-panes.test.tsx`：C-05 拍板后这四个模块
+ *    是**主页 pager 的分页**，`/me/posts` 子页面与 `PostsScreen` 一并删除，
+ *    被测对象从"页面"变成了"pane"。本文件只留纯规则。
  *
  * 依据：`docs/app/task/phase-2/P2C-04-M04我的帖子.md`。
  */
-import * as fs from 'fs';
-import * as path from 'path';
 
-import * as React from 'react';
-import { fireEvent, waitFor } from '@testing-library/react-native';
 
-import { renderApp } from './helpers/renderApp';
-import { zh } from '@/i18n';
-import { PostsScreen } from '@/features/me/PostsScreen';
 import {
   imageUriOf,
   mergePostRows,
@@ -25,8 +19,6 @@ import {
   removePostRow,
   type MyPostRow,
 } from '@/features/me/posts';
-import { EXPECTED_UNAVAILABLE, ME_ENTRIES } from '@/features/me/profile';
-import { secondaryTabStore } from '@/features/navigation/secondaryTabs';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
@@ -77,7 +69,6 @@ beforeEach(() => {
   api.users.getMe.mockResolvedValue({ id: 7 });
   api.users.getProfile.mockResolvedValue(PROFILE_PAYLOAD);
   api.posts.deletePost.mockResolvedValue({ status: 0 });
-  secondaryTabStore.clear();
 });
 
 describe('P2C-04 M-04 我的帖子', () => {
@@ -124,74 +115,4 @@ describe('P2C-04 M-04 我的帖子', () => {
     });
   });
 
-  describe('TC-P2C-04-3A · 页面：空态是"引导发布"，不是"没有结果"', () => {
-    it('帖子为空 → firstRun 空态 + 去发布动作', async () => {
-      api.users.getProfile.mockResolvedValue({ ...PROFILE_PAYLOAD, posts: [], stats: { post_count: 0 } });
-      const view = await renderApp(<PostsScreen />);
-
-      await waitFor(() => expect(view.getByText(zh['me.posts.empty.title'])).toBeTruthy());
-      expect(view.getByText(zh['me.posts.empty.action'])).toBeTruthy();
-      expect(view.queryByText(zh['error.unknown.perceive'])).toBeNull();
-    });
-
-    it('请求失败 → 错误态（与空态不是一回事）', async () => {
-      api.users.getProfile.mockRejectedValue({ kind: 'offline' });
-      const view = await renderApp(<PostsScreen />);
-
-      await waitFor(() => expect(view.getByText(zh['error.net.offline.perceive'])).toBeTruthy());
-      expect(view.queryByText(zh['me.posts.empty.title'])).toBeNull();
-    });
-  });
-
-  describe('TC-P2C-04-4A · 两步取数：先拿自己的 id 再取 profile', () => {
-    it('不会去猜 id', async () => {
-      const view = await renderApp(<PostsScreen />);
-      await waitFor(() => expect(api.users.getProfile).toHaveBeenCalled());
-      expect(api.users.getMe).toHaveBeenCalledTimes(1);
-      expect(api.users.getProfile).toHaveBeenCalledWith(7, { page: 1, pageSize: 20 });
-      await waitFor(() => expect(view.getByTestId('me-post-31')).toBeTruthy());
-    });
-  });
-
-  describe('TC-P2C-04-5A · 删帖：确认后立刻消失', () => {
-    it('点删除 → 弹确认 → 确认后调用接口且该行**立即**从列表移除', async () => {
-      const view = await renderApp(<PostsScreen />);
-      await waitFor(() => expect(view.getByTestId('me-post-delete-31')).toBeTruthy());
-
-      fireEvent.press(view.getByTestId('me-post-delete-31'));
-      // 确认键没有 testID（O03 的既有形态），按**文案**点它
-      await waitFor(() => expect(view.getByText(zh['me.posts.delete.confirm'])).toBeTruthy());
-      fireEvent.press(view.getByText(zh['me.posts.delete.confirm']));
-
-      await waitFor(() => expect(api.posts.deletePost).toHaveBeenCalledWith(31));
-      // 本地先移除：⛔ 不等服务端 profile 的 10s 缓存过期
-      await waitFor(() => expect(view.queryByTestId('me-post-31')).toBeNull());
-    });
-
-    it('删失败 → 重新拉列表（⛔ 不静默吞掉）', async () => {
-      api.posts.deletePost.mockRejectedValue({ kind: 'offline' });
-      const view = await renderApp(<PostsScreen />);
-      await waitFor(() => expect(view.getByTestId('me-post-delete-31')).toBeTruthy());
-      const callsBefore = api.users.getProfile.mock.calls.length;
-
-      fireEvent.press(view.getByTestId('me-post-delete-31'));
-      await waitFor(() => expect(view.getByText(zh['me.posts.delete.confirm'])).toBeTruthy());
-      fireEvent.press(view.getByText(zh['me.posts.delete.confirm']));
-
-      await waitFor(() =>
-        expect(api.users.getProfile.mock.calls.length).toBeGreaterThan(callsBefore)
-      );
-    });
-  });
-
-  describe('TC-P2C-04-6A · 入口账本随本任务更新', () => {
-    it('`posts` 已落地 → 从缺口账本里删掉；路由文件真的在磁盘上', () => {
-      expect(ME_ENTRIES.find((entry) => entry.key === 'posts')?.available).toBe(true);
-      // ⛔ 不写死"账本里还剩谁"（那是快照，后续任务落地时必过期）—— 只断言本任务的相关项已移出
-      expect(EXPECTED_UNAVAILABLE).not.toContain('posts');
-      expect(
-        fs.existsSync(path.resolve(__dirname, '..', 'app', 'me', 'posts.tsx'))
-      ).toBe(true);
-    });
-  });
 });

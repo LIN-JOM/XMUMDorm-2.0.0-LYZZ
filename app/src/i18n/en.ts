@@ -305,7 +305,6 @@ export const en: Record<MessageKey, string> = {
   'me.todos.none': 'Nothing due today',
   'me.section.failed': 'This part did not load',
   'me.entries.title': 'More',
-  'me.entry.posts': 'My posts',
   'me.entry.settings': 'Settings',
   'me.entry.about': 'About & legal',
   'me.content.title': 'My content',

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 
 import { renderApp } from './helpers/renderApp';
-import { PostsScreen } from '@/features/me/PostsScreen';
+import { MeScreen } from '@/features/me/MeScreen';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true }),
@@ -35,7 +35,8 @@ beforeEach(() => {
 
 describe('P3A4-08 我的内容 Tab 接线', () => {
   it('uses the shared TopTabStrip and loads each real ownership endpoint after selection', async () => {
-    const view = await renderApp(<PostsScreen />);
+    // C-05 拍板后「我的内容」就是**一级主页本身**（子页面与 PostsScreen 已删）
+  const view = await renderApp(<MeScreen />);
 
     expect(view.getByTestId('me-content-tabs')).toBeTruthy();
     expect(view.getByTestId('top-tab-posts')).toBeTruthy();
