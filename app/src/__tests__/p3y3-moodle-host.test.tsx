@@ -108,6 +108,15 @@ it('p3y3 requires a fresh proof before showing stored native courses', async () 
   await view.unmount(); await settleMoodleStorage();
 });
 
+it('p3y3 forwards session probes from the embedded Moodle page', async () => {
+  const onProbe = jest.fn();
+  const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => now}
+    onSessionProbe={onProbe} onOpenOriginal={jest.fn()} />, { inScreen: true });
+  await message({ kind: 'session', hasPasswordField: false });
+  expect(onProbe).toHaveBeenCalledWith({ hasPasswordField: false });
+  await view.unmount(); await settleMoodleStorage();
+});
+
 it('p3y3 reports a denied reminder delivery instead of planned', async () => {
   const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => now}
     onReminderPlan={async () => 'denied' as const} onOpenOriginal={jest.fn()} />, { inScreen: true });
