@@ -1,7 +1,7 @@
 import { addDaysYmd, parseYmd, weekDateRange } from '../../../../../shared/config/semesters';
 import type { TimetableWeek } from '../timetable';
 
-export type ClassReminder = { id: string; startsAt: string; fireAt: string; week: number; dayOfWeek: number };
+export type ClassReminder = { id: string; startsAt: string; fireAt: number; week: number; dayOfWeek: number };
 export type ReminderSemester = { id: string; startDate: string; weeks: number };
 const SCHOOL_OFFSET_MS = 8 * 60 * 60 * 1000; // Asia/Kuala_Lumpur, no daylight-saving transition.
 const LEAD_MS = 30 * 60 * 1000;
@@ -34,10 +34,10 @@ export function buildClassReminderPlan(input: { semester: ReminderSemester;
         if (fireAt <= now.getTime()) continue;
         const clock = `${time[1]}:${time[2]}:${time[3] ?? '00'}`;
         const id = ['class', semester.id.trim(), meeting.courseCode.trim(), date, clock].map(encodeURIComponent).join(':');
-        plan.set(id, { id, startsAt: new Date(startsAt).toISOString(), fireAt: new Date(fireAt).toISOString(),
+        plan.set(id, { id, startsAt: new Date(startsAt).toISOString(), fireAt: fireAt,
           week: week.week, dayOfWeek: day });
       }
     }
   }
-  return [...plan.values()].sort((a, b) => a.fireAt.localeCompare(b.fireAt) || a.id.localeCompare(b.id));
+  return [...plan.values()].sort((a, b) => a.fireAt - b.fireAt || a.id.localeCompare(b.id));
 }

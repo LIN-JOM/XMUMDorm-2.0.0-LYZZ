@@ -1,4 +1,4 @@
-import { inspectMoodleIdentity } from './identity';
+import { IDENTITY_INSPECT_SOURCE } from './identity';
 import { parseMoodleResponse, type MoodleMethod, type MoodleResponse } from './contract';
 
 export const MOODLE_MESSAGE_KIND = 'dorm:moodle';
@@ -47,7 +47,7 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
   }
   return `(function () {
     var done = false, timer;
-    var inspectIdentity = (${inspectMoodleIdentity.toString()});
+    var inspectIdentity = (${IDENTITY_INSPECT_SOURCE});
     function sameIdentity() {
       var expected = ${JSON.stringify(userId ?? null)};
       if (expected === null) return !document.querySelector('input[type=password]');

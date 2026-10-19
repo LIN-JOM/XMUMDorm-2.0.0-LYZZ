@@ -25,6 +25,9 @@ async function probe(html: string, userId: unknown) {
   return { result: parseMoodleIdentityMessage(messages[0]), raw: messages[0] };
 }
 const menu = '<div data-region="usermenu"><div class="usermenu"><button id="user-menu-toggle">User</button></div></div>';
+/** 实站结构：登录态由 navbar 证明，用户 id 在 `#usernavigation [data-userid]`，M.cfg 里没有 userId。 */
+const realMenu = '<nav class="navbar"><div id="usernavigation"><div id="nav-notification-popover-container"'
+  + ' data-userid="123"><div class="usermenu-container"><a id="user-menu-toggle">User</a></div></div></div></nav>';
 function populate() {
   selectMoodleCourses([1]);
   writeMoodleCache('courses', { courses: [{ id: 1, name: 'Course', visible: true }], nextOffset: 0 }, moodleCacheGeneration());
@@ -41,8 +44,25 @@ describe('p3y3 school identity and local snapshot', () => {
     expect(result).toEqual({ requestId: 'identity:1', status: 'confirmed', userId: 123 });
     expect(raw).not.toMatch(/sesskey|never-forward|cfg/);
     expect((await probe(menu, '123')).result?.status).toBe('unknown');
-    expect((await probe('<div class="usermenu"><div class="login">Guest</div></div>', 1)).result?.status).toBe('expired');
-    expect((await probe(menu + '<input type="password" value="private">', 123)).result?.status).toBe('expired');
+    expect((await probe('<div class="usermenu"><div class="login">Guest</div></div>', 1)).result?.status).toBe('unknown');
+    expect((await probe(menu + '<input type="password" value="private">', 123)).result?.status).toBe('unknown');
+  });
+  it('reads the real navbar data-userid when M.cfg has no userId (campus 4.x shape)', async () => {
+    expect((await probe(realMenu, undefined)).result).toEqual({
+      requestId: 'identity:1', status: 'confirmed', userId: 123,
+    });
+    expect((await probe(realMenu.replace('data-userid="123"', 'data-userid="guest"'), undefined)).result?.status)
+      .toBe('unknown');
+    expect((await probe('<nav><div data-userid="123"></div></nav>', undefined)).result?.status)
+      .toBe('unknown');
+    expect((await probe(realMenu + '<input type="password">', undefined)).result?.status).toBe('unknown');
+  });
+  it('builds a self-contained probe (Hermes toString returns [bytecode], so literals are mandatory)', () => {
+    const script = buildMoodleIdentityProbeScript('identity:9')!;
+    expect(script).toContain('#usernavigation [data-userid]');
+    expect(script).toContain('inspectMoodleIdentity');
+    expect(script).not.toContain('[bytecode]');
+    expect(script).not.toContain('.toString()');
   });
   it('restores only after the current probe matches the stored school identity', async () => {
     confirmMoodleSchoolIdentity(123); populate();

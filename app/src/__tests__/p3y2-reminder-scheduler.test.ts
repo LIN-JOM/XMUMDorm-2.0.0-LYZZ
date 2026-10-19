@@ -4,7 +4,7 @@ import { loadSemesterClassReminderPlan } from '@/features/tools/reminders/runtim
 
 const labels = { title: 'Study reminder', body: 'Open your timetable.' };
 const now = new Date('2026-09-27T00:00:00Z');
-const plan = (id: string, at = '2026-09-28T00:30:00Z'): ReminderTime => ({ id, fireAt: at });
+const plan = (id: string, at = '2026-09-28T00:30:00Z'): ReminderTime => ({ id, fireAt: Date.parse(at) });
 const tagged = (identifier: string, owner: string, domain: string): NativeReminderRequest => ({
   identifier, content: { data: { dormReminder: 'phase3-v1', owner, domain } },
 });
@@ -182,8 +182,8 @@ it('loads all 14 explicitly numbered weeks before planning the full semester', a
     loadWeek, now, isCurrent: () => true });
   expect(loadWeek.mock.calls.map(([week]) => week)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
   expect(result).toHaveLength(28);
-  expect(result[0].fireAt).toBe('2026-09-28T00:30:00.000Z');
-  expect(result[27].fireAt).toBe('2027-01-01T06:30:00.000Z');
+  expect(result[0].fireAt).toBe(Date.parse('2026-09-28T00:30:00.000Z'));
+  expect(result[27].fireAt).toBe(Date.parse('2027-01-01T06:30:00.000Z'));
 });
 
 it('refuses an incomplete semester response and an obsolete loading session', async () => {

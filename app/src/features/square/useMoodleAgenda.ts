@@ -16,7 +16,7 @@
 import * as React from 'react';
 
 import { agendaDeadlines, type AgendaDeadline } from './todayAgenda';
-import { readMoodleCache, subscribeMoodleInvalidation } from '@/features/tools/moodle/cache';
+import { readMoodleCache, subscribeMoodleDataChanged } from '@/features/tools/moodle/cache';
 
 export type MoodleAgenda = {
   /** 是否已同步过（缓存里有课程）；false = 需要学生打开 Moodle 页同步 */
@@ -36,7 +36,7 @@ export function useMoodleAgenda(nowMs: number): MoodleAgenda {
   const [generation, setGeneration] = React.useState(0);
 
   React.useEffect(
-    () => subscribeMoodleInvalidation(() => setGeneration((current) => current + 1)),
+    () => subscribeMoodleDataChanged(() => setGeneration((current) => current + 1)),
     []
   );
 

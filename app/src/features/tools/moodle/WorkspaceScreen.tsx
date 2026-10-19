@@ -1,7 +1,10 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
+import { onlineManager } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ListItem } from '@/components/ui/ListItem';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import type { MoodleFailure } from './bridge';
@@ -12,7 +15,7 @@ import type { MoodleSyncPhase, MoodleSyncSnapshot } from './sync';
 export type MoodleWorkspaceLabels = {
   firstLogin: string; restoredNative: string; nativeWorkspace: string; login: string; sync: string; cancel: string;
   confirmSelection: string; chooseCourses: string; courses: string; allTypes: string;
-  empty: string; original: string; details: string; unknownSection: string;
+  empty: string; original: string; details: string; unknownSection: string; maintenance: string; offline: string;
   phase: (value: MoodleSyncPhase) => string;
   failure: (value: MoodleFailure) => string;
   moduleType: (value: string) => string;
@@ -25,10 +28,13 @@ export type MoodleWorkspaceScreenProps = {
   onChoose: (ids: number[]) => void;
   onModule: (courseId: number, module: MoodleModule) => void;
   onOriginal: (url: string) => void;
+  maintenance?: boolean;
+  /** Content appended inside the single vertical scroller (deadlines, reminder status). */
+  footer?: React.ReactNode;
 };
 
 export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync, onCancel,
-  onChoose, onModule, onOriginal }: MoodleWorkspaceScreenProps): React.ReactElement {
+  onChoose, onModule, onOriginal, maintenance, footer }: MoodleWorkspaceScreenProps): React.ReactElement {
   const theme = useTheme();
   const [choice, setChoice] = React.useState({ generation: snapshot.data.generation, ids: snapshot.selectedIds });
   const draft = choice.generation === snapshot.data.generation ? choice.ids : snapshot.selectedIds;
@@ -43,10 +49,16 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
   const sections = [...(courseState?.sections ?? [])];
   for (const module of visibleModules) {
     if (!sections.some((section) => section.id === module.sectionId)) {
-      sections.push({ id: module.sectionId, number: 0, title: labels.unknownSection, moduleIds: [] });
+      sections.push({ id: module.sectionId, number: 0, title: labels.unknownSection, moduleIds: [],
+        url: null, visible: true, current: false });
     }
   }
   const busy = snapshot.phase === 'loading-courses' || snapshot.phase === 'loading-objects';
+  const online = React.useSyncExternalStore(
+    (onStoreChange) => onlineManager.subscribe(() => onStoreChange()),
+    () => onlineManager.isOnline(),
+    () => true
+  );
   return <ScrollView testID="moodle-workspace" contentContainerStyle={{ padding: theme.space('space_4'),
     gap: theme.space('space_4') }}>
     <Text testID="moodle-entry">{entry === 'first-login' ? labels.firstLogin : entry === 'restored-native' ? labels.restoredNative : labels.nativeWorkspace}</Text>
@@ -56,7 +68,11 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       {busy ? <Button testID="moodle-cancel" label={labels.cancel} onPress={onCancel} variant="ghost" /> : null}
     </View>
     <Text testID="moodle-phase">{labels.phase(snapshot.phase)}</Text>
-    {snapshot.failure ? <Text colorToken="text-danger">{labels.failure(snapshot.failure)}</Text> : null}
+    {!online ? <Text testID="moodle-offline" colorToken="text-warning">{labels.offline}</Text> : null}
+    {snapshot.failure ? <Text colorToken="text-danger">{maintenance
+      ? labels.maintenance : labels.failure(snapshot.failure)}</Text> : null}
+    {snapshot.data.courses.length === 0 ? <EmptyState kind="firstRun" testID="moodle-empty-sync"
+      title={labels.empty} actionLabel={labels.sync} onAction={onSync} /> : null}
     {snapshot.phase === 'choosing' ? <View style={{ gap: theme.space('space_2') }}>
       <Text role="title">{labels.chooseCourses}</Text>
       {snapshot.candidates.map((course) => <Checkbox key={course.id} testID={`moodle-select-${course.id}`}
@@ -76,20 +92,24 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       {types.map((item) => <Button key={item} testID={`moodle-type-${item}`} label={labels.moduleType(item)}
         variant={type === item ? 'secondary' : 'ghost'} onPress={() => setType(item)} />)}
     </View>
-    {visibleModules.length === 0 ? <Text>{labels.empty}</Text> : null}
+    {visibleModules.length === 0 ? <EmptyState testID={type !== null ? 'moodle-empty-all-types' : 'moodle-empty-sync'}
+      kind={type !== null ? 'noResult' : 'firstRun'} title={labels.empty}
+      actionLabel={type !== null ? labels.allTypes : labels.sync}
+      onAction={type !== null ? () => setType(null) : onSync} /> : null}
     {sections.map((section) => {
       const rows = visibleModules.filter((module) => module.sectionId === section.id);
       if (rows.length === 0) return null;
       return <View key={section.id} style={{ gap: theme.space('space_2') }}>
         <Text role="title">{section.title}</Text>
         {rows.map((module) => <View key={module.id} style={{ gap: theme.space('space_2') }}>
-          <Button testID={`moodle-module-${module.id}`} label={module.name} variant="secondary"
+          <ListItem testID={`moodle-module-${module.id}`} title={module.name}
+            subtitle={labels.moduleType(module.type)}
             onPress={() => currentCourse && onModule(currentCourse.id, module)} />
-          <Text role="caption">{labels.moduleType(module.type)}</Text>
           {module.url ? <Button testID={`moodle-original-${module.id}`} label={labels.original}
             variant="link" onPress={() => onOriginal(module.url!)} /> : null}
         </View>)}
       </View>;
     })}
+    {footer}
   </ScrollView>;
 }

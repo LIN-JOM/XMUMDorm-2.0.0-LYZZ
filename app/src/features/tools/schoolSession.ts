@@ -29,6 +29,7 @@ import { getItem, removeItem, setItem } from '@/shared/storage';
 import type { SchoolSystemSessionState } from '@/components/ui/SchoolSystemCard';
 import { SCHOOL_SYSTEMS, type SchoolSystemId } from './schoolSystems';
 import { clearMoodleCache } from './moodle/cache';
+import { clearMoodleReminders } from './reminders/native';
 
 /* ────────────────────────── 纯规则 ────────────────────────── */
 
@@ -93,7 +94,11 @@ export async function writeSchoolSession(
 }
 
 export async function clearSchoolSession(id: SchoolSystemId): Promise<void> {
-  if (id === 'moodle') clearMoodleCache();
+  if (id === 'moodle') {
+    clearMoodleCache();
+    // 学生明确清除本地课程数据时，已排的截止提醒必须一起撤（审计 D-3）
+    await clearMoodleReminders();
+  }
   await removeItem(schoolSessionKey(id));
 }
 

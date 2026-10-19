@@ -25,11 +25,12 @@ jest.mock('expo-notifications', () => ({
 it('retains permission consent and native reminder scheduling in an Android development build', async () => {
   await expect(notificationPermission.read()).resolves.toBe('granted');
   await expect(notificationPermission.request()).resolves.toBe('granted');
-  expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith('class-reminders', {
-    name: 'Class reminders', importance: 3,
+  expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith('reminders', {
+    name: 'Reminders', importance: 3,
   });
   const fireAt = Date.now() + 60_000;
-  await replaceMoodleReminders([{ id: 'deadline:1', fireAt }]);
+  await replaceMoodleReminders([{ id: 'deadline:1', fireAt }],
+    { title: 'Moodle deadline', body: 'A Moodle deadline is coming up' });
   expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
     content: {
       title: 'Moodle deadline', body: 'A Moodle deadline is coming up',
@@ -47,6 +48,28 @@ it('retains permission consent and native reminder scheduling in an Android deve
   }]);
   await clearReminderOwner('user:7');
   expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('native-reminder');
+});
+
+it('reports the scheduler result instead of assuming reminders were planned', async () => {
+  const denied = { granted: false, canAskAgain: false } as unknown as Awaited<
+    ReturnType<typeof Notifications.getPermissionsAsync>
+  >;
+  jest.mocked(Notifications.getPermissionsAsync).mockResolvedValueOnce(denied);
+  await expect(replaceMoodleReminders([{ id: 'deadline:denied', fireAt: Date.now() + 60_000 }],
+    { title: 'Moodle deadline', body: 'A Moodle deadline is coming up' }))
+    .resolves.toBe('denied');
+
+  await expect(replaceMoodleReminders([{ id: 'deadline:planned', fireAt: Date.now() + 60_000 }],
+    { title: 'Moodle deadline', body: 'A Moodle deadline is coming up' }))
+    .resolves.toBe('planned');
+
+  const occupied = Array.from({ length: 50 }, (_, index) => ({
+    identifier: `other-${index}`, content: { data: { unrelated: true } },
+  }));
+  jest.mocked(Notifications.getAllScheduledNotificationsAsync).mockResolvedValue(occupied as never);
+  await expect(replaceMoodleReminders([{ id: 'deadline:partial', fireAt: Date.now() + 60_000 }],
+    { title: 'Moodle deadline', body: 'A Moodle deadline is coming up' }))
+    .resolves.toBe('partial');
 });
 
 it('keeps notification permissions available in iOS Expo Go', async () => {

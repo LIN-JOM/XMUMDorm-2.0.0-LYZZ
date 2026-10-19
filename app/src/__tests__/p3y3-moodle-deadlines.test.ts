@@ -3,7 +3,8 @@ import type { MoodleActionEvent, MoodleStateResponse } from '@/features/tools/mo
 
 const now = Date.parse('2026-10-11T00:00:00Z');
 const modules = [101, 102, 103, 104].map((id) => ({ id, sectionId: 1, type: 'assign', name: `Task ${id}`,
-  url: `https://l.xmu.edu.my/mod/assign/view.php?id=${id}`, visible: true, userVisible: true, accessVisible: true }));
+  url: `https://l.xmu.edu.my/mod/assign/view.php?id=${id}`, visible: true, userVisible: true, accessVisible: true,
+  restrictions: false, completion: null }));
 const states: MoodleStateResponse[] = [{ courseId: 1, sections: [], modules }];
 const event = (id: number, moduleId: number, time: number): MoodleActionEvent => ({ id, courseId: 1,
   eventType: 'due', action: { name: 'Submit', itemCount: 1, actionable: true }, moduleId: 900 + moduleId, name: `Deadline ${id}`, time, url: modules.find((item) => item.id === moduleId)?.url ?? null });
@@ -26,6 +27,17 @@ it('p3y3 makes protection values configurable and avoids past reminder triggers'
   expect(planMoodleDeadlineReminders(buckets, now)).toEqual([]);
   expect(planMoodleDeadlineReminders(buckets, now, { leadMinutes: 1 }))
     .toEqual([{ id: 'moodle:1:2', fireAt: now + 4 * 60000 }]);
+});
+
+it('p3y3 keeps non-deadline modules out of the unset bucket', () => {
+  const mixed = [
+    { ...modules[0], id: 201, type: 'forum', name: 'Forum', url: 'https://l.xmu.edu.my/mod/forum/view.php?id=201' },
+    { ...modules[0], id: 202, type: 'resource', name: 'Notes', url: 'https://l.xmu.edu.my/mod/resource/view.php?id=202' },
+    { ...modules[0], id: 203, type: 'assign', name: 'No deadline assignment' },
+    { ...modules[0], id: 204, type: 'quiz', name: 'No deadline quiz', url: 'https://l.xmu.edu.my/mod/quiz/view.php?id=204' },
+  ];
+  const buckets = partitionMoodleDeadlines([{ courseId: 1, sections: [], modules: mixed }], [], now);
+  expect(buckets.unset.map((item) => item.module.id)).toEqual([203, 204]);
 });
 
 it('p3y3 excludes inaccessible unselected and unresolved module events', () => {

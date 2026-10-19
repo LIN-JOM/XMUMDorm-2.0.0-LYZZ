@@ -10,7 +10,7 @@ const request = (kind: MoodleDetailRequest['kind']): MoodleDetailRequest => ({ k
   url: kind === 'discussion' ? 'https://l.xmu.edu.my/mod/forum/discuss.php?d=71'
     : `https://l.xmu.edu.my/mod/${kind}/view.php?id=101` });
 
-async function run(kind: MoodleDetailRequest['kind'], options: { redirect?: boolean; changedIdentity?: boolean } = {}) {
+async function run(kind: MoodleDetailRequest['kind'], options: { redirect?: boolean; changedIdentity?: boolean; fixtureName?: string } = {}) {
   const dom = new JSDOM(fixture('forum'), { url: 'https://l.xmu.edu.my/my/', runScripts: 'outside-only' });
   const messages: string[] = [];
   const win = dom.window;
@@ -19,7 +19,7 @@ async function run(kind: MoodleDetailRequest['kind'], options: { redirect?: bool
   const fetch = jest.fn(async (_url: string, init: { method: string }) => {
     if (options.changedIdentity) (win as unknown as { M: { cfg: { userId: number } } }).M.cfg.userId = 124;
     return { type: options.redirect ? 'opaqueredirect' : 'basic', status: options.redirect ? 0 : 200,
-      ok: !options.redirect, url: _url, text: async () => fixture(kind),
+      ok: !options.redirect, url: _url, text: async () => fixture(options.fixtureName ?? kind),
       headers: new Headers({ 'Content-Type': 'application/pdf; charset=UTF-8', 'Content-Length': '321',
         'Last-Modified': 'Sat, 10 Oct 2026 01:00:00 GMT', 'Content-Disposition': 'attachment; filename="notes.pdf"',
         'Set-Cookie': 'secret', ETag: 'private-hash', Location: 'https://outside.example/private' }) };
@@ -56,6 +56,20 @@ describe('p3y3 official-derived synthetic detail DOM and generated page command'
     expect(result).toMatchObject({ status: 'success', data: { description: 'Submit a written report.',
       submission: 'submitted', grading: 'not-graded', rows: expect.any(Array) } });
     expect(result).not.toHaveProperty('data.deadline');
+  });
+  it('reads the campus assign activity dates and submission attachments', async () => {
+    const { result } = await run('assign', { fixtureName: 'assign-real' });
+    expect(result).toMatchObject({ status: 'success', data: { kind: 'assign',
+      submission: 'submitted', grading: 'not-graded',
+      activityDates: expect.stringContaining('Due: Sunday, 28 December 2025'),
+      attachments: [{ name: 'hw.pdf',
+        url: 'https://l.xmu.edu.my/pluginfile.php/9/mod_assign/submission_files/100/hw.pdf' }] } });
+  });
+  it('finds the campus 4.x resource link outside the legacy resourceworkaround wrapper', async () => {
+    const { result, fetch } = await run('resource', { fixtureName: 'resource-real' });
+    expect(fetch.mock.calls.map((call) => call[1].method)).toEqual(['GET', 'HEAD']);
+    expect(result).toMatchObject({ status: 'success', data: { kind: 'resource',
+      file: { name: 'notes.pdf', mimeType: 'application/pdf' } } });
   });
   it('reads folder file links without directory or archive actions', async () => {
     const { result } = await run('folder');

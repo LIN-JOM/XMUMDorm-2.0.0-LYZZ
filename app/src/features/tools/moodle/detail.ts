@@ -11,7 +11,9 @@ export type MoodleDetail = MoodleDetailRequest & { description: string } & (
   | { kind: 'forum'; announcements: MoodleAnnouncement[] }
   | { kind: 'discussion'; posts: MoodlePost[] }
   | { kind: 'assign'; submission: 'submitted' | 'draft' | 'reopened' | 'unknown';
-      grading: 'graded' | 'not-graded' | 'unknown'; locked: boolean; rows: { label: string; value: string }[] }
+      grading: 'graded' | 'not-graded' | 'unknown'; locked: boolean; rows: { label: string; value: string }[];
+      /** School-provided "Opened:/Due:" text; not parsed into typed dates. */
+      activityDates: string | null; attachments: MoodleFile[] }
   | { kind: 'folder'; files: MoodleFile[] }
   | { kind: 'resource'; file: MoodleFile | null }
 );
@@ -21,7 +23,8 @@ export type MoodleDetailResult = { requestId: string } &
   ({ status: 'success'; data: MoodleDetail } | { status: MoodleDetailFailure });
 const DETAIL_KIND = 'dorm:moodle:detail';
 
-/** Strict read paths. Unknown or duplicate parameters are rejected, never silently stripped. */
+/** Strict read paths. Unknown or duplicate parameters are rejected, never silently stripped.
+ * ⚠️ 本函数会被 `toString()` 注入 WebView，必须自包含：域名与路径字面量只能内联，不能改成模块常量。 */
 export function safeMoodleReadUrl(value: unknown, file = false): string | null {
   if (typeof value !== 'string' || value.length > 2048) return null;
   try {
@@ -30,13 +33,17 @@ export function safeMoodleReadUrl(value: unknown, file = false): string | null {
     const parameters = [...url.searchParams.keys()];
     if (new Set(parameters).size !== parameters.length) return null;
     if (file) {
-      if (!/^\/pluginfile\.php\/\d+\/mod_(resource|folder|forum)\/(content|attachment|post)\/\d+\/.+/.test(url.pathname)
+      if (!/^\/pluginfile\.php\/\d+\/mod_(resource|folder|forum|assign)\/(content|attachment|post|submission_files)\/\d+\/.+/.test(url.pathname)
         || url.hash || parameters.some((key) => key !== 'forcedownload')
         || (url.searchParams.has('forcedownload') && !/^[01]$/.test(url.searchParams.get('forcedownload')!))) return null;
       const parts = url.pathname.split('/').slice(1);
       const component = parts[2], area = parts[3];
-      if ((component !== 'mod_forum' && area !== 'content')
-        || (component === 'mod_forum' && area !== 'attachment' && area !== 'post')) return null;
+      // Campus 4.x serves assignment submissions under mod_assign/submission_files; other
+      // components keep the content/attachment/post allow-list.
+      const allowed = component === 'mod_forum' ? (area === 'attachment' || area === 'post')
+        : component === 'mod_assign' ? area === 'submission_files'
+          : area === 'content';
+      if (!allowed) return null;
       for (const part of parts) {
         const decoded = decodeURIComponent(part);
         if (!decoded || decoded === '.' || decoded === '..' || /[\\/\x00-\x1f\x7f]/.test(decoded)) return null;
@@ -143,7 +150,21 @@ export function extractMoodleDetail(request: MoodleDetailRequest, root: ParentNo
       const cells = row.querySelectorAll('th,td');
       return { label: text(cells[0] ?? null), value: text(cells[1] ?? null) };
     }).filter((row) => row.label || row.value);
-    return { ...common, kind: 'assign', submission, grading, locked: !!table.querySelector('.submissionlocked'), rows };
+    const activityDates = text(root.querySelector('.activity-dates')) || null;
+    const seen = new Set<string>();
+    const attachments: MoodleFile[] = [];
+    const anchors = root.querySelectorAll(
+      '[data-region="submission-attachment"] a[href*="/pluginfile.php/"], '
+      + '.fileuploadsubmission a[href*="/pluginfile.php/"], '
+      + '.submissionstatustable a[href*="/pluginfile.php/"]');
+    for (const anchor of Array.from(anchors).slice(0, 50)) {
+      const item = file(anchor, 'mod_assign');
+      if (!item || seen.has(item.url)) continue;
+      seen.add(item.url);
+      attachments.push(item);
+    }
+    return { ...common, kind: 'assign', submission, grading, locked: !!table.querySelector('.submissionlocked'),
+      rows, activityDates, attachments };
   }
   if (request.kind === 'folder') {
     const tree = root.querySelector('.foldertree');
@@ -153,7 +174,11 @@ export function extractMoodleDetail(request: MoodleDetailRequest, root: ParentNo
     return { ...common, kind: 'folder', files };
   }
   return { ...common, kind: 'resource', file: (() => {
-    const anchor = root.querySelector('.resourceworkaround a[href]');
+    // Campus 4.x no longer renders `.resourceworkaround`; the real entry is a pluginfile link
+    // inside `#region-main` (verified on the campus site).
+    const anchor = root.querySelector('.resourceworkaround a[href]')
+      ?? root.querySelector('#region-main a[href*="/pluginfile.php/"]')
+      ?? root.querySelector('[data-region="resource-content"] a[href*="/pluginfile.php/"]');
     return anchor ? file(anchor, 'mod_resource/content') : null;
   })() };
 }
@@ -288,7 +313,9 @@ export function projectMoodleDetail(raw: unknown): MoodleDetail | null {
       ? value.submission : 'unknown';
     const grading = value.grading === 'graded' || value.grading === 'not-graded' ? value.grading : 'unknown';
     return { ...common, kind: 'assign', submission, grading, locked: value.locked === true,
-      rows: list(value.rows).filter((row) => !!row).slice(0, 50).map((row) => ({ label: text(row.label), value: text(row.value) })) };
+      rows: list(value.rows).filter((row) => !!row).slice(0, 50).map((row) => ({ label: text(row.label), value: text(row.value) })),
+      activityDates: text(value.activityDates, 1000) || null,
+      attachments: list(value.attachments).map(file).filter((item): item is MoodleFile => item !== null) };
   }
   if (value.kind === 'folder') return { ...common, kind: 'folder', files: list(value.files).map(file).filter((item): item is MoodleFile => item !== null) };
   if (value.kind === 'resource') return { ...common, kind: 'resource', file: file(value.file) };

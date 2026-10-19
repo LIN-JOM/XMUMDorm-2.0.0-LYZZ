@@ -10,6 +10,10 @@ export type MoodleCourse = {
   startDate: number | null;
   endDate: number | null;
   visible: boolean;
+  /** Official course summary exporter `isfavourite`: pinned in the dashboard. */
+  favourite: boolean;
+  /** Official course summary exporter `progress`: percentage, null when not tracked. */
+  progress: number | null;
 };
 
 export type MoodleSection = {
@@ -17,7 +21,14 @@ export type MoodleSection = {
   number: number;
   title: string;
   moduleIds: number[];
+  /** Official state `sectionurl`, same-origin filtered. */
+  url: string | null;
+  visible: boolean;
+  /** Format's current-section flag. */
+  current: boolean;
 };
+
+export type MoodleModuleCompletion = { state: number; complete: boolean };
 
 export type MoodleModule = {
   id: number;
@@ -28,6 +39,10 @@ export type MoodleModule = {
   visible: boolean;
   userVisible: boolean;
   accessVisible: boolean;
+  /** Official cm state `hascmrestrictions`. */
+  restrictions: boolean;
+  /** Official cm state `completionstate`/`isoverallcomplete`; null when not tracked. */
+  completion: MoodleModuleCompletion | null;
 };
 
 export type MoodleActionEvent = {
@@ -58,6 +73,7 @@ export function parseMoodleResponse<M extends MoodleMethod>(method: M, data: unk
 /**
  * This function is also the page-side projection injected into WebView.
  * Keep every helper inside it and avoid syntax that Babel rewrites to imported helpers.
+ * ⚠️ 注入 WebView 的函数必须自包含：域名与 URL 白名单等字面量只能内联，不能改成模块常量。
  * It returns new whitelist objects; it never forwards the raw response or credentials.
  */
 export function parseMoodleResponse(method: MoodleMethod, data: unknown): MoodleResponse | null {
@@ -76,6 +92,14 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
 
   function enabled(value: unknown): boolean {
     return value === true || value === 1;
+  }
+
+  /** Official cm state completion pair; absent fields stay null instead of guessing false. */
+  function completionOf(value: unknown): MoodleModuleCompletion | null {
+    const item = record(value);
+    if (item === null) return null;
+    const state = integer(item.state, 0);
+    return state === null ? null : { state: state, complete: item.complete === true };
   }
 
   function safeUrl(value: unknown): string | null {
@@ -125,6 +149,9 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
         startDate: integer(standard ? item.startDate : item.startdate, 0),
         endDate: integer(standard ? item.endDate : item.enddate, 0),
         visible: true,
+        favourite: standard ? enabled(item.favourite) : enabled(item.isfavourite),
+        progress: standard ? integer(item.progress, 0)
+          : enabled(item.hasprogress) ? integer(item.progress, 0) : null,
       });
     }
     return { courses: courses, nextOffset: offset };
@@ -152,7 +179,10 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
         const moduleId = integer(list[moduleIndex], 1);
         if (moduleId !== null && moduleIds.indexOf(moduleId) < 0) moduleIds.push(moduleId);
       }
-      const section = { id: id, number: number, title: title, moduleIds: moduleIds };
+      const section = { id: id, number: number, title: title, moduleIds: moduleIds,
+        url: safeUrl(standard ? item.url : item.sectionurl),
+        visible: enabled(item.visible),
+        current: item.current === true };
       sections.push(section);
       sectionsById[String(id)] = section;
     }
@@ -175,6 +205,11 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
         id: id, sectionId: sectionId, type: type, name: name,
         url: userVisible ? safeUrl(item.url) : null,
         visible: true, userVisible: userVisible, accessVisible: accessVisible,
+        restrictions: standard ? enabled(item.restrictions) : enabled(item.hascmrestrictions),
+        completion: standard ? completionOf(item.completion) : (() => {
+          const state = integer(item.completionstate, 0);
+          return state === null ? null : { state: state, complete: item.isoverallcomplete === true };
+        })(),
       };
       modules.push(module);
       modulesById[String(id)] = module;

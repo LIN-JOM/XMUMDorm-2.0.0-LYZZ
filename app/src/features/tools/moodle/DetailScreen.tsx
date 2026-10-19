@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ListItem } from '@/components/ui/ListItem';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import type { MoodleDetail, MoodleFile } from './detail';
@@ -31,12 +33,10 @@ export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscu
     <Button label={labels.original} variant="link" onPress={() => onOriginal(detail.url)} />
     {detail.description ? <Text>{detail.description}</Text> : null}
     {detail.kind === 'forum' ? <View style={{ gap: theme.space('space_3') }}>
-      {detail.announcements.length === 0 ? <Text>{labels.empty}</Text> : null}
-      {detail.announcements.map((row) => <View key={row.id} style={{ gap: theme.space('space_2') }}>
-        <Button testID={`moodle-discussion-${row.id}`} label={row.title} variant="secondary"
-          onPress={() => onDiscussion(row.url)} />
-        {row.author ? <Text role="caption">{row.author}</Text> : null}
-      </View>)}
+      {detail.announcements.length === 0 ? <EmptyState kind="firstRun" testID="moodle-empty-original"
+        title={labels.empty} actionLabel={labels.original} onAction={() => onOriginal(detail.url)} /> : null}
+      {detail.announcements.map((row) => <ListItem key={row.id} testID={`moodle-discussion-${row.id}`}
+        title={row.title} subtitle={row.author ?? undefined} onPress={() => onDiscussion(row.url)} />)}
     </View> : null}
     {detail.kind === 'discussion' ? detail.posts.map((post) => <View key={post.id}
       style={{ gap: theme.space('space_2') }}>
@@ -50,11 +50,16 @@ export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscu
     {detail.kind === 'assign' ? <View style={{ gap: theme.space('space_2') }}>
       <Text>{labels.submissionStatus(detail.submission)}</Text><Text>{labels.gradingStatus(detail.grading)}</Text>
       {detail.locked ? <Text>{labels.locked}</Text> : null}
+      {detail.activityDates ? <Text role="caption">{detail.activityDates}</Text> : null}
       {detail.rows.map((row, index) => <View key={index}>
         <Text role="label">{row.label}</Text><Text>{row.value}</Text>
       </View>)}
+      {detail.attachments.length ? files(detail.attachments) : null}
     </View> : null}
-    {detail.kind === 'folder' ? detail.files.length ? files(detail.files) : <Text>{labels.empty}</Text> : null}
-    {detail.kind === 'resource' ? detail.file ? files([detail.file]) : <Text>{labels.fileUnknown}</Text> : null}
+    {detail.kind === 'folder' ? detail.files.length ? files(detail.files) : <EmptyState kind="firstRun"
+      testID="moodle-empty-folder" title={labels.empty} actionLabel={labels.original}
+      onAction={() => onOriginal(detail.url)} /> : null}
+    {detail.kind === 'resource' ? detail.file ? files([detail.file]) : <EmptyState kind="broken"
+      title={labels.fileUnknown} actionLabel={labels.original} onAction={() => onOriginal(detail.url)} /> : null}
   </ScrollView>;
 }

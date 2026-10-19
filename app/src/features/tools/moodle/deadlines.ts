@@ -9,6 +9,9 @@ export type MoodleDeadlineBuckets = { valid: MoodleDeadline[]; past: MoodleDeadl
   futureAnomalies: MoodleDeadline[]; unset: { courseId: number; module: MoodleModule }[] };
 export type MoodleReminderPlan = { id: string; fireAt: number }[];
 
+/** What the reminder adapter reports back after handing a plan to the OS scheduler. */
+export type MoodleReminderDelivery = 'planned' | 'partial' | 'denied' | 'stale';
+
 export function isMoodleDeadlineEvent(module: MoodleModule, event: MoodleActionEvent): boolean {
   return event.eventType === 'expectcompletionon'
     || (module.type === 'assign' && event.eventType === 'due')
@@ -32,7 +35,12 @@ export function partitionMoodleDeadlines(states: readonly MoodleStateResponse[],
       if (!url) continue;
       const matching = events.filter((event) => event.courseId === state.courseId && event.url === url
         && isMoodleDeadlineEvent(module, event) && Number.isSafeInteger(event.time) && event.time > 0);
-      if (matching.length === 0) { result.unset.push({ courseId: state.courseId, module: { ...module } }); continue; }
+      if (matching.length === 0) {
+        // Only deadline-capable activities belong to "no deadline"; forums, resources and
+        // labels have no deadline concept and must stay out of the buckets.
+        if (module.type === 'assign' || module.type === 'quiz') result.unset.push({ courseId: state.courseId, module: { ...module } });
+        continue;
+      }
       for (const event of matching) {
         const dueAt = event.time * 1000;
         const deadline = { courseId: state.courseId, module: { ...module }, event: { ...event }, dueAt };

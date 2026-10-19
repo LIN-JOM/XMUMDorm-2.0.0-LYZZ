@@ -1,5 +1,5 @@
 export type ReminderDomain = 'class' | 'moodle';
-export type ReminderTime = { id: string; fireAt: string };
+export type ReminderTime = { id: string; fireAt: number };
 export type ReminderLabels = { title: string; body: string };
 export type ReminderDomainPlan = { plan: readonly ReminderTime[]; labels: ReminderLabels };
 export type OwnerReminderPlans = Record<ReminderDomain, ReminderDomainPlan>;
@@ -52,7 +52,7 @@ type Candidate = { domain: ReminderDomain; id: string; time: number; labels: Rem
 function candidatesFor(domain: ReminderDomain, input: ReminderDomainPlan): Candidate[] {
   const unique = new Map<string, Candidate>();
   for (const item of input.plan) {
-    const time = new Date(item.fireAt).getTime();
+    const time = item.fireAt;
     if (!item.id.trim() || !Number.isFinite(time)) continue;
     const prior = unique.get(item.id);
     if (!prior || time < prior.time) unique.set(item.id, { domain, id: item.id, time, labels: { ...input.labels } });

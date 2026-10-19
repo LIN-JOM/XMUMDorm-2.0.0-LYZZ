@@ -34,6 +34,7 @@ import {
   type AuthPhase,
 } from './authFailure';
 import { clearToken, hydrateToken, readTokenSync, saveToken } from './tokenStore';
+import { clearMoodleCache } from '@/features/tools/moodle/cache';
 import type { AppError } from '@/i18n/errors';
 
 /* ────────────────────────── 状态机（纯函数） ────────────────────────── */
@@ -132,6 +133,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
   const markExpired = React.useCallback(async () => {
     await clearToken();
     await clearNamespace();
+    // 设计文档承诺：过期立即清 Moodle 内存与磁盘快照（审计 D-3）
+    clearMoodleCache();
     getQueryClient().clear();
     dispatch({ type: 'session:expired' });
   }, []);
@@ -140,6 +143,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
     await clearToken();
     // ⛔ 不清落盘的话，下一个账号会看到上一个账号的草稿与缓存
     await clearNamespace();
+    // 快照前缀与 storage 命名空间不同，必须显式清（审计 D-3）
+    clearMoodleCache();
     getQueryClient().clear();
     dispatch({ type: 'logout' });
   }, []);
@@ -157,6 +162,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
           };
         }
         await clearNamespace();
+        // 换账号：旧账号的 Moodle 快照不得进入新会话（审计 D-3）
+        clearMoodleCache();
         await saveToken(result.token);
         dispatch({ type: 'login:success', identifier });
         return { ok: true };
@@ -187,6 +194,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }): Re
           };
         }
         await clearNamespace();
+        // 注册成功等同换账号，同样清旧 Moodle 快照（审计 D-3）
+        clearMoodleCache();
         await saveToken(result.token);
         dispatch({ type: 'login:success', identifier: body.username });
         return { ok: true };
