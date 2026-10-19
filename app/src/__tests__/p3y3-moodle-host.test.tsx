@@ -24,6 +24,7 @@ const labels: MoodleWorkspaceHostLabels = { firstLogin: 'First login', restoredN
   nativeWorkspace: 'Native workspace', login: 'Login', sync: 'Sync', cancel: 'Cancel',
   confirmSelection: 'Choose', chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types',
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
+  maintenance: 'Moodle maintenance',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}`,
   back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines', otherEvents: 'Other events',
   eventType: (value) => 'event type ' + String(value), actionableStatus: (value) => 'actionable ' + String(value),
@@ -114,6 +115,30 @@ it('p3y3 forwards session probes from the embedded Moodle page', async () => {
     onSessionProbe={onProbe} onOpenOriginal={jest.fn()} />, { inScreen: true });
   await message({ kind: 'dorm:session', hasPasswordField: false });
   expect(onProbe).toHaveBeenCalledWith({ hasPasswordField: false });
+  await view.unmount(); await settleMoodleStorage();
+});
+
+it('p3y3 shows the maintenance window instead of a generic failure', async () => {
+  const maintenanceNow = Date.parse('2026-10-18T19:30:00Z'); // Kuala Lumpur 03:30
+  const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => maintenanceNow}
+    onOpenOriginal={jest.fn()} />, { inScreen: true });
+  await confirm();
+  await fireEvent.press(view.getByTestId('moodle-sync'));
+  await message({ kind: 'dorm:moodle', requestId: requestId('moodle'), method: 'courses', status: 'denied' });
+  expect(view.getByText('Moodle maintenance')).toBeTruthy();
+  expect(view.queryByText('failure denied')).toBeNull();
+  await view.unmount(); await settleMoodleStorage();
+});
+
+it('p3y3 keeps the plain failure text outside the maintenance window', async () => {
+  const daytime = Date.parse('2026-10-19T04:00:00Z'); // Kuala Lumpur 12:00
+  const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => daytime}
+    onOpenOriginal={jest.fn()} />, { inScreen: true });
+  await confirm();
+  await fireEvent.press(view.getByTestId('moodle-sync'));
+  await message({ kind: 'dorm:moodle', requestId: requestId('moodle'), method: 'courses', status: 'denied' });
+  expect(view.getByText('failure denied')).toBeTruthy();
+  expect(view.queryByText('Moodle maintenance')).toBeNull();
   await view.unmount(); await settleMoodleStorage();
 });
 
