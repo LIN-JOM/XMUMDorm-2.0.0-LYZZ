@@ -5,10 +5,9 @@
  */
 import { isMoodleMaintenanceWindow } from '@/features/tools/moodle/maintenance';
 
-// 吉隆坡 = UTC+8，无夏令时；以下时刻的 UTC 表示是固定的。
-const kl = (hour: number, minute: number, day = 19) => Date.parse(
-  `2026-10-${String(day).padStart(2, '0')}T${String(hour - 8).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00Z`
-);
+// 吉隆坡 = UTC+8，无夏令时；用 Date.UTC 构造再用 -8h 换算，避免负小时字符串。
+const kl = (hour: number, minute: number, day = 19) =>
+  Date.UTC(2026, 9, day, hour, minute) - 8 * 3600_000;
 
 it('p3a8 maintenance window follows Kuala Lumpur time', () => {
   expect(isMoodleMaintenanceWindow(kl(2, 59))).toBe(false);
