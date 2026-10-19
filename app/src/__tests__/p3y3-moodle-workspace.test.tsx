@@ -8,6 +8,7 @@ const labels: MoodleWorkspaceLabels = { firstLogin: 'First login', restoredNativ
   login: 'Login', sync: 'Sync', cancel: 'Cancel', confirmSelection: 'Confirm selection',
   chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types', empty: 'Empty',
   original: 'Original', details: 'Details', unknownSection: 'Other section', maintenance: 'Moodle maintenance',
+  offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}` };
 const courses = [1, 2].map((id) => ({ id, name: `Course ${id}`, shortName: null,
   url: null, startDate: null, endDate: null, visible: true, favourite: false, progress: null }));

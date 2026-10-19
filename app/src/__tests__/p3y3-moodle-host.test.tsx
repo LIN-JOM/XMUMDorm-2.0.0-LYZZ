@@ -24,7 +24,7 @@ const labels: MoodleWorkspaceHostLabels = { firstLogin: 'First login', restoredN
   nativeWorkspace: 'Native workspace', login: 'Login', sync: 'Sync', cancel: 'Cancel',
   confirmSelection: 'Choose', chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types',
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
-  maintenance: 'Moodle maintenance',
+  maintenance: 'Moodle maintenance', offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}`,
   back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines', otherEvents: 'Other events',
   eventType: (value) => 'event type ' + String(value), actionableStatus: (value) => 'actionable ' + String(value),
