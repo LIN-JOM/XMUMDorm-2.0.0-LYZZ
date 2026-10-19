@@ -49,7 +49,7 @@ export async function replaceMoodleReminders(plan: readonly { id: string; fireAt
   const current = owner();
   if (!current) return 'stale';
   const result = await scheduler.replaceDomain(current, 'moodle',
-    plan.map((item) => ({ id: item.id, fireAt: new Date(item.fireAt).toISOString() })), labels);
+    plan.map((item) => ({ id: item.id, fireAt: item.fireAt })), labels);
   if (result.status === 'permission-denied') return 'denied';
   if (result.status === 'stale') return 'stale';
   return result.deferred > 0 ? 'partial' : 'planned';
