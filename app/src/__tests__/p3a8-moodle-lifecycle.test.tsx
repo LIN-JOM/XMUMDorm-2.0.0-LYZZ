@@ -6,7 +6,7 @@
  */
 import * as React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { waitFor } from '@testing-library/react-native';
+import { userEvent, waitFor } from '@testing-library/react-native';
 
 import { Pressable } from '@/components/ui/Pressable';
 import { Text } from '@/components/ui/Text';
@@ -86,7 +86,7 @@ it('p3a8 logout clears the Moodle snapshot and memory', async () => {
   await seedSnapshot();
   const view = await renderApp(<SessionProvider><LogoutProbe /></SessionProvider>);
   await waitFor(() => expect(view.getByText(/status=signedIn/)).toBeTruthy());
-  const user = require('@testing-library/react-native').userEvent.setup();
+  const user = userEvent.setup();
   await user.press(view.getByTestId('logout'));
   await waitFor(() => expect(view.getByText(/status=signedOut/)).toBeTruthy());
   await settleMoodleStorage();
@@ -99,7 +99,7 @@ it('p3a8 expiry clears the Moodle snapshot', async () => {
   await seedSnapshot();
   const view = await renderApp(<SessionProvider><ExpireProbe /></SessionProvider>);
   await waitFor(() => expect(view.getByText(/status=signedIn/)).toBeTruthy());
-  const user = require('@testing-library/react-native').userEvent.setup();
+  const user = userEvent.setup();
   await user.press(view.getByTestId('expire'));
   await waitFor(() => expect(view.getByText(/status=expired/)).toBeTruthy());
   await settleMoodleStorage();
@@ -111,7 +111,7 @@ it('p3a8 account switch drops the previous snapshot', async () => {
   await seedSnapshot();
   const view = await renderApp(<SessionProvider><LoginProbe /></SessionProvider>);
   await waitFor(() => expect(view.getByText(/status=signedOut/)).toBeTruthy());
-  const user = require('@testing-library/react-native').userEvent.setup();
+  const user = userEvent.setup();
   await user.press(view.getByTestId('login'));
   await waitFor(() => expect(view.getByText(/status=signedIn/)).toBeTruthy());
   await settleMoodleStorage();
