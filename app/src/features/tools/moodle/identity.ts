@@ -4,36 +4,29 @@ export type MoodleIdentityResult = { requestId: string } & (
 );
 const IDENTITY_KIND = 'dorm:moodle:identity';
 
-/** Moodle exposes the current user id on the authenticated navbar (`data-userid`); some builds
- * also mirror it in `M.cfg.userid`/`M.cfg.userId`. Both are accepted; the menu must prove login.
- * ⚠️ 本函数会被 `toString()` 注入 WebView，必须自包含：域名与选择器字面量只能内联。 */
-export function inspectMoodleIdentity(root: Pick<Document, 'querySelector'>, origin: string, userId: unknown):
-  { status: 'confirmed'; userId: number } | { status: 'expired' | 'unknown' | 'wrong-origin' } {
+/** ⚠️ Hermes 下 `Function.prototype.toString()` 返回 `"[bytecode]"`（本机 dev build 实测），
+ * 注入 WebView 的源码必须是**字面量**，不得改回 `.toString()`。
+ * 选择器来自校方实站：登录态由 `#user-menu-toggle`/`.usermenu-container` 证明，
+ * 用户 id 在 `#usernavigation [data-userid]`（M.cfg 里没有 userId）。 */
+export const IDENTITY_INSPECT_SOURCE = `function inspectMoodleIdentity(root, origin, userId) {
   if (origin !== 'https://l.xmu.edu.my') return { status: 'wrong-origin' };
-  // A password field or the guest menu proves we are NOT the signed-in workspace.
-  // The probe carries no history, so it cannot claim "expired"; the session layer owns that.
   if (root.querySelector('input[type=password]') || root.querySelector('.usermenu .login')) return { status: 'unknown' };
-  const menu = root.querySelector('#user-menu-toggle')
-    ?? root.querySelector('[data-region=usermenu] .usermenu #user-menu-toggle')
-    ?? root.querySelector('.usermenu-container');
+  var menu = root.querySelector('#user-menu-toggle') || root.querySelector('[data-region=usermenu] .usermenu #user-menu-toggle') || root.querySelector('.usermenu-container');
   if (!menu) return { status: 'unknown' };
-  const declared = root.querySelector('#usernavigation [data-userid]')
-    ?? root.querySelector('nav.navbar [data-userid]')
-    ?? root.querySelector('.usermenu-container [data-userid]');
-  const raw = declared?.getAttribute('data-userid') ?? null;
-  let id = typeof userId === 'number' && Number.isSafeInteger(userId) && userId > 0 ? userId : null;
+  var declared = root.querySelector('#usernavigation [data-userid]') || root.querySelector('nav.navbar [data-userid]') || root.querySelector('.usermenu-container [data-userid]');
+  var raw = declared ? declared.getAttribute('data-userid') : null;
+  var id = (typeof userId === 'number' && isFinite(userId) && userId > 0) ? userId : null;
   if (raw !== null) {
-    const numeric = raw.trim();
-    if (!/^\d+$/.test(numeric)) return { status: 'unknown' };
-    id = Number(numeric);
+    if (!/^\\d+$/.test(String(raw).trim())) return { status: 'unknown' };
+    id = Number(String(raw).trim());
   }
-  if (id === null || !Number.isSafeInteger(id) || id <= 0) return { status: 'unknown' };
+  if (id === null || !isFinite(id) || id <= 0) return { status: 'unknown' };
   return { status: 'confirmed', userId: id };
-}
+}`;
 
 export function buildMoodleIdentityProbeScript(id: string): string | null {
   if (!/^[a-zA-Z0-9:_-]{1,80}$/.test(id)) return null;
-  return `(function(){var inspect=(${inspectMoodleIdentity.toString()});
+  return `(function(){var inspect=(${IDENTITY_INSPECT_SOURCE});
     var result=inspect(document,window.location.origin,window.M&&window.M.cfg&&window.M.cfg.userId);
     var message={kind:${JSON.stringify(IDENTITY_KIND)},requestId:${JSON.stringify(id)},status:result.status};
     if(result.status==='confirmed')message.userId=result.userId;

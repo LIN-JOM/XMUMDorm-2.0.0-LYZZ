@@ -57,6 +57,13 @@ describe('p3y3 school identity and local snapshot', () => {
       .toBe('unknown');
     expect((await probe(realMenu + '<input type="password">', undefined)).result?.status).toBe('unknown');
   });
+  it('builds a self-contained probe (Hermes toString returns [bytecode], so literals are mandatory)', () => {
+    const script = buildMoodleIdentityProbeScript('identity:9')!;
+    expect(script).toContain('#usernavigation [data-userid]');
+    expect(script).toContain('inspectMoodleIdentity');
+    expect(script).not.toContain('[bytecode]');
+    expect(script).not.toContain('.toString()');
+  });
   it('restores only after the current probe matches the stored school identity', async () => {
     confirmMoodleSchoolIdentity(123); populate();
     expect(await persistMoodleSnapshot()).toBe(true);
