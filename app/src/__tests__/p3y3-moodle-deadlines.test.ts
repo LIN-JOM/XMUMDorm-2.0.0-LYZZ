@@ -3,7 +3,8 @@ import type { MoodleActionEvent, MoodleStateResponse } from '@/features/tools/mo
 
 const now = Date.parse('2026-10-11T00:00:00Z');
 const modules = [101, 102, 103, 104].map((id) => ({ id, sectionId: 1, type: 'assign', name: `Task ${id}`,
-  url: `https://l.xmu.edu.my/mod/assign/view.php?id=${id}`, visible: true, userVisible: true, accessVisible: true }));
+  url: `https://l.xmu.edu.my/mod/assign/view.php?id=${id}`, visible: true, userVisible: true, accessVisible: true,
+  restrictions: false, completion: null }));
 const states: MoodleStateResponse[] = [{ courseId: 1, sections: [], modules }];
 const event = (id: number, moduleId: number, time: number): MoodleActionEvent => ({ id, courseId: 1,
   eventType: 'due', action: { name: 'Submit', itemCount: 1, actionable: true }, moduleId: 900 + moduleId, name: `Deadline ${id}`, time, url: modules.find((item) => item.id === moduleId)?.url ?? null });

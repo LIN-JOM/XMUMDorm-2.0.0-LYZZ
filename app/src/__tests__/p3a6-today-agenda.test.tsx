@@ -56,10 +56,13 @@ const modules = [101, 102, 103, 104].map((id) => ({
   visible: true,
   userVisible: true,
   accessVisible: true,
+  restrictions: false,
+  completion: null,
 }));
 
 const states: MoodleStateResponse[] = [
-  { courseId: 1, sections: [{ id: 1, number: 1, title: 'Week 1', moduleIds: [101, 102, 103, 104] }], modules },
+  { courseId: 1, sections: [{ id: 1, number: 1, title: 'Week 1', moduleIds: [101, 102, 103, 104],
+    url: null, visible: true, current: false }], modules },
 ];
 
 function eventAt(id: number, moduleId: number, dueAt: number): MoodleActionEvent {
@@ -100,7 +103,8 @@ describe('P3A6 今日数据规则', () => {
       eventAt(3, 103, SUNDAY_2157 + 2 * 86400_000),
       eventAt(4, 104, SUNDAY_2157 + 3 * 86400_000),
     ];
-    const courses = [{ id: 1, name: 'Algorithms', shortName: 'ALG', url: null, startDate: null, endDate: null, visible: true }];
+    const courses = [{ id: 1, name: 'Algorithms', shortName: 'ALG', url: null, startDate: null, endDate: null,
+      visible: true, favourite: false, progress: null }];
     const deadlines = agendaDeadlines(states, events, courses, SUNDAY_2157);
     expect(deadlines).toHaveLength(3);
     expect(deadlines.map((item) => item.dueAt)).toEqual([
@@ -126,7 +130,8 @@ describe('P3A6 今日数据规则', () => {
     selectMoodleCourses([1]);
     const next = moodleCacheGeneration();
     writeMoodleCache('courses', {
-      courses: [{ id: 1, name: 'Algorithms', shortName: 'ALG', url: null, startDate: null, endDate: null, visible: true }],
+      courses: [{ id: 1, name: 'Algorithms', shortName: 'ALG', url: null, startDate: null, endDate: null,
+        visible: true, favourite: false, progress: null }],
       nextOffset: 0,
     }, next);
     writeMoodleCache('state', states[0], next);

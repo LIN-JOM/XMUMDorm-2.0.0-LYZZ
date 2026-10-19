@@ -43,7 +43,8 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
   const sections = [...(courseState?.sections ?? [])];
   for (const module of visibleModules) {
     if (!sections.some((section) => section.id === module.sectionId)) {
-      sections.push({ id: module.sectionId, number: 0, title: labels.unknownSection, moduleIds: [] });
+      sections.push({ id: module.sectionId, number: 0, title: labels.unknownSection, moduleIds: [],
+        url: null, visible: true, current: false });
     }
   }
   const busy = snapshot.phase === 'loading-courses' || snapshot.phase === 'loading-objects';
