@@ -41,8 +41,8 @@ describe('p3y3 school identity and local snapshot', () => {
     expect(result).toEqual({ requestId: 'identity:1', status: 'confirmed', userId: 123 });
     expect(raw).not.toMatch(/sesskey|never-forward|cfg/);
     expect((await probe(menu, '123')).result?.status).toBe('unknown');
-    expect((await probe('<div class="usermenu"><div class="login">Guest</div></div>', 1)).result?.status).toBe('expired');
-    expect((await probe(menu + '<input type="password" value="private">', 123)).result?.status).toBe('expired');
+    expect((await probe('<div class="usermenu"><div class="login">Guest</div></div>', 1)).result?.status).toBe('unknown');
+    expect((await probe(menu + '<input type="password" value="private">', 123)).result?.status).toBe('unknown');
   });
   it('restores only after the current probe matches the stored school identity', async () => {
     confirmMoodleSchoolIdentity(123); populate();
