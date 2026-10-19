@@ -83,6 +83,9 @@ export default function SchoolSystemScreen(): React.ReactElement {
     deadlineBucket: (value) => t('tools.moodle.status', { value }),
     detailStatus: (value) => t('tools.moodle.status', { value }), reminderStatus: (value) => {
       if (value === 'planned') return t('tools.moodle.reminders.planned');
+      if (value === 'partial') return t('tools.moodle.reminders.partial');
+      if (value === 'denied') return t('tools.moodle.reminders.denied');
+      if (value === 'stale') return t('tools.moodle.reminders.stale');
       if (value === 'cleared') return t('tools.moodle.reminders.cleared');
       if (value === 'failed') return t('tools.moodle.reminders.failed');
       return t('tools.moodle.reminders.unavailable');
@@ -179,7 +182,7 @@ export default function SchoolSystemScreen(): React.ReactElement {
       {system.id === 'moodle' ? (
         <View testID="webview-moodle" style={{ flex: 1 }}>
           <MoodleWorkspaceHost labels={moodleLabels} onOpenOriginal={openMoodleOriginal}
-            onReminderPlan={(plan) => replaceMoodleReminders(plan, {
+            onReminderPlan={async (plan) => replaceMoodleReminders(plan, {
               title: t('tools.reminders.moodle.title'), body: t('tools.reminders.moodle.body'),
             })}
             onClearReminders={clearMoodleReminders} />

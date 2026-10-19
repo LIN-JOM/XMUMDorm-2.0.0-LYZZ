@@ -5,6 +5,7 @@ import { notificationPermission } from '@/features/notifications/permissions';
 import { timetableIdentity } from '../cacheIdentity';
 import { loadSemesterClassReminderPlan } from './runtime';
 import type { ReminderSemester } from './plan';
+import type { MoodleReminderDelivery } from '../moodle/deadlines';
 import { createReminderScheduler, reminderOwnerFromScope, type NativeReminderPort, type ReminderLabels } from './scheduler';
 
 const port: NativeReminderPort = {
@@ -46,10 +47,15 @@ function owner(): string | null {
 const CLASS_LABELS: ReminderLabels = { title: 'Class reminder', body: 'Your class starts soon' };
 const MOODLE_LABELS: ReminderLabels = { title: 'Moodle deadline', body: 'A Moodle deadline is coming up' };
 
-export async function replaceMoodleReminders(plan: readonly { id: string; fireAt: number }[], labels = MOODLE_LABELS): Promise<void> {
+export async function replaceMoodleReminders(plan: readonly { id: string; fireAt: number }[],
+  labels = MOODLE_LABELS): Promise<MoodleReminderDelivery> {
   const current = owner();
-  if (!current) return;
-  await scheduler.replaceDomain(current, 'moodle', plan.map((item) => ({ id: item.id, fireAt: new Date(item.fireAt).toISOString() })), labels);
+  if (!current) return 'stale';
+  const result = await scheduler.replaceDomain(current, 'moodle',
+    plan.map((item) => ({ id: item.id, fireAt: new Date(item.fireAt).toISOString() })), labels);
+  if (result.status === 'permission-denied') return 'denied';
+  if (result.status === 'stale') return 'stale';
+  return result.deferred > 0 ? 'partial' : 'planned';
 }
 
 export async function clearMoodleReminders(): Promise<void> {

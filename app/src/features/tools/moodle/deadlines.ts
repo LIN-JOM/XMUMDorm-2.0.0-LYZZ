@@ -9,6 +9,9 @@ export type MoodleDeadlineBuckets = { valid: MoodleDeadline[]; past: MoodleDeadl
   futureAnomalies: MoodleDeadline[]; unset: { courseId: number; module: MoodleModule }[] };
 export type MoodleReminderPlan = { id: string; fireAt: number }[];
 
+/** What the reminder adapter reports back after handing a plan to the OS scheduler. */
+export type MoodleReminderDelivery = 'planned' | 'partial' | 'denied' | 'stale';
+
 export function isMoodleDeadlineEvent(module: MoodleModule, event: MoodleActionEvent): boolean {
   return event.eventType === 'expectcompletionon'
     || (module.type === 'assign' && event.eventType === 'due')

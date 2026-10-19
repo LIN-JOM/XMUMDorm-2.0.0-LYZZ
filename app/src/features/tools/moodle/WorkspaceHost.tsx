@@ -16,9 +16,10 @@ import type { MoodleModule } from './contract';
 import { safeMoodleReadUrl, type MoodleDetail, type MoodleDetailFailure, type MoodleDetailRequest,
   type MoodleDetailResult } from './detail';
 import { partitionMoodleDeadlines, planMoodleDeadlineReminders,
-  type MoodleDeadlinePolicy, type MoodleReminderPlan } from './deadlines';
+  type MoodleDeadlinePolicy, type MoodleReminderDelivery, type MoodleReminderPlan } from './deadlines';
 
-export type MoodleReminderStatus = 'unavailable' | 'planned' | 'cleared' | 'failed';
+export type MoodleReminderStatus = 'unavailable' | 'planned' | 'partial' | 'denied' | 'stale'
+  | 'cleared' | 'failed';
 export type MoodleWorkspaceHostLabels = MoodleWorkspaceLabels & MoodleDetailLabels & {
   clear: string; backToNative: string; deadlines: string; otherEvents: string;
   eventType: (value: string | null) => string; actionableStatus: (value: boolean | null) => string;
@@ -30,7 +31,8 @@ export type MoodleWorkspaceHostProps = {
   /** Role A supplies every app-authored label from the single application t function. */
   labels: MoodleWorkspaceHostLabels;
   onOpenOriginal: (url: string) => void;
-  onReminderPlan?: (plan: MoodleReminderPlan) => void | Promise<void>;
+  onReminderPlan?: (plan: MoodleReminderPlan) =>
+    void | MoodleReminderDelivery | Promise<void | MoodleReminderDelivery>;
   onClearReminders?: () => void | Promise<void>;
   deadlinePolicy?: MoodleDeadlinePolicy;
   now?: () => number;
@@ -67,8 +69,13 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     if (!action) { setReminderStatus('unavailable'); return; }
     reminderQueue.current = reminderQueue.current.catch(() => undefined).then(async () => {
       try {
-        await action();
-        if (mounted.current && sequence === reminderSequence.current) setReminderStatus(plan === null ? 'cleared' : 'planned');
+        const delivery = await action();
+        if (mounted.current && sequence === reminderSequence.current) {
+          const next: MoodleReminderStatus = plan === null ? 'cleared'
+            : delivery === 'planned' || delivery === 'partial' || delivery === 'denied'
+              || delivery === 'stale' ? delivery : 'planned';
+          setReminderStatus(next);
+        }
       } catch {
         if (mounted.current && sequence === reminderSequence.current) setReminderStatus('failed');
       }
