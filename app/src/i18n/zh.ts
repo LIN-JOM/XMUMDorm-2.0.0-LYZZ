@@ -149,7 +149,7 @@ export const zh = {
   'tools.moodle.value.failure.timeout': '请求超时',
   'tools.moodle.value.failure.wrongOrigin': '来源不符',
   'tools.moodle.value.failure.redirectBlocked': '重定向已拦截',
-  'tools.moodle.value.detail.loading': '加载中',
+  'tools.moodle.value.detail.loading': '读取中',
   'tools.moodle.value.bucket.valid': '待办',
   'tools.moodle.value.bucket.past': '已过期',
   'tools.moodle.value.bucket.unset': '无截止',
