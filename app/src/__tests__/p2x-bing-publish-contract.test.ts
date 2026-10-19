@@ -18,7 +18,7 @@ const market=()=>createMarketplacePublishDescriptor(t,options);
 const post=()=>createPostPublishDescriptor(t,options);
 const ev={title:'Pickup',description:'Package',reward:'5.50',type:'delivery',contactInfo:'Phone',location:'Gate',deadline:''};
 const mv={title:'Book',description:'Used',price:'12.50',category:'books',delivery_method:'pickup',dorm_area:'LY1',tags:[],images:[]};
-const pv={title:'Study',content:'Looking for a group',tagIds:['7'],images:[]};
+const pv={title:'Study',content:'Looking for a group',tagIds:['7'],images:[],contentOrigin:'original',repostSource:null};
 afterEach(()=>getQueryClient().clear());
 beforeEach(()=>{jest.clearAllMocks();getQueryClient().clear();});
 it('三份描述符符合公共契约且媒体禁止落草稿',()=>{
@@ -41,6 +41,16 @@ it('二手提交multipart白名单并返回详情',async()=>{
 });
 it('树洞普通帖固定type并校验标签与标题',async()=>{
  const d=post();await expect(d.submit({...pv,tagIds:['99']})).rejects.toMatchObject({kind:'validation'});await expect(d.submit({...pv,title:''})).rejects.toMatchObject({kind:'validation'});(createPost as jest.Mock).mockResolvedValue({id:23});await d.submit({...pv,type:'announcement'});expect(createPost).toHaveBeenCalledWith({...pv,type:'normal',tagIds:[7]});expect(d.routeAfterSubmit?.({id:23})).toBe('/campus/23?published=1');
+});
+it('树洞转载必须选择 WX，原创提交清除残留来源',async()=>{
+ const d=post();(createPost as jest.Mock).mockResolvedValue({id:23});
+ for(const repostSource of ['',undefined,[], 'unknown'])await expect(d.submit({...pv,contentOrigin:'repost',repostSource})).rejects.toMatchObject({kind:'validation'});
+ await expect(d.submit({...pv,contentOrigin:'unknown'})).rejects.toMatchObject({kind:'validation'});
+ expect(createPost).not.toHaveBeenCalled();
+ await d.submit({...pv,contentOrigin:'repost',repostSource:'WX'});
+ expect(createPost).toHaveBeenLastCalledWith({...pv,contentOrigin:'repost',repostSource:'WX',type:'normal',tagIds:[7]});
+ await d.submit({...pv,repostSource:'WX'});
+ expect(createPost).toHaveBeenLastCalledWith({...pv,type:'normal',tagIds:[7]});
 });
 it('提交失败不清缓存且无效返回id不宣称成功',async()=>{
  getQueryClient().setQueryData(['bing-errand','list',{}],{old:true});(createErrand as jest.Mock).mockRejectedValue({kind:'unreachable'});await expect(errand().submit(ev)).rejects.toMatchObject({kind:'unreachable'});expect(getQueryClient().getQueryData(['bing-errand','list',{}])).toEqual({old:true});(createErrand as jest.Mock).mockResolvedValue({id:0});await expect(errand().submit(ev)).rejects.toMatchObject({kind:'unknown'});
