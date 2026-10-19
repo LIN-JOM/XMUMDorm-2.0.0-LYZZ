@@ -8,7 +8,8 @@
  *   R5 溢出横向滚动（不在这里，在组件层）；⛔ 不提供把子栏目藏起来的下拉入口
  *
  * ⚠️ 二级 Tab 的**具体集合**逐格拍板：
- *   - 「广场」**已定**（所有者 2026-10-12 裁决，7 个同页模块）
+ *   - 「广场」**已定**（所有者 2026-10-18：今日 / 树洞 / 万能墙 / 食堂 / 跑腿；
+ *     其中树洞与万能墙互斥、各自独立 —— 宪法 4.1.1）
  *   - 「我的」**已定**（所有者 2026-10-18 裁决，4 个内容模块同页横滑 —— C-05 关闭）
  *   - 工具 = TO-CONFIRM **C-04** → 集合留空，⛔ 不预占所有者的决定
  */
@@ -28,22 +29,25 @@ export type SecondaryTabRegistry = Record<string, readonly SecondaryTabDefinitio
 /**
  * 「广场」的模块集合 —— **唯一真源**（2026-10-18 收敛）。
  *
- * 所有者 2026-10-12 裁决（骨架规范 §1 顶部横幅 / D-1）：广场首页把
- * 树洞 / 万能墙 / 食堂 / 集市 / 跑腿 / 攻略 / 社团 做成**顶部可横滑的同页模块**。
+ * 所有者 2026-10-18 裁决（本文件顶部的集合即其落地）：
+ *   ① 新增「今日」tab（今日课表 + Moodle 最近 3 条待交），并**作为默认 tab**：
+ *      打开 App 固定落到它；
+ *   ② 校园攻略 / 二手 / 社团从 Tab 条移除，改由品牌头下方的 4 个模块入口直达独立路由
+ *      （`/guides` `/market` `/clubs`），入口注册表在 `features/square/squareModules.tsx`；
+ *   ③ 剩余 Tab = 今日 / 树洞 / 万能墙 / 食堂 / 跑腿。
  * 旧实现把这份集合**又硬编码在 `SquareHome.tsx` 里一份**（7 项 vs 2 项两份定义），
  * 现在只保留这里一份 —— 页面通过 `getSecondaryTabs('square')` / `SQUARE_TABS` 消费。
  *
  * ⛔ 不要把模块集合再写回页面：P2A-03 的源码扫描会让它显式失败。
  */
 export const SQUARE_TABS = [
+  // 2026-10-18：今日是默认 tab（打开 App 即落到这里）
+  { key: 'today', labelKey: 'secondary.today' },
   // 宪法 4.1.1：树洞与万能墙互斥，各自保留分页/排序，只允许导航层合并
   { key: 'confession', labelKey: 'secondary.confession' },
   { key: 'wall', labelKey: 'secondary.wall' },
   { key: 'canteen', labelKey: 'canteen.title' },
-  { key: 'market', labelKey: 'screen.market.title' },
   { key: 'errand', labelKey: 'screen.errand.title' },
-  { key: 'guides', labelKey: 'square.guides.title' },
-  { key: 'clubs', labelKey: 'clubs.title' },
 ] as const satisfies readonly SecondaryTabDefinition[];
 
 /**

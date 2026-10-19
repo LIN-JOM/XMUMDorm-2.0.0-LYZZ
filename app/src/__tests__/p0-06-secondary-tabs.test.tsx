@@ -77,15 +77,13 @@ describe('P0-06 二级顶部 Tab 条', () => {
   });
 
   describe('集合声明：已定的落库，未定的留空（C-03/C-04/C-05）', () => {
-    it('「广场」= 7 个同页模块（所有者 2026-10-12 裁决；集合只有一处定义）', () => {
+    it('「广场」= 今日 / 树洞 / 万能墙 / 食堂 / 跑腿（所有者 2026-10-18 裁决；集合只有一处定义）', () => {
       expect(SQUARE_TABS.map((tab) => tab.key)).toEqual([
+        'today',
         'confession',
         'wall',
         'canteen',
-        'market',
         'errand',
-        'guides',
-        'clubs',
       ]);
     });
 
@@ -160,7 +158,7 @@ describe('P0-06 二级顶部 Tab 条', () => {
           <TopTabStrip tabs={SQUARE_TABS} selectedKey="confession" onSelect={() => undefined} />
         )
       );
-      const first = view.getByTestId('top-tab-confession');
+      const first = view.getByTestId('top-tab-today');
       expect(first.props.accessibilityRole).toBe('tab');
       expect(String(first.props.accessibilityLabel)).toContain('1');
       expect(String(first.props.accessibilityLabel)).toContain(String(SQUARE_TABS.length));

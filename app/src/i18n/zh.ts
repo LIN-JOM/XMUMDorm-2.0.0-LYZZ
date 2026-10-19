@@ -272,6 +272,23 @@ export const zh = {
   'screen.tools': '工具',
   'screen.campus': '校园里',
   'screen.me': '我的',
+  // ── 广场品牌头与模块入口（2026-10-18 所有者裁决）──────────────────
+  'square.brand': 'XMUM Dorm',
+  'square.brand.emblem': '厦门大学校徽',
+  'square.module.schedule': '课表',
+  'square.module.guides': '校园攻略',
+  'square.module.market': '二手',
+  'square.module.clubs': '社团',
+  // ── 广场「今日」tab（2026-10-18）────────────────────────────────────
+  'square.today.courses': '今日课表',
+  'square.today.noCourses': '今天没有课',
+  'square.today.deadlines': 'Moodle 待交',
+  'square.today.noDeadlines': '暂时没有待交作业',
+  'square.today.moodleUnsynced': 'Moodle 待交尚未同步',
+  'square.today.moodleSync': '打开 Moodle 同步',
+  'square.today.deadlineToday': '今天 {clock} 截止',
+  'square.today.deadlineTomorrow': '明天 {clock} 截止',
+  'square.today.deadlineLater': '{date} {clock} 截止',
   // ── 我的 / 仪表盘（M-01；P2C-03 起）────────────────────────────────
   'me.level.1': '新生',
   'me.level.2': '探索者',
@@ -384,7 +401,8 @@ export const zh = {
   'mailbox.chat.empty.description': '先打个招呼',
   'mailbox.chat.read': '已读',
 
-  // ── 二级 Tab（宪法 4.8；校园里两项已定，广场/工具待 C-03/C-04）──
+  // ── 二级 Tab（宪法 4.8；广场五项已定于 2026-10-18，工具待 C-04）──
+  'secondary.today': '今日',
   'secondary.confession': '树洞',
   'secondary.wall': '万能墙',
 
