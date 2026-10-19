@@ -191,7 +191,7 @@
 | TD-68 | 今日课程时段显示带秒（真数据是 `14:00:00`，界面会出现 `14:00:00 离散数学…`） | 已完成 | 落点：`features/me/dashboard.ts` 的 `formatClockTime()`；用例 `p2c-03` + 真服务 `live-api-layer` | 契约验证 §5 |
 | TD-69 | `shared/**` 的改动以前不触发任何 CI 门 | 已完成 | 落点：workflow 的 `paths` 加 `shared/**` + 新增 `shared-tests` job | P2D-01 |
 | TD-78 | **广场「今日」的 Moodle 待交依赖学生先打开 `system/moodle` 同步**：Y0 隐私口径要求磁盘快照只在当前页面确认校方账号后恢复，所以冷启动时今日页显示"未同步"入口而不是已有待交 | 待排期 | 产品需裁决"是否允许冷启动读取上一会话快照"；若允许，改 `moodle/cache.ts` 的恢复前置条件（安全评审） | [广场今日页批次](task/广场今日页/00-批次总览与施工计划.md) · [T1](task/广场今日页/T1-今日数据与纯逻辑.md) |
-| TD-79 | **Moodle 审计仅剩设备项**：实站与真机证据（P-2）· 契约详情 DOM 12 字段（P-6 余项，需校园 DOM 样本） | 待能力 | 所有者提供 development build 与校园账号；在此之前本地可推进项已清空（P-10 以复用 `ListItem` 与计划修正关闭） | [审计](evaluation/Moodle模块能力边界审计-2026-10-19.md) · [Phase F 总结](task/Moodle审计整改/17-第六批总结.md) |
+| TD-79 | **Moodle 审计仅剩设备项**：实站与真机证据（P-2）· 契约详情 DOM 12 字段（P-6 余项，需校园 DOM 样本） | 待能力 | 所有者提供 development build 与校园账号；执行清单见 [设备验证清单](task/Moodle审计整改/设备验证清单.md)（P-10 以复用 `ListItem` 与计划修正关闭） | [审计](evaluation/Moodle模块能力边界审计-2026-10-19.md) · [Phase F 总结](task/Moodle审计整改/17-第六批总结.md) |
 
 > **两条"已完成"为什么还留着**：本册约定（文件头）—— 完成后**保留条目并写清落点**，供日后追溯"这条路为什么长这样"。
 
