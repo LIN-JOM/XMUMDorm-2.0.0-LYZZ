@@ -143,7 +143,7 @@ export function inputKindFor(kind: FormFieldKind): InputKind {
 export function createInitialValues(fields: readonly FormFieldDescriptor[]): FormValues {
   const values: FormValues = {};
   for (const field of fields) {
-    values[field.name] = field.initialValue ??
+    values[field.name] = field.initialValue ?? (
       field.kind === 'checkbox'
         ? false
         : field.kind === 'switch'
@@ -152,7 +152,7 @@ export function createInitialValues(fields: readonly FormFieldDescriptor[]): For
             ? []
             : field.kind === 'segmented' || field.kind === 'select'
               ? (field.source?.options[0]?.value ?? null)
-              : '';
+              : '');
   }
   return values;
 }

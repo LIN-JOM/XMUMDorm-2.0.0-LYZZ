@@ -113,10 +113,10 @@ describe('TC-P1-10-2A · DSL：描述符 → 控件（纯函数）', () => {
 
   it('显式初始值保留空标签数组、布尔、数字和文本', () => {
     expect(createInitialValues([
-      field({ name: 'topics', kind: 'custom', initialValue: [] }),
-      field({ name: 'accepted', kind: 'checkbox', initialValue: true }),
-      field({ name: 'count', kind: 'number', initialValue: 0 }),
-      field({ name: 'title', initialValue: '草稿标题' }),
+      field({ name: 'topics', labelKey: 'publish.bing.tags', kind: 'custom', initialValue: [] }),
+      field({ name: 'accepted', labelKey: 'form.error.required', kind: 'checkbox', initialValue: true }),
+      field({ name: 'count', labelKey: 'form.error.required', kind: 'number', initialValue: 0 }),
+      field({ name: 'title', labelKey: 'publish.bing.title', initialValue: '草稿标题' }),
     ])).toEqual({ topics: [], accepted: true, count: 0, title: '草稿标题' });
   });
 
