@@ -122,6 +122,7 @@ export const zh = {
   'tools.moodle.details': '详情',
   'tools.moodle.unknownSection': '其他章节',
   'tools.moodle.maintenance': 'Moodle 维护中（03:00–04:30）',
+  'tools.moodle.offline': '当前离线',
   'tools.moodle.deadlines': '截止时间',
   'tools.moodle.otherEvents': '其他事件',
   'tools.moodle.clear': '清除 Moodle 数据',

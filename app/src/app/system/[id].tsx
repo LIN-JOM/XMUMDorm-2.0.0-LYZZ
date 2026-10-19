@@ -77,6 +77,7 @@ export default function SchoolSystemScreen(): React.ReactElement {
       courses: t('tools.moodle.courses'), allTypes: t('tools.moodle.allTypes'), empty: t('tools.moodle.empty'),
       original: t('tools.moodle.original'), details: t('tools.moodle.details'), unknownSection: t('tools.moodle.unknownSection'),
       maintenance: t('tools.moodle.maintenance'),
+      offline: t('tools.moodle.offline'),
       phase: status.phase,
       failure: status.failure,
       moduleType: status.moduleType, back: t('action.back'),

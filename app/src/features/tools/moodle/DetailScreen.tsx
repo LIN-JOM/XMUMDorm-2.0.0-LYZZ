@@ -31,7 +31,11 @@ export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscu
     <Button label={labels.original} variant="link" onPress={() => onOriginal(detail.url)} />
     {detail.description ? <Text>{detail.description}</Text> : null}
     {detail.kind === 'forum' ? <View style={{ gap: theme.space('space_3') }}>
-      {detail.announcements.length === 0 ? <Text>{labels.empty}</Text> : null}
+      {detail.announcements.length === 0 ? <View style={{ gap: theme.space('space_2') }}>
+        <Text>{labels.empty}</Text>
+        <Button testID="moodle-empty-original" label={labels.original} variant="link"
+          onPress={() => onOriginal(detail.url)} />
+      </View> : null}
       {detail.announcements.map((row) => <View key={row.id} style={{ gap: theme.space('space_2') }}>
         <Button testID={`moodle-discussion-${row.id}`} label={row.title} variant="secondary"
           onPress={() => onDiscussion(row.url)} />
@@ -54,7 +58,14 @@ export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscu
         <Text role="label">{row.label}</Text><Text>{row.value}</Text>
       </View>)}
     </View> : null}
-    {detail.kind === 'folder' ? detail.files.length ? files(detail.files) : <Text>{labels.empty}</Text> : null}
-    {detail.kind === 'resource' ? detail.file ? files([detail.file]) : <Text>{labels.fileUnknown}</Text> : null}
+    {detail.kind === 'folder' ? detail.files.length ? files(detail.files) : <View style={{ gap: theme.space('space_2') }}>
+      <Text>{labels.empty}</Text>
+      <Button testID="moodle-empty-folder" label={labels.original} variant="link"
+        onPress={() => onOriginal(detail.url)} />
+    </View> : null}
+    {detail.kind === 'resource' ? detail.file ? files([detail.file]) : <View style={{ gap: theme.space('space_2') }}>
+      <Text>{labels.fileUnknown}</Text>
+      <Button label={labels.original} variant="link" onPress={() => onOriginal(detail.url)} />
+    </View> : null}
   </ScrollView>;
 }
