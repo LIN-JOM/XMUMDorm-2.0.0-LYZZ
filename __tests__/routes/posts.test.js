@@ -74,6 +74,60 @@ describe('Posts Routes', () => {
   });
 
   describe('POST /api/posts', () => {
+    function acceptPost(metadata) {
+      query.mockImplementation(async (sql) => {
+        if (sql.startsWith('INSERT INTO posts')) return { insertId: 44 };
+        if (sql.includes('p.content')) return [{
+          id: 44, user_id: 9, title: '标题', content: '正文', type: 'normal', ...metadata,
+        }];
+        if (sql.includes('SELECT p.id')) return [{ id: 44 }];
+        return [];
+      });
+    }
+
+    it('persists a WX repost and returns it from create, list and detail without changing the body', async () => {
+      const metadata = { content_origin: 'repost', repost_source: 'WX' };
+      acceptPost(metadata);
+      const created = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', ...metadata });
+      expect(created.status).toBe(200);
+      expect(created.body.data).toMatchObject({ content: '正文', ...metadata });
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', 'repost', 'WX']
+      );
+      const list = await supertest(app()).get('/api/posts');
+      expect(list.body.data.list[0]).toMatchObject(metadata);
+      const detail = await supertest(app()).get('/api/posts/44');
+      expect(detail.body.data).toMatchObject(metadata);
+      for (const [sql] of query.mock.calls.filter(([sql]) => sql.includes('p.content'))) {
+        expect(sql).toContain('p.content_origin');
+        expect(sql).toContain('p.repost_source');
+      }
+    });
+
+    it.each([
+      [{ content_origin: 'original', repost_source: 'WX' }, 'original'],
+      [{}, null],
+    ])('keeps original sources empty and legacy declarations unknown: %j', async (input, origin) => {
+      acceptPost({ content_origin: origin, repost_source: null });
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', ...input });
+      expect(res.status).toBe(200);
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', origin, null]
+      );
+    });
+
+    it.each([
+      { content_origin: 'repost' },
+      { content_origin: 'repost', repost_source: '   ' },
+      { content_origin: 'repost', repost_source: ['WX'] },
+      { content_origin: 'unknown', repost_source: 'WX' },
+      { repost_source: 'WX' },
+    ])('rejects invalid declaration metadata before inserting: %j', async (metadata) => {
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', ...metadata });
+      expect(res.status).toBe(400);
+      expect(query).not.toHaveBeenCalled();
+    });
+
     it('rejects announcement creation by non-admin users', async () => {
       const res = await supertest(app())
         .post('/api/posts')
