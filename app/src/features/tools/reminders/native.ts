@@ -44,11 +44,8 @@ function owner(): string | null {
   return reminderOwnerFromScope(timetableIdentity().scope);
 }
 
-const CLASS_LABELS: ReminderLabels = { title: 'Class reminder', body: 'Your class starts soon' };
-const MOODLE_LABELS: ReminderLabels = { title: 'Moodle deadline', body: 'A Moodle deadline is coming up' };
-
 export async function replaceMoodleReminders(plan: readonly { id: string; fireAt: number }[],
-  labels = MOODLE_LABELS): Promise<MoodleReminderDelivery> {
+  labels: ReminderLabels): Promise<MoodleReminderDelivery> {
   const current = owner();
   if (!current) return 'stale';
   const result = await scheduler.replaceDomain(current, 'moodle',
@@ -67,7 +64,7 @@ export async function clearReminderOwner(previousOwner: string): Promise<void> {
   await scheduler.clearOwner(previousOwner);
 }
 
-export async function refreshClassReminders(labels = CLASS_LABELS): Promise<void> {
+export async function refreshClassReminders(labels: ReminderLabels): Promise<void> {
   const current = owner();
   if (!current) return;
   const semester = resolveSemesterContext().semester as ReminderSemester | null;

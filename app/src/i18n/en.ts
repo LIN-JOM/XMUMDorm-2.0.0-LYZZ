@@ -121,7 +121,7 @@ export const en: Record<MessageKey, string> = {
   'tools.moodle.deadlines': 'Deadlines',
   'tools.moodle.otherEvents': 'Other events',
   'tools.moodle.clear': 'Clear Moodle data',
-  'tools.moodle.backToNative': 'Open native workspace',
+  'tools.moodle.backToNative': 'Open workspace',
   'tools.moodle.locked': 'Content is locked',
   'tools.moodle.fileUnknown': 'File details unavailable',
   'tools.moodle.fileMetadata': '{mime} · {size}',

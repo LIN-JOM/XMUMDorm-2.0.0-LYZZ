@@ -125,7 +125,7 @@ export const zh = {
   'tools.moodle.deadlines': '截止时间',
   'tools.moodle.otherEvents': '其他事件',
   'tools.moodle.clear': '清除 Moodle 数据',
-  'tools.moodle.backToNative': '进入本机工作台',
+  'tools.moodle.backToNative': '进入工作台',
   'tools.moodle.locked': '内容已锁定',
   'tools.moodle.fileUnknown': '文件信息不可用',
   'tools.moodle.fileMetadata': '{mime} · {size}',
