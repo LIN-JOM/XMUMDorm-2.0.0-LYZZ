@@ -111,6 +111,15 @@ describe('TC-P1-10-2A · DSL：描述符 → 控件（纯函数）', () => {
     expect(values).toEqual({ a: '', b: '', c: false, d: false, e: [], f: [], g: 'x' });
   });
 
+  it('显式初始值保留空标签数组、布尔、数字和文本', () => {
+    expect(createInitialValues([
+      field({ name: 'topics', kind: 'custom', initialValue: [] }),
+      field({ name: 'accepted', kind: 'checkbox', initialValue: true }),
+      field({ name: 'count', kind: 'number', initialValue: 0 }),
+      field({ name: 'title', initialValue: '草稿标题' }),
+    ])).toEqual({ topics: [], accepted: true, count: 0, title: '草稿标题' });
+  });
+
   it('isEmptyValue：⛔ **`0` 与 `false` 不算空**（否则"数量 0"会被判未填）', () => {
     expect(isEmptyValue('')).toBe(true);
     expect(isEmptyValue('   ')).toBe(true);

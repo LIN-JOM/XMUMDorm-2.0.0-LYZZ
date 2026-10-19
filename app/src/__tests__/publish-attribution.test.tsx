@@ -15,7 +15,7 @@ jest.mock('../../../shared/api/posts', () => ({ createPost: jest.fn() }));
 
 function Host() {
   const { t } = useI18n();
-  const descriptor = React.useMemo(() => createPostPublishDescriptor(t, { tags: [], renderMedia: () => null }), [t]);
+  const descriptor = React.useMemo(() => createPostPublishDescriptor(t, { tags: [], renderMedia: () => null, renderTags: () => null }), [t]);
   const host = usePublishFormCore(descriptor, { signedIn: true, acceptedTerms: true });
   return <Form testID="attribution-form" form={host.form} sections={host.sections} labels={host.labels} semantic={host.semantic} />;
 }
