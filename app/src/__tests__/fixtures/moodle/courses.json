@@ -9,6 +9,9 @@
       "enddate": 1806883200,
       "visible": 1,
       "hidden": false,
+      "isfavourite": true,
+      "hasprogress": true,
+      "progress": 42,
       "summary": "Synthetic private course description",
       "sesskey": "fixture-only-secret"
     },
@@ -21,6 +24,7 @@
       "enddate": 0,
       "visible": true,
       "hidden": true,
+      "progress": 88,
       "courseimage": "https://l.xmu.edu.my/pluginfile.php/1/fixture.png"
     },
     { "id": 44, "fullname": "Hidden course", "visible": 0 },

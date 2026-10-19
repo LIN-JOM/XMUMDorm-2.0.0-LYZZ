@@ -11,10 +11,12 @@ describe('Moodle response projection', () => {
           id: 42, name: 'Algorithms', shortName: 'CS101',
           url: 'https://l.xmu.edu.my/course/view.php?id=42',
           startDate: 1791158400, endDate: 1806883200, visible: true,
+          favourite: true, progress: 42,
         },
         {
           id: 43, name: 'Discrete Mathematics', shortName: 'MA101', url: null,
           startDate: 1791158400, endDate: 0, visible: true,
+          favourite: false, progress: null,
         },
       ],
       nextOffset: 25,
@@ -25,26 +27,32 @@ describe('Moodle response projection', () => {
     expect(parseMoodleResponse('state', JSON.stringify(stateFixture))).toEqual({
       courseId: 42,
       sections: [
-        { id: 10, number: 0, title: 'General', moduleIds: [100, 101, 102, 106] },
-        { id: 11, number: 1, title: 'Week 1', moduleIds: [] },
+        { id: 10, number: 0, title: 'General', moduleIds: [100, 101, 102, 106],
+          url: 'https://l.xmu.edu.my/course/section.php?id=10', visible: true, current: true },
+        { id: 11, number: 1, title: 'Week 1', moduleIds: [],
+          url: null, visible: true, current: false },
       ],
       modules: [
         {
           id: 100, sectionId: 10, type: 'assign', name: 'Tutorial 1',
           url: 'https://l.xmu.edu.my/mod/assign/view.php?id=100',
           visible: true, userVisible: true, accessVisible: true,
+          restrictions: true, completion: { state: 1, complete: false },
         },
         {
           id: 101, sectionId: 10, type: 'resource', name: 'Restricted notes', url: null,
           visible: true, userVisible: false, accessVisible: false,
+          restrictions: false, completion: null,
         },
         {
           id: 102, sectionId: 10, type: 'label', name: 'Chapter introduction', url: null,
           visible: true, userVisible: true, accessVisible: true,
+          restrictions: false, completion: null,
         },
         {
           id: 106, sectionId: 10, type: 'folder', name: 'Unknown access', url: null,
           visible: true, userVisible: false, accessVisible: false,
+          restrictions: false, completion: null,
         },
       ],
     });

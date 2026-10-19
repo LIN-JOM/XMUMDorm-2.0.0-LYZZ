@@ -1,13 +1,14 @@
 {
   "course": { "id": 42, "sectionlist": [10, 11, 12], "statekey": "fixture-only-state-key" },
   "section": [
-    { "id": 10, "number": 0, "title": "General", "cmlist": [100, 101, 102, 103, 105, 106, 999], "visible": true },
+    { "id": 10, "number": 0, "title": "General", "cmlist": [100, 101, 102, 103, 105, 106, 999], "visible": true,
+      "sectionurl": "https://l.xmu.edu.my/course/section.php?id=10", "current": true },
     { "id": 11, "number": 1, "title": "Week 1", "cmlist": [], "visible": 1 },
     { "id": 12, "number": 2, "title": "Hidden section", "cmlist": [104], "visible": false },
     { "id": 13, "number": 3, "title": "Unknown visibility", "cmlist": [] }
   ],
   "cm": [
-    { "id": 100, "sectionid": 10, "module": "assign", "modname": "作业", "name": "Tutorial 1", "url": "https://l.xmu.edu.my/mod/assign/view.php?id=100&token=fixture-only-secret", "visible": true, "uservisible": true, "accessvisible": true, "content": "Synthetic private HTML" },
+    { "id": 100, "sectionid": 10, "module": "assign", "modname": "作业", "name": "Tutorial 1", "url": "https://l.xmu.edu.my/mod/assign/view.php?id=100&token=fixture-only-secret", "visible": true, "uservisible": true, "accessvisible": true, "hascmrestrictions": true, "completionstate": 1, "isoverallcomplete": false, "content": "Synthetic private HTML" },
     { "id": 101, "sectionid": 10, "module": "resource", "name": "Restricted notes", "url": "https://l.xmu.edu.my/mod/resource/view.php?id=101", "visible": true, "uservisible": false, "accessvisible": false },
     { "id": 102, "sectionid": 10, "module": "label", "name": "Chapter introduction", "visible": 1, "uservisible": 1, "accessvisible": 1 },
     { "id": 103, "sectionid": 10, "module": "forum", "name": "Hidden module", "visible": false, "uservisible": true, "accessvisible": true },
