@@ -57,13 +57,14 @@ jest.mock('react-native-pager-view', () => {
    * ⚠️ 必须是**函数组件 + forwardRef**，不能是 class：实测 class 形态的替身会让
    * 同一文件里的**第二次**渲染查不到任何节点（P1-08 记的并发根污染，症状一样）。
    */
-  const MockPagerView = React.forwardRef(
-    (props: Record<string, unknown>, ref: React.Ref<{ setPage: typeof setPage }>) => {
-      React.useImperativeHandle(ref, () => ({ setPage }));
-      lastProps.current = props;
-      return React.createElement(View, { testID: 'me-content-pager' }, props.children as never);
-    }
-  );
+  const MockPagerView = React.forwardRef(function MockPagerView(
+    props: Record<string, unknown>,
+    ref: React.Ref<{ setPage: typeof setPage }>
+  ) {
+    React.useImperativeHandle(ref, () => ({ setPage }));
+    lastProps.current = props;
+    return React.createElement(View, { testID: 'me-content-pager' }, props.children as never);
+  });
   return {
     __esModule: true,
     default: MockPagerView,

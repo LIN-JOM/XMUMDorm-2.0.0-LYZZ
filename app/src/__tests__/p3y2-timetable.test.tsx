@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { TimetableScreen, type TimetableRenderProps } from '@/features/tools/TimetableScreen';
-import { courseAccent, weekdayTimetableWeek } from '@/features/tools/timetableView';
+import { courseAccentMap, weekdayTimetableWeek } from '@/features/tools/timetableView';
 import { normalizeTimetableWeek, safeTimetableWeekCount, timetableCacheKey } from '@/features/tools/timetable';
 import { clearNamespace, setItem } from '@/shared/storage';
 
@@ -18,11 +18,12 @@ let gridProps: TimetableRenderProps | undefined;
 function grid(props: TimetableRenderProps) { gridProps = props; return <View testID="grid-probe" />; }
 beforeEach(async () => { await clearNamespace(); gridProps = undefined; api.getScheduleWeek.mockReset().mockImplementation(async (week: number) => payload(week)); });
 
-it('maps course identity to a stable brand or accent token independently of week, venue and order', () => {
-  const meeting = normalizeTimetableWeek(payload(1))!.days[1][0];
-  expect(courseAccent(meeting)).toBe(courseAccent({ ...meeting, venue: 'Changed', dayOfWeek: 5, startTime: '17:00' }));
-  expect(courseAccent({ ...meeting, courseCode: ' cs101 ' })).toBe(courseAccent(meeting));
-  expect(['bg-brand-soft', 'bg-accent-soft']).toContain(courseAccent(meeting));
+it('assigns every course in the week a stable course accent (2026-10-18 redesign)', () => {
+  const week = normalizeTimetableWeek(payload(1))!;
+  const map = courseAccentMap(week);
+  expect(map.get('CS101')).toBeDefined();
+  expect(courseAccentMap(week).get('CS101')).toEqual(map.get('CS101'));
+  expect(map.size).toBe(1);
 });
 
 it('retains Friday and removes both weekend buckets from grid input without mutating the cache', () => {
@@ -56,11 +57,12 @@ it('preserves a cached week when the network fails', async () => {
   expect(view.getByTestId('grid-probe')).toBeTruthy();
 });
 
-it('keeps an import action for a week with no weekday meetings', async () => {
+it('keeps the full 08:00–21:00 axis for a week with no weekday meetings', async () => {
   api.getScheduleWeek.mockImplementation(async (week: number) => ({ week, currentWeek: week, days: {} }));
   const view = await renderApp(<TimetableScreen renderGrid={grid} />);
-  await waitFor(() => expect(view.getByTestId('timetable-empty')).toBeTruthy());
-  expect(view.getByText('课表导入')).toBeTruthy();
+  await waitFor(() => expect(view.getByTestId('grid-probe')).toBeTruthy());
+  expect(view.queryByTestId('timetable-empty')).toBeNull();
+  expect(view.getByTestId('timetable-import')).toBeTruthy();
 });
 
 it.each([1e308, 1000000, NaN, Infinity, -1, 0, 1.5])('falls back to the configured twenty-week count for unsafe response %s', (count) => {

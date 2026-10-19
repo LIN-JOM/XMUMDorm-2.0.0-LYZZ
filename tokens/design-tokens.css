@@ -226,6 +226,22 @@
   --color-state-warning:          #bb6a29; /* [usage=fill] 警告不得仅靠色块，必须配图标（H=55°）*/
   --color-state-danger:           #f36d6d; /* [usage=fill] */
 
+  /* ---- 2.3' 课程色（course）—— 色弱友好（CUD/Okabe-Ito 取向，2026-10-18 所有者要求）----
+   * 只给课表用：同一门课同色、不同课异色；**色相之间差得开**，且每个填充自带承载文字色。
+   * ⛔ 不得拿来表达状态语义（状态仍用 state-*）。 */
+  --color-course-1-fill:  #4da7ff;   /* [usage=fill] 蓝 */
+  --color-course-1-on:    #0e1520;   /* [usage=text][textSafe][contrastOn=--color-course-1-fill] */
+  --color-course-2-fill:  #f2b64c;   /* [usage=fill] 橙 */
+  --color-course-2-on:    #191307;   /* [usage=text][textSafe][contrastOn=--color-course-2-fill] */
+  --color-course-3-fill:  #3dd9a6;   /* [usage=fill] 青绿 */
+  --color-course-3-on:    #0b1a14;   /* [usage=text][textSafe][contrastOn=--color-course-3-fill] */
+  --color-course-4-fill:  #f0a6c8;   /* [usage=fill] 品红 */
+  --color-course-4-on:    #1a0f15;   /* [usage=text][textSafe][contrastOn=--color-course-4-fill] */
+  --color-course-5-fill:  #7ccdf2;   /* [usage=fill] 天蓝 */
+  --color-course-5-on:    #0c1a22;   /* [usage=text][textSafe][contrastOn=--color-course-5-fill] */
+  --color-course-6-fill:  #f5e97a;   /* [usage=fill] 黄 */
+  --color-course-6-on:    #1a1a07;   /* [usage=text][textSafe][contrastOn=--color-course-6-fill] */
+
   /* ---- 2.4 图标（icon）--------------------------------------------------- */
   --color-icon-primary:   #f2f4f9;   /* [usage=icon] 非文本 UI 构件，阈值 ≥3:1 */
   --color-icon-secondary: #aab2c5;   /* [usage=icon] */
@@ -288,6 +304,21 @@
   --color-state-success:          #29845e; /* [usage=fill] */
   --color-state-warning:          #af6226; /* [usage=fill] 警告不得仅靠色块，必须配图标（H=55°）*/
   --color-state-danger:           #c35253; /* [usage=fill] */
+
+  /* ---- 2.3' 课程色（course）—— 色弱友好（CUD/Okabe-Ito 取向，2026-10-18 所有者要求）----
+   * 与暗色同一语义名、不同取值：亮色用更深的填充 + 白字，保证与页面底有足够色差。 */
+  --color-course-1-fill:  #0072b2;   /* [usage=fill] 蓝 */
+  --color-course-1-on:    #ffffff;   /* [usage=text][textSafe][contrastOn=--color-course-1-fill] */
+  --color-course-2-fill:  #e69f00;   /* [usage=fill] 橙 */
+  --color-course-2-on:    #12141a;   /* [usage=text][textSafe][contrastOn=--color-course-2-fill] */
+  --color-course-3-fill:  #007a5a;   /* [usage=fill] 青绿 */
+  --color-course-3-on:    #ffffff;   /* [usage=text][textSafe][contrastOn=--color-course-3-fill] */
+  --color-course-4-fill:  #cc79a7;   /* [usage=fill] 品红 */
+  --color-course-4-on:    #12141a;   /* [usage=text][textSafe][contrastOn=--color-course-4-fill] */
+  --color-course-5-fill:  #56b4e9;   /* [usage=fill] 天蓝 */
+  --color-course-5-on:    #12141a;   /* [usage=text][textSafe][contrastOn=--color-course-5-fill] */
+  --color-course-6-fill:  #f0e442;   /* [usage=fill] 黄 */
+  --color-course-6-on:    #12141a;   /* [usage=text][textSafe][contrastOn=--color-course-6-fill] */
 
   /* ---- 2.4 图标 ---------------------------------------------------------- */
   --color-icon-primary:   #1b1f2c;   /* [usage=icon] */

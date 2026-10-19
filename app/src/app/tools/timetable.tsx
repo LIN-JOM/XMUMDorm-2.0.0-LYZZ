@@ -9,6 +9,8 @@ export default function TimetableRoute(): React.ReactElement {
     <TimetableGrid
       testID={props.testID}
       week={props.week}
+      visibleWeekdays={props.visibleWeekdays}
+      getCourseAccent={props.getCourseAccent}
       highlightWeekday={props.highlightWeekday}
       onPressMeeting={props.onPressMeeting}
     />

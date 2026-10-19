@@ -354,7 +354,7 @@ schedule 3 · reports 1                                  = 273
 | ID | 页面（中 / 英） | 入口 | 原型 | 关键端点 / 数据源 | 关键组件 | 层 |
 |---|---|---|---|---|---|---|
 | **T-01** | 工具首页 / Tools | **Tab 2** | P7 | `GET /api/schedule/week`、`GET /api/todos/today`、本地节假日数据、校方系统清单（本地配置） | `MetricRow` `QuickActionGrid` `TodayCard`（当前/下一节课）`ListItem` `SchoolSystemCard` | P0 |
-| **T-02** | 课程表 / Timetable | T-01 | **P11** | `GET /api/schedule/week?week=N` | `P11 课表网格`（原型骨架） `SegmentedControl`（周切换）`TodayCard` | P0 |
+| **T-02** | 课程表 / Timetable | T-01 | **P11** | `GET /api/schedule/week?week=N` | `P11 课表网格`（原型骨架；**课程色 + 名称/地点**）`IconButton`（上一周 / 下一周）`O06 BottomSheet`（课程详情半屏：课程码/地点/时间/星期/教师/学分/本周安排） | P0 |
 | **T-03** | 课表导入（校方系统抓取）/ Import from School System | T-02、T-05 | P4 `模态式` | 客户端抓取（无后端）→ `POST /api/schedule/import/preview` → `POST /api/schedule/import` | `ImportPreviewList` `Form` `TextArea`（兜底）`AlertDialog`（**整表覆盖**） | **P0** |
 | **T-04** | 校方系统与会话 / School Systems | T-01 | P2 | **无后端**（本地单项配置 + 平台 cookie 存储状态） | `ListItem` `SessionBadge` `Button`（清除会话）`InlineNotice` | **P0** |
 | **T-05** | 校方系统内嵌浏览器 / School System Browser | T-04 | **P18（建议新增，待评审）** | **无后端**（`react-native-webview`；凭据不出设备） | `WebViewContainer` `SchoolSystemToolbar` `Button`（读取本页课表）`InlineNotice`；✅ **三个系统全部学号登录**（所有者 2026-10-02 确认）→ **三格全部内嵌，无例外** | **P0** |

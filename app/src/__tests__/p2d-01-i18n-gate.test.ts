@@ -29,6 +29,7 @@ const SRC_ROOT = path.resolve(__dirname, '..');
 const REGISTERED_CAST_FILES: readonly string[] = [
   path.join('features', 'me', 'profile.ts'),
   path.join('features', 'tools', 'scheduleImport.ts'),
+  path.join('features', 'tools', 'CourseInfoSheet.tsx'),
   path.join('app', 'tools', 'schedule-import.tsx'),
   path.join('features', 'mailbox', 'MailboxScreen.tsx'),
   path.join('features', 'guides', 'GuidesScreens.tsx'),
