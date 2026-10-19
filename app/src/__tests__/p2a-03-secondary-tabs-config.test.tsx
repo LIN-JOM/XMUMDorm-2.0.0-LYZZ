@@ -40,9 +40,14 @@ function walkSource(dir: string, out: string[] = []): string[] {
 
 describe('P2A-03 二级 Tab 集合收成一处配置', () => {
   describe('TC-P2A-03-1A · 空集合 = 没有二级 Tab', () => {
-    it('「我的」还没拍板（TO-CONFIRM C-05）→ 空集合、不占位', () => {
-      expect(getSecondaryTabs('me')).toEqual([]);
-      expect(hasSecondaryTabs('me')).toBe(false);
+    it('「我的」已拍板（C-05，2026-10-18）→ 四集合、占位', () => {
+      expect(getSecondaryTabs('me').map((tab) => tab.key)).toEqual([
+        'posts',
+        'marketplace',
+        'errands',
+        'reviews',
+      ]);
+      expect(hasSecondaryTabs('me')).toBe(true);
     });
 
     it('工具仍在 C-04 拍板前保持空集合（⛔ 不预占所有者的决定）', () => {
@@ -133,11 +138,11 @@ describe('P2A-03 二级 Tab 集合收成一处配置', () => {
       expect(holders).toEqual([path.join('features', 'navigation', 'secondaryTabs.ts')]);
     });
 
-    it('集合的形状是"一级格 → 数组"，且当前只有一格非空（未拍板期间不许偷偷加）', () => {
+    it('集合的形状是"一级格 → 数组"；已拍板的才非空（未拍板的格不许偷偷加）', () => {
       const nonEmpty = Object.entries(SECONDARY_TABS)
         .filter(([, tabs]) => tabs.length > 0)
         .map(([primary]) => primary);
-      expect(nonEmpty).toEqual(['square']);
+      expect(nonEmpty).toEqual(['square', 'me']);
     });
   });
 });

@@ -1,6 +1,6 @@
 # App 依赖准入登记（Phase 0–2）
 
-**日期**：2026-10-18　**版本**：v1.4
+**日期**：2026-10-18　**版本**：v1.5
 **性质**：**evaluation 层**（判定记录）。承接 [生产开发计划 §Phase 0](../task/phase-0/P0-01-工程脚手架与依赖准入.md) 与 **P0-11**。
 **判据来源**：App 设计宪法 **3.4**（准入五项）· **9.13**（最后发布时间必须读**该版本自己的时间戳**，⛔ 不用 `time.modified`）· **11.4**（含原生代码的变更**必须重建**，不能 OTA）· **9.11**（⛔ 自带调色板/样式引擎不得作基座）· **16.2**（⛔ 不得引入第二套图标库）
 
@@ -33,6 +33,7 @@
 | `react` | 19.2.3 | MIT | 无 | 无 | 2025-12-11 | 否 |
 | `react-dom` | 19.2.3 | MIT | 无 | 无 | 2025-12-11 | 否（仅 Web/工具链需要；本项目双端为原生） |
 | `react-native` | 0.86.3 | MIT | **有** | 有 | 2026-08-24 | 否 |
+| `react-native-pager-view` | **8.0.2** | MIT | **有**（android/ ios/ `react-native-pager-view.podspec`） | **有**（变更须重建） | 2026-05-20 | 否（只提供分页容器与横滑手势，视觉样式全部由我们传入）。**版本由 Expo SDK 57 的 `bundledNativeModules.json` 钉死**（`npx expo install` 对齐）。用途：Phase 3「我的」四个内容 Tab 的横滑切换（C-05 拍板 / R-M4） |
 | `react-native-safe-area-context` | 5.7.0 | MIT | **有**（android/ ios/ cpp/） | 有 | 2026-02-24 | 否（**宪法第 17 条的指定实现**，我们不用 RN 内置 `SafeAreaView`） |
 | `react-native-reanimated` | **4.5.1** | MIT | **有** | 有 | 2026-07-02 | 否（`expo-router` 的依赖；**版本曾被 npm 拉到 4.7.1，已钉回**，见 §3 问题 6） |
 | `react-native-worklets` | **0.10.1** | MIT | **有** | 有 | 2026-07-01 | 否（reanimated 的运行时；**曾被拉到 0.13.0 与 `expo-modules-core` 的 peer 上界冲突**，见 §3 问题 6） |

@@ -70,9 +70,11 @@ describe('P2C-05 设置与法务三页', () => {
 
   it('TC-P2C-05-4A · 未上线的入口不显示；能进去的才显示', async () => {
     const view = await renderApp(<SettingsScreen />);
-    // 记账本：`about` 已落地 → 出现在设置里；`posts` 不在这里（它直接在「我的」上）
+    // 记账本：`about` 已落地 → 出现在设置里；`posts` 不在这里（它是主页的内容 Tab）
     expect(view.getByTestId('settings-entry-about')).toBeTruthy();
     expect(view.queryByTestId('settings-entry-posts')).toBeNull();
+    // ⛔ 「设置」这一行指向页面自身 —— 齿轮已是唯一入口，冗余行不许回来
+    expect(view.queryByTestId('settings-entry-settings')).toBeNull();
     // 未上线的三页（通知与推送/屏蔽用户/账号注销）⛔ 不显示禁用占位
     expect(view.queryByText('通知与推送')).toBeNull();
     expect(view.queryByText('屏蔽用户')).toBeNull();
@@ -98,9 +100,10 @@ describe('P2C-05 设置与法务三页', () => {
     expect(view.getByText(zh['me.settings.deactivate.failed'])).toBeTruthy();
   });
 
-  it('TC-P2C-05-5A · 入口账本已清空（三条都落地了）', () => {
+  it('TC-P2C-05-5A · 入口账本：主页两个入口已删，只剩「关于与法律」', () => {
     expect(EXPECTED_UNAVAILABLE).toEqual([]);
-    expect(visibleEntries().map((entry) => entry.key)).toEqual(['posts', 'settings', 'about']);
+    // 2026-10-18：`settings` 指向页面自身（齿轮已是唯一入口）、`posts` 提升为主页 Tab
+    expect(visibleEntries().map((entry) => entry.key)).toEqual(['about']);
     // 每个入口的路由文件都真的在磁盘上
     for (const entry of ME_ENTRIES) {
       const candidates = [

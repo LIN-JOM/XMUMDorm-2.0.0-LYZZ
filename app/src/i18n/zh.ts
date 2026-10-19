@@ -306,7 +306,6 @@ export const zh = {
   'me.todos.none': '今天没有待办',
   'me.section.failed': '这一块没加载出来',
   'me.entries.title': '更多',
-  'me.entry.posts': '我的帖子',
   'me.entry.settings': '设置',
   'me.entry.about': '关于与法律',
   'me.content.title': '我的内容',
