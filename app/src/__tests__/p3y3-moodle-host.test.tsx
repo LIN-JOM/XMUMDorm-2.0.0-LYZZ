@@ -112,7 +112,7 @@ it('p3y3 forwards session probes from the embedded Moodle page', async () => {
   const onProbe = jest.fn();
   const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => now}
     onSessionProbe={onProbe} onOpenOriginal={jest.fn()} />, { inScreen: true });
-  await message({ kind: 'session', hasPasswordField: false });
+  await message({ kind: 'dorm:session', hasPasswordField: false });
   expect(onProbe).toHaveBeenCalledWith({ hasPasswordField: false });
   await view.unmount(); await settleMoodleStorage();
 });
