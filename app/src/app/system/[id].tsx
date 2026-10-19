@@ -185,7 +185,8 @@ export default function SchoolSystemScreen(): React.ReactElement {
             onReminderPlan={async (plan) => replaceMoodleReminders(plan, {
               title: t('tools.reminders.moodle.title'), body: t('tools.reminders.moodle.body'),
             })}
-            onClearReminders={clearMoodleReminders} />
+            onClearReminders={clearMoodleReminders}
+            onSessionProbe={(probe) => { void sessions.markProbe('moodle', probe); }} />
         </View>
       ) : mode === 'webview' ? (
         <SchoolSystemWebView

@@ -31,6 +31,8 @@ export type MoodleWorkspaceHostProps = {
   /** Role A supplies every app-authored label from the single application t function. */
   labels: MoodleWorkspaceHostLabels;
   onOpenOriginal: (url: string) => void;
+  /** T-04 session probe forwarded from the embedded school page (password field present or not). */
+  onSessionProbe?: (probe: { hasPasswordField: boolean }) => void;
   onReminderPlan?: (plan: MoodleReminderPlan) =>
     void | MoodleReminderDelivery | Promise<void | MoodleReminderDelivery>;
   onClearReminders?: () => void | Promise<void>;
@@ -161,7 +163,8 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     <View testID="moodle-webview-area" style={mode === 'web' ? { flex: 1 } : { height: 0, overflow: 'hidden' }}
       accessibilityElementsHidden={mode !== 'web'} importantForAccessibility={mode === 'web' ? 'auto' : 'no-hide-descendants'}>
       <SchoolSystemWebView ref={bridge} system={SCHOOL_SYSTEMS.find((system) => system.id === 'moodle')!} preserveSnapshotOnClose
-        onMoodleIdentity={onIdentity} onMoodleResponse={onResponse} onMoodleDetail={onDetail} />
+        onMoodleIdentity={onIdentity} onMoodleResponse={onResponse} onMoodleDetail={onDetail}
+        onSessionProbe={(probe) => latest.current.onSessionProbe?.(probe)} />
     </View>
     {mode === 'native' ? <View style={{ flex: 1 }}>
       {detail ? detail.status === 'success' && detail.data ? <MoodleDetailScreen detail={detail.data} labels={labels}
