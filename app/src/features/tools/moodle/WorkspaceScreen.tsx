@@ -4,6 +4,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ListItem } from '@/components/ui/ListItem';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import type { MoodleFailure } from './bridge';
@@ -101,9 +102,9 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       return <View key={section.id} style={{ gap: theme.space('space_2') }}>
         <Text role="title">{section.title}</Text>
         {rows.map((module) => <View key={module.id} style={{ gap: theme.space('space_2') }}>
-          <Button testID={`moodle-module-${module.id}`} label={module.name} variant="secondary"
+          <ListItem testID={`moodle-module-${module.id}`} title={module.name}
+            subtitle={labels.moduleType(module.type)}
             onPress={() => currentCourse && onModule(currentCourse.id, module)} />
-          <Text role="caption">{labels.moduleType(module.type)}</Text>
           {module.url ? <Button testID={`moodle-original-${module.id}`} label={labels.original}
             variant="link" onPress={() => onOriginal(module.url!)} /> : null}
         </View>)}
