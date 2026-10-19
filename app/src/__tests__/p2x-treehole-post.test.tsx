@@ -26,6 +26,8 @@ import { renderApp } from './helpers/renderApp';
 const post: TreeholePostViewModel = {
   id: 7,
   title: '晚自习搭子',
+  contentOrigin: null,
+  repostSource: null,
   content: '今晚有人想去图书馆吗？',
   authorName: '小蓝',
   authorId: 9,
@@ -84,6 +86,29 @@ describe('P2X TreeholePreview（折叠判定）', () => {
 });
 
 describe('P2X TreeholePostRow', () => {
+  it.each([
+    ['zh', 'original', null, '原创'],
+    ['en', 'original', null, 'Original'],
+    ['zh', 'repost', 'WX', '转载 · WX'],
+    ['en', 'repost', 'WX', 'Repost · WX'],
+  ] as const)('列表与详情共享声明，%s %s', async (locale, contentOrigin, repostSource, label) => {
+    const attributed = { ...post, contentOrigin, repostSource };
+    const view = await renderApp(<>
+      {row({ post: attributed })}
+      <TreeholePostDetail post={attributed} timeLabel="刚刚" liked={false} likeCount={0} commentCount={0} onLike={() => undefined} onComment={() => undefined} />
+    </>, { locale });
+    expect(view.getAllByText(label)).toHaveLength(2);
+    for (const item of view.getAllByTestId('treehole-attribution')) expect(item.props.accessibilityRole).toBe('text');
+  });
+
+  it('旧帖的列表和详情均不显示声明', async () => {
+    const view = await renderApp(<>
+      {row()}
+      <TreeholePostDetail post={post} timeLabel="刚刚" liked={false} likeCount={0} commentCount={0} onLike={() => undefined} onComment={() => undefined} />
+    </>);
+    expect(view.queryByTestId('treehole-attribution')).toBeNull();
+  });
+
   it('信息流只有标题：身份 + 标签（日期右边）+ 计数，⛔ 不展示正文', async () => {
     const view = await renderApp(row());
     expect(view.getByTestId('treehole-author-name')).toHaveTextContent('小蓝');
@@ -182,7 +207,7 @@ describe('P2X TreeholePostRow', () => {
   it('万能墙详情匿名：没有昵称、没有等级、没有标题', async () => {
     const view = await renderApp(
       <TreeholePostDetail
-        post={post}
+        post={{ ...post, contentOrigin: 'repost', repostSource: 'WX' }}
         timeLabel=""
         liked={false}
         likeCount={2}
@@ -197,6 +222,7 @@ describe('P2X TreeholePostRow', () => {
     expect(view.queryByText('小蓝')).toBeNull();
     expect(view.queryByTestId('treehole-author-level')).toBeNull();
     expect(view.queryByText('晚自习搭子')).toBeNull();
+    expect(view.queryByTestId('treehole-attribution')).toBeNull();
     expect(view.getByText('匿名正文')).toBeTruthy();
   });
 });

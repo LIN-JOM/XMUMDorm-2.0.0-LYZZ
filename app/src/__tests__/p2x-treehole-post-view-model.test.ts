@@ -3,6 +3,21 @@ import { toTreeholePostViewModel } from '@/features/campus/treeholePostViewModel
 const base = { id: 7, content: '正文', author: { nickname: '小蓝' } };
 
 describe('P2X Treehole post view model', () => {
+  it('投影 WX 转载，原创忽略残留来源', () => {
+    expect(toTreeholePostViewModel({ ...base, content_origin: 'repost', repost_source: 'WX' })).toMatchObject({ contentOrigin: 'repost', repostSource: 'WX' });
+    expect(toTreeholePostViewModel({ ...base, content_origin: 'original', repost_source: 'WX' })).toMatchObject({ contentOrigin: 'original', repostSource: null });
+  });
+
+  it.each([
+    {},
+    { content_origin: null },
+    { content_origin: 'unknown', repost_source: 'WX' },
+    { content_origin: 'repost', repost_source: '' },
+    { content_origin: 'repost', repost_source: '<script>bad</script>' },
+  ])('历史与不合法声明不被推断为原创：%j', metadata => {
+    expect(toTreeholePostViewModel({ ...base, ...metadata })).toMatchObject({ contentOrigin: null, repostSource: null });
+  });
+
   it('保留三图原始顺序，并忽略无效 URL', () => {
     expect(toTreeholePostViewModel({ ...base, images: [{ url: 'one' }, { url: '' }, { url: 'two' }, { url: 'three' }] }).mediaUrls)
       .toEqual(['one', 'two', 'three']);
