@@ -49,6 +49,25 @@ it('retains permission consent and native reminder scheduling in an Android deve
   expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('native-reminder');
 });
 
+it('reports the scheduler result instead of assuming reminders were planned', async () => {
+  const denied = { granted: false, canAskAgain: false } as unknown as Awaited<
+    ReturnType<typeof Notifications.getPermissionsAsync>
+  >;
+  jest.mocked(Notifications.getPermissionsAsync).mockResolvedValueOnce(denied);
+  await expect(replaceMoodleReminders([{ id: 'deadline:denied', fireAt: Date.now() + 60_000 }]))
+    .resolves.toBe('denied');
+
+  await expect(replaceMoodleReminders([{ id: 'deadline:planned', fireAt: Date.now() + 60_000 }]))
+    .resolves.toBe('planned');
+
+  const occupied = Array.from({ length: 50 }, (_, index) => ({
+    identifier: `other-${index}`, content: { data: { unrelated: true } },
+  }));
+  jest.mocked(Notifications.getAllScheduledNotificationsAsync).mockResolvedValue(occupied as never);
+  await expect(replaceMoodleReminders([{ id: 'deadline:partial', fireAt: Date.now() + 60_000 }]))
+    .resolves.toBe('partial');
+});
+
 it('keeps notification permissions available in iOS Expo Go', async () => {
   jest.replaceProperty(Platform, 'OS', 'ios');
   jest.mocked(isRunningInExpoGo).mockReturnValue(true);

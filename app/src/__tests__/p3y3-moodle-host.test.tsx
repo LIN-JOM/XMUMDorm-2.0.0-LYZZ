@@ -108,6 +108,20 @@ it('p3y3 requires a fresh proof before showing stored native courses', async () 
   await view.unmount(); await settleMoodleStorage();
 });
 
+it('p3y3 reports a denied reminder delivery instead of planned', async () => {
+  const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => now}
+    onReminderPlan={async () => 'denied' as const} onOpenOriginal={jest.fn()} />, { inScreen: true });
+  await confirm();
+  await fireEvent.press(view.getByTestId('moodle-sync'));
+  await core('courses', { courses: [course], nextOffset: 0 });
+  await fireEvent.press(view.getByTestId('moodle-select-1'));
+  await fireEvent.press(view.getByTestId('moodle-confirm-selection'));
+  await core('state', state);
+  await core('events', { events: [], firstId: null, lastId: null });
+  expect(view.getByText('reminders denied')).toBeTruthy();
+  await view.unmount(); await settleMoodleStorage();
+});
+
 it('p3y3 invalidates a changed project token once when a cache listener reads immediately', async () => {
   const previous = readTokenSync();
   let calls = 0;
