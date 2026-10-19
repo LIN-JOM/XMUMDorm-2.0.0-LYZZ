@@ -181,27 +181,26 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
           onLogin={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(false); setMode('web'); }}
           onSync={() => { pendingDetail.current = null; setDetail(null); controller.start(); }}
           onCancel={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(); }}
-          onChoose={(ids) => controller.choose(ids)} onModule={readDetail} onOriginal={openOriginal} />
-        <ScrollView testID="moodle-deadlines" style={{ maxHeight: theme.space('space_6') * 8 }}
-          contentContainerStyle={{ padding: theme.space('space_4'), gap: theme.space('space_2') }}>
-          <Text role="headline">{labels.deadlines}</Text>
-          {deadlineRows.map(({ key, rows }) => <View key={key}>
-            <Text role="label">{labels.deadlineBucket(key)}</Text>
-            {rows.map((row) => <Text key={row.event.id}>{row.event.name} · {labels.formatTime(row.dueAt)}</Text>)}
-          </View>)}
-          <Text role="label">{labels.deadlineBucket('unset')}</Text>
-          {buckets.unset.map((row) => <Text key={`${row.courseId}:${row.module.id}`}>{row.module.name}</Text>)}
-          <Text role="headline">{labels.otherEvents}</Text>
-          {otherEvents.map((event) => <View key={event.id}>
-            <Text>{event.name}</Text>
-            <Text role="caption">{labels.eventType(event.eventType ?? null)} · {labels.actionableStatus(event.action?.actionable ?? null)}</Text>
-            {event.action?.name ? <Text>{event.action.name}</Text> : null}
-            {event.time > 0 && Number.isFinite(new Date(event.time * 1000).getTime())
-              ? <Text role="caption">{labels.formatTime(event.time * 1000)}</Text> : null}
-          </View>)}
-        </ScrollView>
+          onChoose={(ids) => controller.choose(ids)} onModule={readDetail} onOriginal={openOriginal}
+          footer={<View testID="moodle-deadlines" style={{ gap: theme.space('space_2') }}>
+            <Text role="headline">{labels.deadlines}</Text>
+            {deadlineRows.map(({ key, rows }) => <View key={key}>
+              <Text role="label">{labels.deadlineBucket(key)}</Text>
+              {rows.map((row) => <Text key={row.event.id}>{row.event.name} · {labels.formatTime(row.dueAt)}</Text>)}
+            </View>)}
+            <Text role="label">{labels.deadlineBucket('unset')}</Text>
+            {buckets.unset.map((row) => <Text key={`${row.courseId}:${row.module.id}`}>{row.module.name}</Text>)}
+            <Text role="headline">{labels.otherEvents}</Text>
+            {otherEvents.map((event) => <View key={event.id}>
+              <Text>{event.name}</Text>
+              <Text role="caption">{labels.eventType(event.eventType ?? null)} · {labels.actionableStatus(event.action?.actionable ?? null)}</Text>
+              {event.action?.name ? <Text>{event.action.name}</Text> : null}
+              {event.time > 0 && Number.isFinite(new Date(event.time * 1000).getTime())
+                ? <Text role="caption">{labels.formatTime(event.time * 1000)}</Text> : null}
+            </View>)}
+            <Text testID="moodle-reminder-status" role="caption">{labels.reminderStatus(reminderStatus)}</Text>
+          </View>} />
       </>}
-      <Text testID="moodle-reminder-status" role="caption">{labels.reminderStatus(reminderStatus)}</Text>
     </View> : null}
   </View>;
 }

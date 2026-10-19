@@ -4,6 +4,8 @@
  * 宪法 10.1/10.2/10.5-5：每屏要有加载/空/错误/无网四态；空态必须给一个动作。
  */
 import * as React from 'react';
+import * as fs from 'fs';
+import * as path from 'path';
 import { act, fireEvent } from '@testing-library/react-native';
 import { onlineManager } from '@tanstack/react-query';
 
@@ -48,18 +50,28 @@ it('p3a8 empty course list offers the sync action', async () => {
   const view = await renderApp(<MoodleWorkspaceScreen labels={labels} snapshot={snapshot([], [])}
     entry="current-native" onLogin={jest.fn()} onSync={onSync} onCancel={jest.fn()}
     onChoose={jest.fn()} onModule={jest.fn()} onOriginal={jest.fn()} />);
-  await fireEvent.press(view.getByTestId('moodle-empty-sync'));
+  await fireEvent.press(view.getAllByText('Sync')[view.getAllByText('Sync').length - 1]);
   expect(onSync).toHaveBeenCalledTimes(1);
+});
+
+it('p3a8 the workspace keeps one scroller and no self-made deadline height', () => {
+  const root = path.resolve(__dirname, '..', 'features', 'tools', 'moodle');
+  const host = fs.readFileSync(path.join(root, 'WorkspaceHost.tsx'), 'utf8');
+  const screen = fs.readFileSync(path.join(root, 'WorkspaceScreen.tsx'), 'utf8');
+  expect(host).not.toMatch(/space_6'\) \* 8/);
+  expect(host).not.toContain('<ScrollView testID="moodle-deadlines"');
+  expect(screen).toContain('{footer}');
 });
 
 it('p3a8 empty detail offers the original page action', async () => {
   const onOriginal = jest.fn();
   const url = 'https://l.xmu.edu.my/mod/forum/view.php?id=101';
   const view = await renderApp(<MoodleDetailScreen detail={{ kind: 'forum', courseId: 1, moduleId: 101,
-    url, description: '', announcements: [] }} labels={{ back: 'Back', original: 'Original', empty: 'Empty',
+    url, description: '', announcements: [] }} labels={{ back: 'Back', original: 'Open page', empty: 'Empty',
     locked: 'Locked', fileUnknown: 'Unknown', submissionStatus: (value) => value,
     gradingStatus: (value) => value, formatTime: (value) => String(value), fileMetadata: () => '' }}
   onBack={jest.fn()} onOriginal={onOriginal} onDiscussion={jest.fn()} />);
-  await fireEvent.press(view.getByTestId('moodle-empty-original'));
+  expect(view.getByTestId('moodle-empty-original')).toBeTruthy();
+  await fireEvent.press(view.getAllByText('Open page')[0]);
   expect(onOriginal).toHaveBeenCalledWith(url);
 });

@@ -3,6 +3,7 @@ import { ScrollView, View } from 'react-native';
 import { onlineManager } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import type { MoodleFailure } from './bridge';
@@ -27,10 +28,12 @@ export type MoodleWorkspaceScreenProps = {
   onModule: (courseId: number, module: MoodleModule) => void;
   onOriginal: (url: string) => void;
   maintenance?: boolean;
+  /** Content appended inside the single vertical scroller (deadlines, reminder status). */
+  footer?: React.ReactNode;
 };
 
 export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync, onCancel,
-  onChoose, onModule, onOriginal, maintenance }: MoodleWorkspaceScreenProps): React.ReactElement {
+  onChoose, onModule, onOriginal, maintenance, footer }: MoodleWorkspaceScreenProps): React.ReactElement {
   const theme = useTheme();
   const [choice, setChoice] = React.useState({ generation: snapshot.data.generation, ids: snapshot.selectedIds });
   const draft = choice.generation === snapshot.data.generation ? choice.ids : snapshot.selectedIds;
@@ -67,10 +70,8 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
     {!online ? <Text testID="moodle-offline" colorToken="text-warning">{labels.offline}</Text> : null}
     {snapshot.failure ? <Text colorToken="text-danger">{maintenance
       ? labels.maintenance : labels.failure(snapshot.failure)}</Text> : null}
-    {snapshot.data.courses.length === 0 ? <View style={{ gap: theme.space('space_2') }}>
-      <Text>{labels.empty}</Text>
-      <Button testID="moodle-empty-sync" label={labels.sync} onPress={onSync} />
-    </View> : null}
+    {snapshot.data.courses.length === 0 ? <EmptyState kind="firstRun" testID="moodle-empty-sync"
+      title={labels.empty} actionLabel={labels.sync} onAction={onSync} /> : null}
     {snapshot.phase === 'choosing' ? <View style={{ gap: theme.space('space_2') }}>
       <Text role="title">{labels.chooseCourses}</Text>
       {snapshot.candidates.map((course) => <Checkbox key={course.id} testID={`moodle-select-${course.id}`}
@@ -90,11 +91,10 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       {types.map((item) => <Button key={item} testID={`moodle-type-${item}`} label={labels.moduleType(item)}
         variant={type === item ? 'secondary' : 'ghost'} onPress={() => setType(item)} />)}
     </View>
-    {visibleModules.length === 0 ? <View style={{ gap: theme.space('space_2') }}>
-      <Text>{labels.empty}</Text>
-      {type !== null ? <Button testID="moodle-empty-all-types" label={labels.allTypes}
-        variant="link" onPress={() => setType(null)} /> : null}
-    </View> : null}
+    {visibleModules.length === 0 ? <EmptyState testID={type !== null ? 'moodle-empty-all-types' : 'moodle-empty-sync'}
+      kind={type !== null ? 'noResult' : 'firstRun'} title={labels.empty}
+      actionLabel={type !== null ? labels.allTypes : labels.sync}
+      onAction={type !== null ? () => setType(null) : onSync} /> : null}
     {sections.map((section) => {
       const rows = visibleModules.filter((module) => module.sectionId === section.id);
       if (rows.length === 0) return null;
@@ -109,5 +109,6 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
         </View>)}
       </View>;
     })}
+    {footer}
   </ScrollView>;
 }
