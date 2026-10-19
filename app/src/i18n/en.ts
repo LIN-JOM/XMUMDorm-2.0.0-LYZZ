@@ -18,6 +18,7 @@ export const en: Record<MessageKey, string> = {
   'screen.campus.write.denied': 'Your account cannot perform this action',
   'screen.campus.write.replying': 'Replying to a comment',
   'screen.campus.read.post': 'Post',
+  'screen.campus.read.repostSource': 'Repost · {source}',
   'screen.campus.read.wallTitle': 'Wall',
   'screen.campus.read.listEnd': 'No more posts',
   'screen.campus.read.refreshFailed': 'Refresh failed. Retry',

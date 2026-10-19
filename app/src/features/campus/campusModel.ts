@@ -15,6 +15,8 @@ export type Post = {
   comment_count?: number;
   title?: string | null;
   content: string;
+  content_origin?: string | null;
+  repost_source?: string | null;
   created_at?: string;
   template_key?: string;
   author?: {

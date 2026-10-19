@@ -19,7 +19,7 @@ import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import { TreeholeMedia } from './TreeholeMedia';
-import { TreeholeActionBar, TreeholeAuthorLine, TreeholeTagList } from './TreeholePostParts';
+import { TreeholeActionBar, TreeholeAuthorLine, TreeholeTagList, TreeholeAttribution } from './TreeholePostParts';
 import type { TreeholePostViewModel } from './treeholePostViewModel';
 import { treeholeCanExpand, treeholePreviewLines } from './treeholePreview';
 
@@ -77,6 +77,8 @@ export function TreeholePostDetail({
         level={post.authorLevel}
         anonymous={anonymous}
       />
+
+      {anonymous ? null : <TreeholeAttribution post={post} />}
 
       {/* 详情标题是**页面级标题**（24sp），比列表标题大一档、比昵称(14sp)大两档：
           所有者 2026-10-18 第五轮「标题字体小一点」后，标题不再用 32sp 把整屏压成两行字。 */}

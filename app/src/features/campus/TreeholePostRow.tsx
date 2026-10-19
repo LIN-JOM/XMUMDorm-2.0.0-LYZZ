@@ -20,7 +20,7 @@ import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { TreeholeMedia } from './TreeholeMedia';
 import { SearchHighlight } from './SearchHighlight';
-import { TreeholeActionBar, TreeholeAuthorLine } from './TreeholePostParts';
+import { TreeholeActionBar, TreeholeAuthorLine, TreeholeAttribution } from './TreeholePostParts';
 import type { TreeholePostViewModel } from './treeholePostViewModel';
 
 /** 行标题：有标题用标题，没有就退回正文首行（空行不渲染） */
@@ -82,40 +82,44 @@ export function TreeholePostRow({
       />
 
       <View style={{ paddingLeft: indent, gap: theme.space('space_1') }}>
-        {/* 内容区：只有标题可点（动作区是兄弟节点，⛔ 按钮套按钮） */}
-        <Pressable
-          testID={`campus-row-${post.id}`}
-          onPress={onOpen}
-          accessibilityRole="button"
-          accessibilityLabel={openLabel}
-          contentAlign="stretch"
-        >
-          {/* 2026-10-18 第五轮（所有者：标题字体小一点）：
-              标题从 headline(24sp) 降到 label(16sp) 粗体 —— X 的信息流正文就是 15–17sp；
-              昵称同步降到 body(14sp) 常规体，层级仍靠**字号 + 字重 + 颜色**三层区分（16 粗主 / 14 常规次 / 12 弱）。
-              ⚠️ `label` 默认带 1.5× 字号放大上限（那是给固定高度的按钮用的）；标题不是固定高度，
-              所以这里显式 `maxFontSizeMultiplier={0}`（不设上限），否则 200% 系统字号下
-              标题 24sp 会小于昵称 28sp，层级反过来。 */}
-          {title.length === 0 ? null : query ? (
-            <SearchHighlight
-              value={title}
-              query={query}
-              role="label"
-              numberOfLines={2}
-              maxFontSizeMultiplier={0}
-            />
-          ) : (
-            <Text
-              role="label"
-              emphasis="strong"
-              colorToken="text-primary"
-              numberOfLines={2}
-              maxFontSizeMultiplier={0}
-            >
-              {title}
-            </Text>
-          )}
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.space('space_2') }}>
+          <TreeholeAttribution post={post} />
+          {/* 内容区：只有标题可点（动作区是兄弟节点，⛔ 按钮套按钮） */}
+          <Pressable
+            testID={`campus-row-${post.id}`}
+            onPress={onOpen}
+            accessibilityRole="button"
+            accessibilityLabel={openLabel}
+            contentAlign="stretch"
+            style={{ flex: 1 }}
+          >
+            {/* 2026-10-18 第五轮（所有者：标题字体小一点）：
+                标题从 headline(24sp) 降到 label(16sp) 粗体 —— X 的信息流正文就是 15–17sp；
+                昵称同步降到 body(14sp) 常规体，层级仍靠**字号 + 字重 + 颜色**三层区分（16 粗主 / 14 常规次 / 12 弱）。
+                ⚠️ `label` 默认带 1.5× 字号放大上限（那是给固定高度的按钮用的）；标题不是固定高度，
+                所以这里显式 `maxFontSizeMultiplier={0}`（不设上限），否则 200% 系统字号下
+                标题 24sp 会小于昵称 28sp，层级反过来。 */}
+            {title.length === 0 ? null : query ? (
+              <SearchHighlight
+                value={title}
+                query={query}
+                role="label"
+                numberOfLines={2}
+                maxFontSizeMultiplier={0}
+              />
+            ) : (
+              <Text
+                role="label"
+                emphasis="strong"
+                colorToken="text-primary"
+                numberOfLines={2}
+                maxFontSizeMultiplier={0}
+              >
+                {title}
+              </Text>
+            )}
+          </Pressable>
+        </View>
 
         {post.mediaUrls.length > 0 ? (
           <Pressable

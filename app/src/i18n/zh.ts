@@ -19,6 +19,7 @@ export const zh = {
   'screen.campus.write.replying': '正在回复某条评论',
 
   'screen.campus.read.post': '帖子',
+  'screen.campus.read.repostSource': '转载 · {source}',
   'screen.campus.read.wallTitle': '万能墙',
   'screen.campus.read.listEnd': '没有更多帖子',
   'screen.campus.read.refreshFailed': '刷新失败，重试',

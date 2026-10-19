@@ -21,7 +21,21 @@ import { Pressable } from '@/components/ui/Pressable';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
-import type { TreeholePostTag } from './treeholePostViewModel';
+import type { TreeholePostTag, TreeholePostViewModel } from './treeholePostViewModel';
+
+export function TreeholeAttribution({ post }: {
+  post: Pick<TreeholePostViewModel, 'contentOrigin' | 'repostSource'>;
+}): React.ReactElement | null {
+  const { t } = useI18n();
+  if (!post.contentOrigin) return null;
+  return (
+    <Text testID="treehole-attribution" role="caption" colorToken="text-muted">
+      {post.contentOrigin === 'original'
+        ? t('publish.treehole.original')
+        : t('screen.campus.read.repostSource', { source: post.repostSource ?? '' })}
+    </Text>
+  );
+}
 
 export function TreeholeAuthorLine({
   name,
