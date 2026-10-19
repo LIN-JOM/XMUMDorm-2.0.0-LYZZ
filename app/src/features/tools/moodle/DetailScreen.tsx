@@ -50,9 +50,11 @@ export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscu
     {detail.kind === 'assign' ? <View style={{ gap: theme.space('space_2') }}>
       <Text>{labels.submissionStatus(detail.submission)}</Text><Text>{labels.gradingStatus(detail.grading)}</Text>
       {detail.locked ? <Text>{labels.locked}</Text> : null}
+      {detail.activityDates ? <Text role="caption">{detail.activityDates}</Text> : null}
       {detail.rows.map((row, index) => <View key={index}>
         <Text role="label">{row.label}</Text><Text>{row.value}</Text>
       </View>)}
+      {detail.attachments.length ? files(detail.attachments) : null}
     </View> : null}
     {detail.kind === 'folder' ? detail.files.length ? files(detail.files) : <EmptyState kind="firstRun"
       testID="moodle-empty-folder" title={labels.empty} actionLabel={labels.original}

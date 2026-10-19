@@ -4,7 +4,8 @@ export type MoodleIdentityResult = { requestId: string } & (
 );
 const IDENTITY_KIND = 'dorm:moodle:identity';
 
-/** Moodle 4.5 exposes userId, not userid. A positive guest ID alone is insufficient.
+/** Moodle exposes the current user id on the authenticated navbar (`data-userid`); some builds
+ * also mirror it in `M.cfg.userid`/`M.cfg.userId`. Both are accepted; the menu must prove login.
  * ⚠️ 本函数会被 `toString()` 注入 WebView，必须自包含：域名与选择器字面量只能内联。 */
 export function inspectMoodleIdentity(root: Pick<Document, 'querySelector'>, origin: string, userId: unknown):
   { status: 'confirmed'; userId: number } | { status: 'expired' | 'unknown' | 'wrong-origin' } {
@@ -12,9 +13,22 @@ export function inspectMoodleIdentity(root: Pick<Document, 'querySelector'>, ori
   // A password field or the guest menu proves we are NOT the signed-in workspace.
   // The probe carries no history, so it cannot claim "expired"; the session layer owns that.
   if (root.querySelector('input[type=password]') || root.querySelector('.usermenu .login')) return { status: 'unknown' };
-  if (!root.querySelector('[data-region=usermenu] .usermenu #user-menu-toggle')
-    || typeof userId !== 'number' || !Number.isSafeInteger(userId) || userId <= 0) return { status: 'unknown' };
-  return { status: 'confirmed', userId };
+  const menu = root.querySelector('#user-menu-toggle')
+    ?? root.querySelector('[data-region=usermenu] .usermenu #user-menu-toggle')
+    ?? root.querySelector('.usermenu-container');
+  if (!menu) return { status: 'unknown' };
+  const declared = root.querySelector('#usernavigation [data-userid]')
+    ?? root.querySelector('nav.navbar [data-userid]')
+    ?? root.querySelector('.usermenu-container [data-userid]');
+  const raw = declared?.getAttribute('data-userid') ?? null;
+  let id = typeof userId === 'number' && Number.isSafeInteger(userId) && userId > 0 ? userId : null;
+  if (raw !== null) {
+    const numeric = raw.trim();
+    if (!/^\d+$/.test(numeric)) return { status: 'unknown' };
+    id = Number(numeric);
+  }
+  if (id === null || !Number.isSafeInteger(id) || id <= 0) return { status: 'unknown' };
+  return { status: 'confirmed', userId: id };
 }
 
 export function buildMoodleIdentityProbeScript(id: string): string | null {
