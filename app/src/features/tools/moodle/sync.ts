@@ -106,6 +106,10 @@ export function createMoodleSync(port: MoodleSyncPort) {
     if (request.method === 'courses') {
       const data = result.data as MoodleCoursesResponse;
       for (const course of data.courses) candidates.set(course.id, course);
+      // Campus 4.5 returns an empty trailing page whose nextoffset equals the requested
+      // offset (21 courses, limit 50 → offset 0: nextoffset 21 → offset 21: [], nextoffset 21).
+      // That is the end of pagination, not a repeated cursor.
+      if (data.courses.length === 0) { phase = 'choosing'; changed(); return true; }
       if (data.nextOffset === 0) { phase = 'choosing'; changed(); return true; }
       if (data.nextOffset <= (request.offset ?? 0) || courseOffsets.has(data.nextOffset)) {
         fail('invalid-data'); return true;

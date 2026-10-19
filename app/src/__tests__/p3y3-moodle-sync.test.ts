@@ -44,6 +44,17 @@ describe('p3y3 paginated Moodle synchronization', () => {
     expect(sync.snapshot().candidates).toHaveLength(2);
   });
 
+  it('treats an empty trailing page with an unchanged offset as the end of pagination', () => {
+    const { sync, requests, reply } = harness();
+    sync.start();
+    reply({ courses: [course(1)], nextOffset: 21 });
+    expect(requests[1].request).toEqual({ method: 'courses', offset: 21 });
+    reply({ courses: [], nextOffset: 21 });
+    expect(sync.snapshot().phase).toBe('choosing');
+    expect(sync.snapshot().failure).toBeNull();
+    expect(sync.snapshot().candidates.map((item) => item.id)).toEqual([1]);
+  });
+
   it('rejects repeating course and event cursors', () => {
     const { sync, reply } = harness();
     sync.start();

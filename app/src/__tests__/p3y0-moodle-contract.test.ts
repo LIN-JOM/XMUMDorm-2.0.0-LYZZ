@@ -23,6 +23,27 @@ describe('Moodle response projection', () => {
     });
   });
 
+  it('accepts campus 4.x decimal-string ids inside the course format state', () => {
+    const state = JSON.stringify({
+      course: { id: '13593' },
+      section: [{ id: '293322', number: '1', title: 'General', cmlist: ['1017622'], visible: 1,
+        sectionurl: 'https://l.xmu.edu.my/course/section.php?id=293322', current: true }],
+      cm: [{ id: '1017622', sectionid: '293322', module: 'assign', name: 'Quiz 1', visible: 1,
+        uservisible: 1, accessvisible: 1, hascmrestrictions: 0, completionstate: '1',
+        isoverallcomplete: true, url: 'https://l.xmu.edu.my/mod/assign/view.php?id=1017622' }],
+    });
+    expect(parseMoodleResponse('state', state)).toMatchObject({
+      courseId: 13593,
+      sections: [{ id: 293322, number: 1, title: 'General', current: true, moduleIds: [1017622] }],
+      modules: [{ id: 1017622, sectionId: 293322, type: 'assign', name: 'Quiz 1',
+        completion: { state: 1, complete: true } }],
+    });
+  });
+
+  it('accepts an empty event page that omits both cursors', () => {
+    expect(parseMoodleResponse('events', { events: [] })).toEqual({ events: [], firstId: null, lastId: null });
+  });
+
   it('decodes the official state JSON string and takes machine type from module', () => {
     expect(parseMoodleResponse('state', JSON.stringify(stateFixture))).toEqual({
       courseId: 42,
