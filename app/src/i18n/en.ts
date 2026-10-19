@@ -117,6 +117,7 @@ export const en: Record<MessageKey, string> = {
   'tools.moodle.original': 'Open original',
   'tools.moodle.details': 'Details',
   'tools.moodle.unknownSection': 'Other section',
+  'tools.moodle.maintenance': 'Moodle under maintenance (03:00–04:30)',
   'tools.moodle.deadlines': 'Deadlines',
   'tools.moodle.otherEvents': 'Other events',
   'tools.moodle.clear': 'Clear Moodle data',

@@ -12,7 +12,7 @@ import type { MoodleSyncPhase, MoodleSyncSnapshot } from './sync';
 export type MoodleWorkspaceLabels = {
   firstLogin: string; restoredNative: string; nativeWorkspace: string; login: string; sync: string; cancel: string;
   confirmSelection: string; chooseCourses: string; courses: string; allTypes: string;
-  empty: string; original: string; details: string; unknownSection: string;
+  empty: string; original: string; details: string; unknownSection: string; maintenance: string;
   phase: (value: MoodleSyncPhase) => string;
   failure: (value: MoodleFailure) => string;
   moduleType: (value: string) => string;
@@ -25,10 +25,11 @@ export type MoodleWorkspaceScreenProps = {
   onChoose: (ids: number[]) => void;
   onModule: (courseId: number, module: MoodleModule) => void;
   onOriginal: (url: string) => void;
+  maintenance?: boolean;
 };
 
 export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync, onCancel,
-  onChoose, onModule, onOriginal }: MoodleWorkspaceScreenProps): React.ReactElement {
+  onChoose, onModule, onOriginal, maintenance }: MoodleWorkspaceScreenProps): React.ReactElement {
   const theme = useTheme();
   const [choice, setChoice] = React.useState({ generation: snapshot.data.generation, ids: snapshot.selectedIds });
   const draft = choice.generation === snapshot.data.generation ? choice.ids : snapshot.selectedIds;
@@ -57,7 +58,8 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       {busy ? <Button testID="moodle-cancel" label={labels.cancel} onPress={onCancel} variant="ghost" /> : null}
     </View>
     <Text testID="moodle-phase">{labels.phase(snapshot.phase)}</Text>
-    {snapshot.failure ? <Text colorToken="text-danger">{labels.failure(snapshot.failure)}</Text> : null}
+    {snapshot.failure ? <Text colorToken="text-danger">{maintenance
+      ? labels.maintenance : labels.failure(snapshot.failure)}</Text> : null}
     {snapshot.phase === 'choosing' ? <View style={{ gap: theme.space('space_2') }}>
       <Text role="title">{labels.chooseCourses}</Text>
       {snapshot.candidates.map((course) => <Checkbox key={course.id} testID={`moodle-select-${course.id}`}

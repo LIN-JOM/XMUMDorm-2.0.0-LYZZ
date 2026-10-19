@@ -15,6 +15,7 @@ import type { MoodleBridgeResult, MoodleReadRequest } from './bridge';
 import type { MoodleModule } from './contract';
 import { safeMoodleReadUrl, type MoodleDetail, type MoodleDetailFailure, type MoodleDetailRequest,
   type MoodleDetailResult } from './detail';
+import { isMoodleMaintenanceWindow } from './maintenance';
 import { partitionMoodleDeadlines, planMoodleDeadlineReminders,
   type MoodleDeadlinePolicy, type MoodleReminderDelivery, type MoodleReminderPlan } from './deadlines';
 
@@ -136,6 +137,7 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
   }, []);
 
   const now = (props.now ?? Date.now)();
+  const maintenance = isMoodleMaintenanceWindow(now);
   const buckets = partitionMoodleDeadlines(snapshot.data.states, snapshot.data.events, now, deadlinePolicy);
   const plan = planMoodleDeadlineReminders(buckets, now, deadlinePolicy);
   const planSignature = JSON.stringify(plan);
@@ -175,7 +177,7 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
             {labels.detailStatus(detail.status === 'success' ? 'invalid-data' : detail.status)}</Text>
           {detail.module.url ? <Button label={labels.original} variant="link" onPress={() => openOriginal(detail.module.url!)} /> : null}
         </ScrollView> : <>
-        <MoodleWorkspaceScreen labels={labels} snapshot={snapshot} entry={entry}
+        <MoodleWorkspaceScreen labels={labels} snapshot={snapshot} entry={entry} maintenance={maintenance}
           onLogin={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(false); setMode('web'); }}
           onSync={() => { pendingDetail.current = null; setDetail(null); controller.start(); }}
           onCancel={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(); }}
