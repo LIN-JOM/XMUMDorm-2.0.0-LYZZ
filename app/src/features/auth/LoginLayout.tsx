@@ -28,7 +28,7 @@ export function LoginLayout({
     theme.space('space_12') * 2
   );
   // 降低拱高，让圆弧更柔和；保留曲面占位高度，避免带动下方表单。
-  const curveRise = curveHeight * 0.8;
+  const curveRise = curveHeight * 0.4;
   // 由弦宽和拱高求圆半径，单段圆弧保持左右对称、顶部连续圆润。
   const curveRadius =
     curveRise > 0
