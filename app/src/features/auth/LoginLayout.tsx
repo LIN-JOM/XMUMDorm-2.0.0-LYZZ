@@ -27,10 +27,12 @@ export function LoginLayout({
     viewport.width * 0.24,
     theme.space('space_12') * 2
   );
-  // 用户明确为圆拱：由弦宽和拱高求圆半径，单段圆弧保持左右对称、顶部连续圆润。
+  // 降低拱高，让圆弧更柔和；保留曲面占位高度，避免带动下方表单。
+  const curveRise = curveHeight * 0.8;
+  // 由弦宽和拱高求圆半径，单段圆弧保持左右对称、顶部连续圆润。
   const curveRadius =
-    curveHeight > 0
-      ? (viewport.width ** 2 / 4 + curveHeight ** 2) / (2 * curveHeight)
+    curveRise > 0
+      ? (viewport.width ** 2 / 4 + curveRise ** 2) / (2 * curveRise)
       : 0;
   const curveEdge = `M 0 ${curveHeight} A ${curveRadius} ${curveRadius} 0 0 1 ${viewport.width} ${curveHeight}`;
   // 常规竖屏保留草图的空白，长内容交给滚动；只在视口变矮时为基本操作收起空白。
