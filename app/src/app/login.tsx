@@ -1,17 +1,10 @@
 /**
- * 登录页（P1-13「登录最小链路」）
- *
- * ⚠️ **它不是 `P15 鉴权`原型**：`P15`（品牌头 + 表单卡 + 验证码倒计时 + 条款链接）
- * 不在本包的四个骨架里，属后续任务。本页只把**链路**接通：
- * 真实调 `POST /api/auth/login` → 令牌进 `expo-secure-store` → 请求层立刻能带上它。
- * ⛔ 所以这里**没有**注册/找回密码/条款勾选（那些属于 `A-03`/`A-04`/`A-05`）。
- *
- * 用到的既有件：`Screen`（安全区唯一容器）· `Input`（`C04`）· `Button`（`C01`）
- * · `ErrorSummary`（`K04`，三段文案来自 `toErrorCopy`）。
+ * 登录页：用户确认的双层曲面布局；提交仍沿用 P1-13 的会话与安全令牌链路。
+ * 布局见 docs/app/task/login-curve-ui/00-实施计划.md。
  */
 
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
 
 import { useTheme } from '@/design-system/theme';
@@ -21,9 +14,9 @@ import { Button } from '@/components/ui/Button';
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
 import { InlineNotice } from '@/components/ui/InlineNotice';
 import { Input } from '@/components/ui/Input';
-import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useSession } from '@/features/auth/session';
+import { LoginLayout } from '@/features/auth/LoginLayout';
 
 export default function LoginScreen(): React.ReactElement {
   const theme = useTheme();
@@ -58,11 +51,7 @@ export default function LoginScreen(): React.ReactElement {
   };
 
   return (
-    <Screen topMode="topbar" testID="login">
-      <ScrollView
-        contentContainerStyle={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <LoginLayout>
         <Text role="title" emphasis="strong" colorToken="text-primary">
           {t('auth.title')}
         </Text>
@@ -116,7 +105,6 @@ export default function LoginScreen(): React.ReactElement {
             onPress={() => router.push('/reset-password')}
           />
         </View>
-      </ScrollView>
-    </Screen>
+    </LoginLayout>
   );
 }
