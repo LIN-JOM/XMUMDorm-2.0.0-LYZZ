@@ -1,4 +1,7 @@
 import { readMoodleCache } from './cache';
+import { IDENTITY_INSPECT_SOURCE } from './identity';
+import { EXTRACT_MOODLE_DETAIL_SOURCE, PROJECT_MOODLE_FILE_HEADERS_SOURCE,
+  SAFE_MOODLE_URL_SOURCE } from './injected-sources';
 
 export type MoodleDetailKind = 'forum' | 'discussion' | 'assign' | 'folder' | 'resource';
 export type MoodleDetailRequest = { kind: MoodleDetailKind; courseId: number; moduleId: number; url: string };
@@ -64,8 +67,7 @@ export function safeMoodleReadUrl(value: unknown, file = false): string | null {
 }
 
 /** A discussion URL must first have been discovered in this module's accepted forum result. */
-export function authorizeMoodleDetail(request: MoodleDetailRequest, discovered: readonly string[] = []): boolean {
-  const cache = readMoodleCache();
+export function authorizeMoodleDetail(request: MoodleDetailRequest, discovered: readonly string[] = []): boolean {  const cache = readMoodleCache();
   const state = cache.states.find((item) => item.courseId === request.courseId);
   const module = state?.modules.find((item) => item.id === request.moduleId);
   if (!module || !module.visible || !module.userVisible || !cache.courses.some((item) => item.id === request.courseId)) return false;
@@ -169,7 +171,9 @@ export function extractMoodleDetail(request: MoodleDetailRequest, root: ParentNo
   if (request.kind === 'folder') {
     const tree = root.querySelector('.foldertree');
     if (!tree) return null;
-    const files = Array.from(tree.querySelectorAll('.fp-filename a[href]')).slice(0, 200)
+    // 实站 4.x 的 `.fp-filename` 可能**就是** <a>（不是包着 <a>），所以直接取树内所有
+    // pluginfile 链接，再按 mod_folder/content 过滤。
+    const files = Array.from(tree.querySelectorAll('a[href*="/pluginfile.php/"]')).slice(0, 200)
       .map((node) => file(node, 'mod_folder/content')).filter((item): item is MoodleFile => item !== null);
     return { ...common, kind: 'folder', files };
   }
@@ -212,16 +216,16 @@ export function buildMoodleDetailReadScript(id: string, request: MoodleDetailReq
     : path !== `/mod/${request.kind}/view.php` || Number(new URL(url).searchParams.get('id')) !== request.moduleId) return null;
   return `(function(){
     var request=${JSON.stringify(request)}, done=false, timer, controller=new AbortController();
-    var safeMoodleReadUrl=(${safeMoodleReadUrl.toString()});
-    var extractMoodleDetail=(${extractMoodleDetail.toString()});
-    var projectMoodleFileHeaders=(${projectMoodleFileHeaders.toString()});
+    var safeMoodleReadUrl=(${SAFE_MOODLE_URL_SOURCE});
+    var extractMoodleDetail=(${EXTRACT_MOODLE_DETAIL_SOURCE});
+    var projectMoodleFileHeaders=(${PROJECT_MOODLE_FILE_HEADERS_SOURCE});
+    var inspectIdentity=(${IDENTITY_INSPECT_SOURCE});
+    var expectedUser=${userId};
     function send(status,data){if(done)return;done=true;clearTimeout(timer);controller.abort();
       var message={kind:${JSON.stringify(DETAIL_KIND)},requestId:${JSON.stringify(id)},status:status};
       if(status==='success')message.data=data;window.ReactNativeWebView.postMessage(JSON.stringify(message));}
-    function identity(){return window.location.origin==='https://l.xmu.edu.my'
-      && !document.querySelector('input[type=password]') && !document.querySelector('.usermenu .login')
-      && !!document.querySelector('[data-region=usermenu] .usermenu #user-menu-toggle')
-      && window.M && window.M.cfg && window.M.cfg.userId===${userId};}
+    function identity(){var result=inspectIdentity(document,window.location.origin,window.M&&window.M.cfg&&window.M.cfg.userId);
+      return result.status==='confirmed'&&result.userId===expectedUser;}
     if(window.location.origin!=='https://l.xmu.edu.my'){send('wrong-origin');return;}
     if(!identity()){send('expired');return;}
     if(typeof window.fetch!=='function'){send('unavailable');return;}
