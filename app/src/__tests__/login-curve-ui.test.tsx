@@ -33,6 +33,13 @@ beforeEach(() => {
 });
 
 describe('登录曲面页面', () => {
+  it('不再用大标题占据曲线下方空间，字段名称始终可见', async () => {
+    const view = await renderApp(<LoginScreen />);
+    expect(view.queryByRole('header')).toBeNull();
+    await userEvent.setup().type(view.getByTestId('login-identifier'), 'student');
+    expect(view.getByText('学号或邮箱 *')).toBeTruthy();
+    expect(view.getByText('密码 *')).toBeTruthy();
+  });
   it('密码显示切换保留已输入的值', async () => {
     const view = await renderApp(<LoginScreen />);
     const user = userEvent.setup();
@@ -95,7 +102,7 @@ describe('登录曲面页面', () => {
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/(tabs)'));
   });
 
-  it('内容增高或视口缩小时，先缩短空白，保留可滚动表单', async () => {
+  it('常规屏保留草图留白，矮屏缩短留白并保留可滚动表单', async () => {
     const view = await renderApp(<LoginScreen />);
     const layout = (width: number, height: number) => ({
       nativeEvent: { layout: { x: 0, y: 0, width, height } },
@@ -113,8 +120,8 @@ describe('登录曲面页面', () => {
     const normalBlank = StyleSheet.flatten(
       view.getByTestId('login-logo-space').props.style
     ).height;
-    expect(normalBlank).toBeGreaterThan(0);
-    expect(normalBlank).toBeLessThanOrEqual(300);
+    // 草图上方约三分之一：800 高的画布保留 256，不能被 500 高的表单挤掉。
+    expect(normalBlank).toBe(256);
     await fireEvent(
       view.getByTestId('login-viewport'),
       'layout',
