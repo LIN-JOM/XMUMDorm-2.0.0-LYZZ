@@ -166,7 +166,7 @@
 > **来源（本节不复述细节）**：[甲-已知缺陷与更正总账](task/phase-2/甲-已知缺陷与更正总账.md) 是甲域**唯一**缺陷总账 · [甲-逐屏 13.1 验收记录](test/甲-逐屏13.1验收记录.md) · [甲-真实后端契约验证](test/甲-真实后端契约验证.md) · [甲-安全区 10 条清单](test/甲-安全区10条清单.md)。
 > **取舍**：需要所有者拍板的事**只在 TO-CONFIRM 登记一份**（本表只写编号引用），符合文件头的分工约定。
 
-**现在（2026-10-19）**：本节 **24 条** —— `待排期` 11 · `待能力` 7 · `待实测` 3 · `已完成` 3；**0 条阻塞开工，0 条阻塞别人**。TD-55 已通过线上无令牌探针确认路由返回 401，待真实账号矩阵完成后收口。
+**现在（2026-10-19）**：本节 **24 条** —— `待排期` 10 · `待能力` 7 · `待实测` 4 · `已完成` 3；**0 条阻塞开工，0 条阻塞别人**。TD-55 已通过线上无令牌探针确认路由返回 401，待真实账号矩阵完成后收口。
 
 | ID | 条目 | 状态 | 等谁 / 什么时候消 | 唯一真源 |
 |---|---|---|---|---|
@@ -193,7 +193,7 @@
 | TD-78 | **广场「今日」的 Moodle 待交依赖学生先打开 `system/moodle` 同步**：Y0 隐私口径要求磁盘快照只在当前页面确认校方账号后恢复，所以冷启动时今日页显示"未同步"入口而不是已有待交 | 待排期 | 产品需裁决"是否允许冷启动读取上一会话快照"；若允许，改 `moodle/cache.ts` 的恢复前置条件（安全评审） | [广场今日页批次](task/广场今日页/00-批次总览与施工计划.md) · [T1](task/广场今日页/T1-今日数据与纯逻辑.md) |
 | TD-79 | **Moodle 实站真机已验证同步链路**：身份识别、Native workspace、课程分页与选择、state（含字符串 id）与 events、章节/模块列表、类型筛选均已在 Android 15 实站通过；剩余：详情页（TD-81 的 detail 注入）、通知授权与送达（需真机）、作业成绩值/评论数等样本字段 | 待能力 | 详情修复走 TD-81；通知与真机证据待设备；P-6 余项需已评分样本 | [实站探测记录](task/Moodle审计整改/实站探测记录-2026-10-19.md) · [本地预览与证书问题](task/Moodle审计整改/本地预览与Android13证书问题-2026-10-19.md) |
 | TD-80 | **Android ≤14 不信任校方站点证书链**：`l.xmu.edu.my` 下发 `Sectigo … CA DV R36 ← Sectigo … Root R46`，API 33 信任库无 R46（hash `e071171e`），WebView/Chrome 均报 SSL error code 3；Android 15（API 35）信任库有该根，实站实测可打开并登录 | 待实测 | 真机（Android ≤14）与校内网络复核；若同样失败需校方补全证书链或做产品决策 | [本地预览与证书问题](task/Moodle审计整改/本地预览与Android13证书问题-2026-10-19.md) |
-| TD-81 | **Hermes 下 `Function.prototype.toString()` 返回 `"[bytecode]"`**，注入 WebView 的脚本在真机失效。已修并在 Android 15 实站验证：身份探针改字面量源码、bridge 改最小投影器字面量（课程/事件字段白名单 + URL 去 query/hash）；顺带修实站分页空尾页、state 字符串 id、空 events 无游标。**剩余**：`detail.ts` 的 `safeMoodleReadUrl`/`extractMoodleDetail`/`projectMoodleFileHeaders` 3 处 `.toString()` 与 detail 内 `M.cfg.userId` 身份判断 → 详情页仍不可用 | 待排期 | 把这 3 处改字面量源码（或页面取原始数据、原生解析），detail 身份判断改用 `IDENTITY_INSPECT_SOURCE`；补注入自包含守卫 | [本地预览与证书问题](task/Moodle审计整改/本地预览与Android13证书问题-2026-10-19.md) |
+| TD-81 | **Hermes 下 `Function.prototype.toString()` 返回 `"[bytecode]"`**，注入 WebView 的脚本在真机失效。已修并验证：身份探针与 bridge 改字面量（Android 15 实站同步已通）；detail 的 `safeMoodleReadUrl`/`extractMoodleDetail`/`projectMoodleFileHeaders` 已改字面量源码（`injected-sources.ts`），detail 身份判断改用 `IDENTITY_INSPECT_SOURCE`，并加「字面量与原生实现一致」测试护栏。**剩余**：四类详情页的真机实站验证（本轮登录被拒，疑似凭据已轮换） | 待实测 | 用有效校园凭据在 Android 15 设备上打开公告/作业/文件夹/资源详情各一例 | [本地预览与证书问题](task/Moodle审计整改/本地预览与Android13证书问题-2026-10-19.md) |
 
 > **两条"已完成"为什么还留着**：本册约定（文件头）—— 完成后**保留条目并写清落点**，供日后追溯"这条路为什么长这样"。
 
