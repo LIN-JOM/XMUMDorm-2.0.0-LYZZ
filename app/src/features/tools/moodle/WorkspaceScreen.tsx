@@ -8,7 +8,9 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
+import { InlineNotice } from '@/components/ui/InlineNotice';
 import { ListItem } from '@/components/ui/ListItem';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
@@ -115,9 +117,10 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       <Text testID="moodle-entry" role="caption" colorToken="text-secondary">{entry === 'first-login' ? labels.firstLogin
         : entry === 'restored-native' ? labels.restoredNative : labels.nativeWorkspace}</Text>
       <Text testID="moodle-phase" role="caption" colorToken="text-secondary">{labels.phase(snapshot.phase)}</Text>
-      {!online ? <Text testID="moodle-offline" colorToken="text-warning">{labels.offline}</Text> : null}
-      {snapshot.failure ? <Text colorToken="text-danger">{maintenance
-        ? labels.maintenance : labels.failure(snapshot.failure)}</Text> : null}
+      {!online ? <InlineNotice testID="moodle-offline" tone="warning" message={labels.offline} /> : null}
+      {snapshot.failure ? <InlineNotice testID="moodle-failure" tone="danger"
+        message={maintenance ? labels.maintenance : labels.failure(snapshot.failure)}
+        actionLabel={labels.sync} onAction={onSync} /> : null}
     </View>
     <View testID="moodle-section-courses" style={{ gap: theme.space('space_3') }}>
       <SectionHeader title={snapshot.phase === 'choosing' ? labels.chooseCourses : labels.courses}
@@ -129,8 +132,8 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
             ? draft.filter((id) => id !== course.id) : [...draft, course.id] })} />)}
         <Button testID="moodle-confirm-selection" label={labels.confirmSelection} onPress={() => onChoose(draft)} />
       </Card> : null}
-      {snapshot.phase !== 'choosing' && !hasCourses ? <EmptyState kind="firstRun" testID="moodle-empty-sync"
-        title={labels.empty} actionLabel={labels.sync} onAction={onSync} /> : null}
+      {snapshot.phase !== 'choosing' && !hasCourses ? <EmptyState kind="firstRun"
+        testID="moodle-empty-courses" title={labels.empty} actionLabel={labels.sync} onAction={onSync} /> : null}
       {snapshot.phase !== 'choosing' && hasCourses ? <>
         <View style={{ gap: theme.space('space_1') }}>
           <Text testID="moodle-current-course" role="headline" emphasis="strong">
@@ -155,8 +158,8 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
     {snapshot.phase === 'choosing' || !hasCourses ? null : <View testID="moodle-section-content"
       onLayout={(event) => { contentTop.current = event.nativeEvent.layout.y; }}
       style={{ gap: theme.space('space_3') }}>
-      {visibleModules.length === 0 ? <EmptyState
-        testID={type !== null ? 'moodle-empty-all-types' : 'moodle-empty-sync'}
+      {busy ? <LoadingState testID="moodle-content-loading" /> : visibleModules.length === 0 ? <EmptyState
+        testID={type !== null ? 'moodle-empty-all-types' : 'moodle-empty-modules'}
         kind={type !== null ? 'noResult' : 'firstRun'} title={labels.empty}
         actionLabel={type !== null ? labels.allTypes : labels.sync}
         onAction={type !== null ? () => setType(null) : onSync} /> : null}
