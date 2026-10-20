@@ -193,6 +193,16 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
             {item.meta ? <Text role="caption" colorToken="text-secondary">{item.meta}</Text> : null}
           </View>)}
         </View>)}
+        {deadlines.others.length === 0 ? null : <View>
+          <Text role="label" colorToken="text-secondary"
+            style={{ paddingHorizontal: theme.space('space_4'), paddingTop: theme.space('space_2') }}>
+            {deadlines.otherTitle}</Text>
+          {deadlines.others.map((item) => <View key={item.key} style={{ paddingHorizontal: theme.space('space_4'),
+            paddingVertical: theme.space('space_1'), gap: theme.space('space_1') }}>
+            <Text role="body">{item.title}</Text>
+            {item.meta ? <Text role="caption" colorToken="text-secondary">{item.meta}</Text> : null}
+          </View>)}
+        </View>}
         </Card>}
       <Text testID="moodle-reminder-status" role="caption" colorToken="text-secondary">
         {deadlines.reminder}</Text>

@@ -170,8 +170,9 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     ].filter((group) => group.items.length > 0),
     otherTitle: labels.otherEvents,
     others: otherEvents.map((event) => ({ key: `event-${event.id}`, title: event.name,
-      meta: [labels.eventType(event.eventType ?? null), labels.actionableStatus(event.action?.actionable ?? null)]
-        .join(' · ') })),
+      meta: [labels.eventType(event.eventType ?? null), labels.actionableStatus(event.action?.actionable ?? null),
+        event.time > 0 && Number.isFinite(new Date(event.time * 1000).getTime())
+          ? labels.formatTime(event.time * 1000) : null].filter(Boolean).join(' · ') })),
     reminder: labels.reminderStatus(reminderStatus),
     empty: labels.noDeadlines,
   };
