@@ -46,10 +46,10 @@ export function getPostDetail(postId, token) {
 }
 
 /**
- * 发布帖子（FormData：content, type, images）
+ * 发布帖子（FormData：正文、声明、标签与图片）
  */
 export function createPost(body) {
-  const { title, content, type = 'normal', images, tagIds } = body || {};
+  const { title, content, type = 'normal', images, tagIds, contentOrigin, repostSource } = body || {};
   if (!content || !String(content).trim()) throw new Error('内容不能为空');
   const form = new FormData();
   if (title != null && String(title).trim()) {
@@ -57,6 +57,8 @@ export function createPost(body) {
   }
   form.append('content', String(content).trim());
   form.append('type', type === 'announcement' ? 'announcement' : 'normal');
+  if (contentOrigin != null) form.append('content_origin', contentOrigin);
+  if (contentOrigin === 'repost' && repostSource != null) form.append('repost_source', repostSource);
   if (images && Array.isArray(images)) {
     images.slice(0, 3).forEach((f) => form.append('images', f));
   }
