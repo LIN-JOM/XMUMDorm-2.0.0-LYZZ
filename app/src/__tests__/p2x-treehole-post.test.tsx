@@ -137,6 +137,32 @@ describe('P2X TreeholePostRow', () => {
     expect(view.getByTestId('campus-row-7')).toBeTruthy();
   });
 
+  it.each([
+    ['zh', 'light', '转载 · '],
+    ['zh', 'dark', '转载 · '],
+    ['en', 'light', 'Repost · '],
+    ['en', 'dark', 'Repost · '],
+  ] as const)('双语主题与 200%% 字号属性保留完整可访问来源：%s %s', async (locale, scheme, prefix) => {
+    const source = '学院群聊'.repeat(25);
+    const attributed = { ...post, contentOrigin: 'repost' as const, repostSource: source };
+    const spy = jest.spyOn(PixelRatio, 'getFontScale').mockReturnValue(2);
+    try {
+      const view = await renderApp(<>
+        {row({ post: attributed })}
+        <TreeholePostDetail post={attributed} timeLabel="刚刚" liked={false} likeCount={0} commentCount={0} onLike={() => undefined} onComment={() => undefined} />
+      </>, { locale, scheme });
+      const labels = view.getAllByRole('text', { name: `${prefix}${source}` });
+      expect(labels).toHaveLength(2);
+      for (const label of labels) {
+        expect(label.props.allowFontScaling).toBe(true);
+        expect(label.props.maxFontSizeMultiplier).toBeUndefined();
+      }
+      expect(labels[1].props.numberOfLines).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('信息流只有标题：身份 + 标签（日期右边）+ 计数，⛔ 不展示正文', async () => {
     const view = await renderApp(row());
     expect(view.getByTestId('treehole-author-name')).toHaveTextContent('小蓝');

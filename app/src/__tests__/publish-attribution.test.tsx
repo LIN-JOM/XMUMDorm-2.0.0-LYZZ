@@ -134,3 +134,27 @@ it('自定义草稿切到原创，不提交残留来源', async () => {
   await fireEvent.press(view.getByTestId('attribution-form-submit'));
   await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ contentOrigin: 'original', repostSource: null })));
 });
+
+it.each([
+  ['zh', '原创', '转载', '自定义', '转载来源：自定义', '来源说明', '必填', '请填写 1–100 字符的单行纯文字来源'],
+  ['en', 'Original', 'Repost', 'Custom', 'Repost source：Custom', 'Source description', 'required', 'Enter a single-line plain-text source of 1–100 characters'],
+] as const)('声明选择和来源错误使用当前语言的可访问名称：%s', async (locale, original, repost, custom, selection, field, required, error) => {
+  const view = await renderApp(<Host />, { locale });
+  expect(view.getByRole('radio', { name: original, checked: true })).toBeTruthy();
+  await fireEvent.press(view.getByRole('radio', { name: repost }));
+  expect(view.getByRole('radio', { name: repost, checked: true })).toBeTruthy();
+  await fireEvent.press(view.getByRole('combobox'));
+  await fireEvent.press(view.getByRole('button', { name: custom }));
+  expect(view.getByRole('combobox', { name: selection, expanded: false })).toBeTruthy();
+  const input = view.getByTestId('attribution-form-customRepostSource');
+  expect(input.props.accessibilityLabel).toContain(field);
+  expect(input.props.accessibilityLabel).toContain(required);
+  expect(view.getByTestId('attribution-form-title').props.accessibilityLabel).toContain(required);
+  expect(view.getByTestId('attribution-form-content').props.accessibilityLabel).toContain(required);
+  await fireEvent.changeText(view.getByTestId('attribution-form-title'), '标题');
+  await fireEvent.changeText(view.getByTestId('attribution-form-content'), '正文');
+  await fireEvent.changeText(input, '<invalid>');
+  await fireEvent.press(view.getByTestId('attribution-form-submit'));
+  await waitFor(() => expect(view.getByTestId('attribution-form-customRepostSource').props.accessibilityLabel).toContain(error));
+  expect(createPost).not.toHaveBeenCalled();
+});
