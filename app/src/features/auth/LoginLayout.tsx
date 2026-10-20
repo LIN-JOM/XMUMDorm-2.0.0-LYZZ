@@ -10,10 +10,6 @@ import Svg, { Path } from 'react-native-svg';
 import { Screen } from '@/components/ui/Screen';
 import { useTheme } from '@/design-system/theme';
 
-// 草图的相对坐标：宽 390、高 100，两侧低、中间缓缓隆起；不是字体或间距令牌。
-const CURVE_EDGE =
-  'M 0 100 C 54 60 72 22 120 22 C 164 22 208 12 236 14 C 292 18 338 52 390 100';
-
 /** 登录专用布局：底层预留 Logo，表层容纳曲面与表单。安全区与键盘仍由 Screen 处理。 */
 export function LoginLayout({
   children,
@@ -31,6 +27,12 @@ export function LoginLayout({
     viewport.width * 0.24,
     theme.space('space_12') * 2
   );
+  // 用户明确为圆拱：由弦宽和拱高求圆半径，单段圆弧保持左右对称、顶部连续圆润。
+  const curveRadius =
+    curveHeight > 0
+      ? (viewport.width ** 2 / 4 + curveHeight ** 2) / (2 * curveHeight)
+      : 0;
+  const curveEdge = `M 0 ${curveHeight} A ${curveRadius} ${curveRadius} 0 0 1 ${viewport.width} ${curveHeight}`;
   // 常规竖屏保留草图的空白，长内容交给滚动；只在视口变矮时为基本操作收起空白。
   // 不能从视口减去整份表单，否则标签、错误或字体变高就会把曲线推到屏幕顶端。
   const blankHeight = Math.min(
@@ -84,15 +86,15 @@ export function LoginLayout({
               <Svg
                 width="100%"
                 height="100%"
-                viewBox="0 0 390 100"
+                viewBox={`0 0 ${viewport.width} ${curveHeight}`}
                 preserveAspectRatio="none"
               >
                 <Path
-                  d={`${CURVE_EDGE} L 390 100 L 0 100 Z`}
+                  d={`${curveEdge} L 0 ${curveHeight} Z`}
                   fill={backgroundColor}
                 />
                 <Path
-                  d={CURVE_EDGE}
+                  d={curveEdge}
                   fill="none"
                   stroke={theme.color['border-strong'].value}
                   strokeWidth={theme.borderWidth('border_width_hairline')}
