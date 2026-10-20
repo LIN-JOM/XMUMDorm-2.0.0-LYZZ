@@ -1,4 +1,4 @@
-import { POST_REPOST_SOURCES } from '../../../../shared/constants/postAttribution';
+import { normalizePostRepostSource } from '../../../../shared/constants/postAttribution';
 
 export type TreeholePostSource = {
   id: number;
@@ -78,7 +78,7 @@ function treeholeTags(value: TreeholePostSource['tags']): readonly TreeholePostT
 /** Maps a validated treehole API row to presentation-only, nullable-safe values. */
 export function toTreeholePostViewModel(post: TreeholePostSource): TreeholePostViewModel {
   const authorName = post.author?.nickname?.trim() || post.author?.username?.trim() || null;
-  const repostSource = typeof post.repost_source === 'string' && POST_REPOST_SOURCES.includes(post.repost_source) ? post.repost_source : null;
+  const repostSource = normalizePostRepostSource(post.repost_source);
   const contentOrigin = post.content_origin === 'original' ? 'original'
     : post.content_origin === 'repost' && repostSource !== null ? 'repost' : null;
   return {

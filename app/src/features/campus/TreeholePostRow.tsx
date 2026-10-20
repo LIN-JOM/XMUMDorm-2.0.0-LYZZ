@@ -83,7 +83,7 @@ export function TreeholePostRow({
 
       <View style={{ paddingLeft: indent, gap: theme.space('space_1') }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.space('space_2') }}>
-          <TreeholeAttribution post={post} />
+          <TreeholeAttribution post={post} compact />
           {/* 内容区：只有标题可点（动作区是兄弟节点，⛔ 按钮套按钮） */}
           <Pressable
             testID={`campus-row-${post.id}`}

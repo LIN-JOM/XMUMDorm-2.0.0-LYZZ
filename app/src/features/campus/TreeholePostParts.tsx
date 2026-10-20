@@ -23,13 +23,20 @@ import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import type { TreeholePostTag, TreeholePostViewModel } from './treeholePostViewModel';
 
-export function TreeholeAttribution({ post }: {
+export function TreeholeAttribution({ post, compact = false }: {
   post: Pick<TreeholePostViewModel, 'contentOrigin' | 'repostSource'>;
+  compact?: boolean;
 }): React.ReactElement | null {
   const { t } = useI18n();
   if (!post.contentOrigin) return null;
   return (
-    <Text testID="treehole-attribution" role="caption" colorToken="text-muted">
+    <Text
+      testID="treehole-attribution"
+      role="caption"
+      colorToken="text-muted"
+      numberOfLines={compact ? 1 : undefined}
+      style={compact ? { flexShrink: 1, maxWidth: '50%' } : undefined}
+    >
       {post.contentOrigin === 'original'
         ? t('publish.treehole.original')
         : t('screen.campus.read.repostSource', { source: post.repostSource ?? '' })}
