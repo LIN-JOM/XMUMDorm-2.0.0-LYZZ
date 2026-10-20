@@ -147,7 +147,7 @@ export const EXTRACT_MOODLE_DETAIL_SOURCE = `function extractMoodleDetail(reques
   if (request.kind === 'folder') {
     var tree = root.querySelector('.foldertree');
     if (!tree) return null;
-    var folderFiles = Array.from(tree.querySelectorAll('.fp-filename a[href]')).slice(0, 200)
+    var folderFiles = Array.from(tree.querySelectorAll('a[href*="/pluginfile.php/"]')).slice(0, 200)
       .map(function (node) { return file(node, 'mod_folder/content'); })
       .filter(function (item) { return item !== null; });
     return Object.assign({}, common, { kind: 'folder', files: folderFiles });

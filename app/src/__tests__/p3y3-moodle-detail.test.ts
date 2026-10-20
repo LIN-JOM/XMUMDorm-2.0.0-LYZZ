@@ -60,6 +60,11 @@ describe('p3y3 official-derived synthetic detail DOM and generated page command'
       submission: 'submitted', grading: 'not-graded', rows: expect.any(Array) } });
     expect(result).not.toHaveProperty('data.deadline');
   });
+  it('finds campus 4.x folder files whether the filename element is the anchor or wraps one', async () => {
+    const { result } = await run('folder', { fixtureName: 'folder-real' });
+    expect(result).toMatchObject({ status: 'success', data: { kind: 'folder',
+      files: [{ name: 'brief.pdf' }, { name: 'notes.pdf' }] } });
+  });
   it('reads the campus assign activity dates and submission attachments', async () => {
     const { result } = await run('assign', { fixtureName: 'assign-real' });
     expect(result).toMatchObject({ status: 'success', data: { kind: 'assign',

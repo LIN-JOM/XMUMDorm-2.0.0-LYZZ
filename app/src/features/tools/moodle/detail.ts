@@ -171,7 +171,9 @@ export function extractMoodleDetail(request: MoodleDetailRequest, root: ParentNo
   if (request.kind === 'folder') {
     const tree = root.querySelector('.foldertree');
     if (!tree) return null;
-    const files = Array.from(tree.querySelectorAll('.fp-filename a[href]')).slice(0, 200)
+    // 实站 4.x 的 `.fp-filename` 可能**就是** <a>（不是包着 <a>），所以直接取树内所有
+    // pluginfile 链接，再按 mod_folder/content 过滤。
+    const files = Array.from(tree.querySelectorAll('a[href*="/pluginfile.php/"]')).slice(0, 200)
       .map((node) => file(node, 'mod_folder/content')).filter((item): item is MoodleFile => item !== null);
     return { ...common, kind: 'folder', files };
   }
