@@ -4,6 +4,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ListItem } from '@/components/ui/ListItem';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -108,11 +109,13 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
               onPress={() => { setCourseId(course.id); setType(null); }} />)}
           </View>
         </Card>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
-          <Button testID="moodle-type-all" label={labels.allTypes} variant="ghost" onPress={() => setType(null)} />
-          {types.map((item) => <Button key={item} testID={`moodle-type-${item}`} label={labels.moduleType(item)}
-            variant={type === item ? 'secondary' : 'ghost'} onPress={() => setType(item)} />)}
-        </View>
+        <ScrollView testID="moodle-chips" horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: theme.space('space_2') }}>
+          <Chip testID="moodle-type-all" variant="selectable" selected={type === null} label={labels.allTypes}
+            onPress={() => setType(null)} />
+          {types.map((item) => <Chip key={item} testID={`moodle-type-${item}`} variant="selectable"
+            selected={type === item} label={labels.moduleType(item)} onPress={() => setType(item)} />)}
+        </ScrollView>
       </> : null}
     </View>
     {snapshot.phase === 'choosing' || !hasCourses ? null : <View testID="moodle-section-content"
