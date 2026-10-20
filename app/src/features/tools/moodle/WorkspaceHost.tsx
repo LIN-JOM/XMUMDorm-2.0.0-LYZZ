@@ -192,6 +192,7 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     </View>
     {mode === 'native' ? <View style={{ flex: 1 }}>
       {detail ? detail.status === 'success' && detail.data ? <MoodleDetailScreen detail={detail.data} labels={labels}
+        title={detail.module.name}
         onBack={() => { pendingDetail.current = null; setDetail(null); }} onOriginal={openOriginal}
         onDiscussion={(url) => readDetail(detail.courseId, detail.module, url)} /> : <ScrollView>
           <Button label={labels.back} variant="ghost" onPress={() => { pendingDetail.current = null; setDetail(null); }} />

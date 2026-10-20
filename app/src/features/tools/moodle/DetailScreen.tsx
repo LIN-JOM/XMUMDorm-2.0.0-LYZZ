@@ -1,7 +1,10 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
+import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import ExternalLink from 'lucide-react-native/icons/external-link';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { IconButton } from '@/components/ui/IconButton';
 import { ListItem } from '@/components/ui/ListItem';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
@@ -15,10 +18,12 @@ export type MoodleDetailLabels = {
   fileMetadata: (file: MoodleFile) => string;
 };
 
-/** P3 detail: existing Text and Button only; no HTML rendering or implicit attachment fetch. */
-export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscussion }: {
+/** P3 detail: one header row, then the kind-specific body; no HTML rendering, no implicit fetch. */
+export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscussion, title }: {
   detail: MoodleDetail; labels: MoodleDetailLabels; onBack: () => void;
   onOriginal: (url: string) => void; onDiscussion: (url: string) => void;
+  /** Module name shown in the header; the detail payload carries no title of its own. */
+  title?: string;
 }): React.ReactElement {
   const theme = useTheme();
   const files = (items: readonly MoodleFile[]) => items.map((file) => <View key={file.url}
@@ -29,8 +34,13 @@ export function MoodleDetailScreen({ detail, labels, onBack, onOriginal, onDiscu
     <Button label={labels.original} variant="link" onPress={() => onOriginal(file.url)} />
   </View>);
   return <ScrollView testID="moodle-detail" contentContainerStyle={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}>
-    <Button testID="moodle-detail-back" label={labels.back} variant="ghost" onPress={onBack} />
-    <Button label={labels.original} variant="link" onPress={() => onOriginal(detail.url)} />
+    <View testID="moodle-detail-header" style={{ flexDirection: 'row', alignItems: 'center',
+      gap: theme.space('space_2') }}>
+      <IconButton testID="moodle-detail-back" Icon={ArrowLeft} accessibilityLabel={labels.back} onPress={onBack} />
+      <Text role="headline" emphasis="strong" numberOfLines={2} style={{ flex: 1 }}>{title ?? ''}</Text>
+      <IconButton testID="moodle-detail-original" Icon={ExternalLink}
+        accessibilityLabel={labels.original} onPress={() => onOriginal(detail.url)} />
+    </View>
     {detail.description ? <Text>{detail.description}</Text> : null}
     {detail.kind === 'forum' ? <View style={{ gap: theme.space('space_3') }}>
       {detail.announcements.length === 0 ? <EmptyState kind="firstRun" testID="moodle-empty-original"
