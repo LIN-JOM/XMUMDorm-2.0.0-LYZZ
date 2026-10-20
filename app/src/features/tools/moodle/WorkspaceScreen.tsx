@@ -142,10 +142,10 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       {sections.map((section) => {
         const rows = visibleModules.filter((module) => module.sectionId === section.id);
         if (rows.length === 0) return null;
-        return <View key={section.id} style={{ gap: theme.space('space_2') }}>
-          <SectionHeader title={section.title} style={{ paddingHorizontal: 0 }} />
-          <Card variant="plain" padding="none">
-            {rows.map((module) => <View key={module.id}>
+        return <Card key={section.id} testID={`moodle-chapter-${section.id}`} variant="plain" padding="none">
+          <SectionHeader title={section.title}
+            style={{ paddingHorizontal: theme.space('space_4'), paddingTop: theme.space('space_3') }} />
+          {rows.map((module) => <View key={module.id}>
               <ListItem testID={`moodle-module-${module.id}`} title={module.name}
                 subtitle={labels.moduleType(module.type)}
                 onPress={() => currentCourse && onModule(currentCourse.id, module)} />
@@ -155,8 +155,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
                   variant="link" size="small" onPress={() => onOriginal(module.url!)} />
               </View> : null}
             </View>)}
-          </Card>
-        </View>;
+        </Card>;
       })}
     </View>}
     {footer}
