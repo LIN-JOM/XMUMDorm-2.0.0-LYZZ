@@ -109,6 +109,20 @@ describe('P2X TreeholePostRow', () => {
     expect(view.queryByTestId('treehole-attribution')).toBeNull();
   });
 
+  it('长自定义来源在列表用单行摘要，详情保留原文', async () => {
+    const source = '来'.repeat(100);
+    const attributed = { ...post, contentOrigin: 'repost' as const, repostSource: source };
+    const view = await renderApp(<>
+      {row({ post: attributed })}
+      <TreeholePostDetail post={attributed} timeLabel="刚刚" liked={false} likeCount={0} commentCount={0} onLike={() => undefined} onComment={() => undefined} />
+    </>);
+    expect(view.getAllByText(`转载 · ${source}`)).toHaveLength(2);
+    const labels = view.getAllByTestId('treehole-attribution');
+    expect(labels[0].props.numberOfLines).toBe(1);
+    expect(labels[1].props.numberOfLines).toBeUndefined();
+    expect(view.getByTestId('campus-row-7')).toBeTruthy();
+  });
+
   it('信息流只有标题：身份 + 标签（日期右边）+ 计数，⛔ 不展示正文', async () => {
     const view = await renderApp(row());
     expect(view.getByTestId('treehole-author-name')).toHaveTextContent('小蓝');

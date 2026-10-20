@@ -62,6 +62,17 @@ it('七个预设按用户要求排序，提交时保留平台名称',async()=>{
   expect(createPost).toHaveBeenLastCalledWith(expect.objectContaining({contentOrigin:'repost',repostSource:source}));
  }
 });
+it('自定义来源提交实际文字，空白、超长、标记和控制字符不进入接口',async()=>{
+ const d=post();(createPost as jest.Mock).mockResolvedValue({id:25});
+ for(const customRepostSource of ['', '   ', undefined, [], '来'.repeat(101), '<b>WX</b>', '学院\n群聊']){
+  await expect(d.submit({...pv,contentOrigin:'repost',repostSource:'custom',customRepostSource})).rejects.toMatchObject({kind:'validation'});
+ }
+ expect(createPost).not.toHaveBeenCalled();
+ await d.submit({...pv,contentOrigin:'repost',repostSource:'custom',customRepostSource:'  学院群聊  '});
+ expect(createPost).toHaveBeenLastCalledWith({...pv,type:'normal',tagIds:[7],contentOrigin:'repost',repostSource:'学院群聊'});
+ await d.submit({...pv,contentOrigin:'repost',repostSource:'custom',customRepostSource:'来'.repeat(100)});
+ expect(createPost).toHaveBeenLastCalledWith(expect.objectContaining({repostSource:'来'.repeat(100)}));
+});
 it('提交失败不清缓存且无效返回id不宣称成功',async()=>{
  getQueryClient().setQueryData(['bing-errand','list',{}],{old:true});(createErrand as jest.Mock).mockRejectedValue({kind:'unreachable'});await expect(errand().submit(ev)).rejects.toMatchObject({kind:'unreachable'});expect(getQueryClient().getQueryData(['bing-errand','list',{}])).toEqual({old:true});(createErrand as jest.Mock).mockResolvedValue({id:0});await expect(errand().submit(ev)).rejects.toMatchObject({kind:'unknown'});
 });

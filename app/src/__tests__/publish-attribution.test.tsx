@@ -47,6 +47,34 @@ it('填写真实表单后提交 WX 转载，正文不加前缀', async () => {
   await waitFor(() => expect(createPost).toHaveBeenCalledWith({ title: '标题', content: '正文', type: 'normal', tagIds: [], images: [], contentOrigin: 'repost', repostSource: 'WX' }));
 });
 
+it('选自定义才显示输入，填写来源后提交去空格文字', async () => {
+  (createPost as jest.Mock).mockResolvedValue({ id: 54 });
+  const view = await renderApp(<Host />);
+  await fireEvent.changeText(view.getByTestId('attribution-form-title'), '标题');
+  await fireEvent.changeText(view.getByTestId('attribution-form-content'), '正文');
+  await fireEvent.press(view.getByTestId('attribution-form-contentOrigin-repost'));
+  expect(view.queryByTestId('attribution-form-customRepostSource')).toBeNull();
+  await fireEvent.press(view.getByTestId('attribution-form-repostSource'));
+  await fireEvent.press(view.getByLabelText('自定义'));
+  expect(view.getByTestId('attribution-form-customRepostSource').props.maxLength).toBe(100);
+  await fireEvent.changeText(view.getByTestId('attribution-form-customRepostSource'), '  学院群聊  ');
+  await fireEvent.press(view.getByTestId('attribution-form-submit'));
+  await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ content: '正文', contentOrigin: 'repost', repostSource: '学院群聊' })));
+});
+
+it('自定义来源空白时阻止真实表单提交', async () => {
+  const view = await renderApp(<Host />);
+  await fireEvent.changeText(view.getByTestId('attribution-form-title'), '标题');
+  await fireEvent.changeText(view.getByTestId('attribution-form-content'), '正文');
+  await fireEvent.press(view.getByTestId('attribution-form-contentOrigin-repost'));
+  await fireEvent.press(view.getByTestId('attribution-form-repostSource'));
+  await fireEvent.press(view.getByLabelText('自定义'));
+  await fireEvent.changeText(view.getByTestId('attribution-form-customRepostSource'), '   ');
+  await fireEvent.press(view.getByTestId('attribution-form-submit'));
+  await waitFor(() => expect(view.getByTestId('attribution-form-summary')).toBeTruthy());
+  expect(createPost).not.toHaveBeenCalled();
+});
+
 it('恢复转载草稿，切回原创后提交空来源', async () => {
   await setItem(draftKeyFor('publish:confession'), { title: '草稿标题', content: '草稿正文', contentOrigin: 'repost', repostSource: 'WX' });
   (createPost as jest.Mock).mockResolvedValue({ id: 53 });

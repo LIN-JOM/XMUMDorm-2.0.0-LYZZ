@@ -7,6 +7,10 @@ describe('P2X Treehole post view model', () => {
     expect(toTreeholePostViewModel({ ...base, content_origin: 'repost', repost_source: 'WX' })).toMatchObject({ contentOrigin: 'repost', repostSource: 'WX' });
     expect(toTreeholePostViewModel({ ...base, content_origin: 'original', repost_source: 'WX' })).toMatchObject({ contentOrigin: 'original', repostSource: null });
   });
+  it('保留规范化的自定义来源和长度上限', () => {
+    expect(toTreeholePostViewModel({ ...base, content_origin: 'repost', repost_source: '  学院群聊  ' })).toMatchObject({ contentOrigin: 'repost', repostSource: '学院群聊' });
+    expect(toTreeholePostViewModel({ ...base, content_origin: 'repost', repost_source: '来'.repeat(100) })).toMatchObject({ contentOrigin: 'repost', repostSource: '来'.repeat(100) });
+  });
 
   it.each([
     {},
@@ -14,6 +18,8 @@ describe('P2X Treehole post view model', () => {
     { content_origin: 'unknown', repost_source: 'WX' },
     { content_origin: 'repost', repost_source: '' },
     { content_origin: 'repost', repost_source: '<script>bad</script>' },
+    { content_origin: 'repost', repost_source: '来'.repeat(101) },
+    { content_origin: 'repost', repost_source: '学院\n群聊' },
   ])('历史与不合法声明不被推断为原创：%j', metadata => {
     expect(toTreeholePostViewModel({ ...base, ...metadata })).toMatchObject({ contentOrigin: null, repostSource: null });
   });
