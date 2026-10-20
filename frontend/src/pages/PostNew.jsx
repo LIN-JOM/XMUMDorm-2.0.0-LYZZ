@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
@@ -15,7 +15,9 @@ import { getApiErrorMessage } from '@shared/utils/apiError';
 import { QK } from '@shared/query/queryKeys';
 import { FOOD_SQUARE_TAG_SLUG } from '@shared/constants/canteen';
 import { POST_REPOST_SOURCES, POST_REPOST_SOURCE_MAX_LENGTH } from '@shared/constants/postAttribution';
+import { acceptCurrentTerms, getMyTermsStatus } from '@shared/api/users';
 import { buildPostAttribution } from '../utils/postAttribution';
+import TermsAcceptanceGate from '../components/TermsAcceptanceGate';
 import './PostNew.css';
 
 const POST_TAGS_STALE_MS = 15 * 60 * 1000;
@@ -40,6 +42,47 @@ export default function PostNew() {
   const [loading, setLoading] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const fileInputRef = useRef(null);
+  const [termsStatus, setTermsStatus] = useState(null);
+  const [termsLoading, setTermsLoading] = useState(true);
+  const [termsAccepting, setTermsAccepting] = useState(false);
+  const [termsError, setTermsError] = useState('');
+
+  const loadTermsStatus = useCallback(async () => {
+    if (!isLoggedIn) {
+      setTermsStatus(null);
+      setTermsLoading(false);
+      return;
+    }
+
+    setTermsLoading(true);
+    setTermsError('');
+    try {
+      setTermsStatus(await getMyTermsStatus());
+    } catch (error) {
+      setTermsStatus(null);
+      setTermsError(getApiErrorMessage(error));
+    } finally {
+      setTermsLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    loadTermsStatus();
+  }, [loadTermsStatus]);
+
+  const handleAcceptTerms = async () => {
+    if (!termsStatus?.version) return;
+
+    setTermsAccepting(true);
+    setTermsError('');
+    try {
+      setTermsStatus(await acceptCurrentTerms(termsStatus.version));
+    } catch (error) {
+      setTermsError(getApiErrorMessage(error));
+    } finally {
+      setTermsAccepting(false);
+    }
+  };
 
   const { data: allTags = [] } = useQuery({
     queryKey: QK.postTagsList(),
@@ -92,6 +135,8 @@ export default function PostNew() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (termsStatus?.accepted !== true) return;
+
     const trimmedTitle = title.trim();
     const trimmedContent = content.trim();
     if (!isAdmin && !trimmedTitle) {
@@ -166,6 +211,14 @@ export default function PostNew() {
         navigate(created?.id ? `/post/${created.id}` : '/', { replace: true });
       }
     } catch (error) {
+      if (error?.body?.code === 'TERMS_NOT_ACCEPTED') {
+        setTermsStatus({
+          version: error.body.data?.version || termsStatus?.version || '',
+          accepted: false,
+        });
+        setTermsError(isEn ? 'Please accept the current Terms of Service first.' : '请先接受当前服务条款。');
+        return;
+      }
       Toast.error(getApiErrorMessage(error));
     } finally {
       setLoading(false);
@@ -185,7 +238,18 @@ export default function PostNew() {
           <h1>{pageTitle}</h1>
         </div>
 
-        <form className="postnew-form" onSubmit={handleSubmit}>
+        {termsLoading || termsStatus?.accepted !== true ? (
+          <TermsAcceptanceGate
+            isEn={isEn}
+            version={termsStatus?.version}
+            loading={termsLoading}
+            accepting={termsAccepting}
+            error={termsError}
+            onAccept={handleAcceptTerms}
+            onRetry={loadTermsStatus}
+          />
+        ) : (
+          <form className="postnew-form" onSubmit={handleSubmit}>
           {!isAdmin ? (
             <>
               <Select
@@ -315,7 +379,8 @@ export default function PostNew() {
               {loading ? (isEn ? 'Publishing…' : '发布中…') : pageTitle}
             </Button>
           </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );
