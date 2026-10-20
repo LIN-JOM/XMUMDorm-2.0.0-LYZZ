@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
+import ExternalLink from 'lucide-react-native/icons/external-link';
 import { onlineManager } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Chip } from '@/components/ui/Chip';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { IconButton } from '@/components/ui/IconButton';
 import { ListItem } from '@/components/ui/ListItem';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
@@ -145,16 +147,15 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
         return <Card key={section.id} testID={`moodle-chapter-${section.id}`} variant="plain" padding="none">
           <SectionHeader title={section.title}
             style={{ paddingHorizontal: theme.space('space_4'), paddingTop: theme.space('space_3') }} />
-          {rows.map((module) => <View key={module.id}>
-              <ListItem testID={`moodle-module-${module.id}`} title={module.name}
-                subtitle={labels.moduleType(module.type)}
-                onPress={() => currentCourse && onModule(currentCourse.id, module)} />
-              {module.url ? <View style={{ paddingHorizontal: theme.space('space_4'),
-                paddingBottom: theme.space('space_2') }}>
-                <Button testID={`moodle-original-${module.id}`} label={labels.original}
-                  variant="link" size="small" onPress={() => onOriginal(module.url!)} />
-              </View> : null}
-            </View>)}
+          {rows.map((module) => <ListItem key={module.id} testID={`moodle-module-${module.id}`}
+            title={module.name}
+            trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space('space_1') }}>
+              <Chip testID={`moodle-module-type-${module.id}`} variant="static"
+                label={labels.moduleType(module.type)} />
+              {module.url ? <IconButton testID={`moodle-original-${module.id}`} Icon={ExternalLink}
+                accessibilityLabel={labels.original} onPress={() => onOriginal(module.url!)} /> : null}
+            </View>}
+            onPress={() => currentCourse && onModule(currentCourse.id, module)} />)}
         </Card>;
       })}
     </View>}
