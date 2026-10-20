@@ -53,6 +53,14 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
   const [courseId, setCourseId] = React.useState<number | null>(null);
   const [type, setType] = React.useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  const scroller = React.useRef<ScrollView>(null);
+  const contentTop = React.useRef(0);
+  React.useEffect(() => {
+    // 切课之后内容段整体换掉：把视口带到内容段开头，而不是停在课程段
+    if (courseId === null) return;
+    // 测试环境只有宿主桩，没有真实滚动；这里按存在性调用，不假设实现
+    scroller.current?.scrollTo?.({ y: contentTop.current, animated: false });
+  }, [courseId]);
   const currentCourse = snapshot.data.courses.find((course) => course.id === courseId)
     ?? snapshot.data.courses[0];
   const courseState = snapshot.data.states.find((state) => state.courseId === currentCourse?.id);
@@ -73,7 +81,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
     () => true
   );
   const hasCourses = snapshot.data.courses.length > 0;
-  return <ScrollView testID="moodle-workspace" contentContainerStyle={{ padding: theme.space('space_4'),
+  return <ScrollView ref={scroller} testID="moodle-workspace" contentContainerStyle={{ padding: theme.space('space_4'),
     gap: theme.space('space_6') }}>
     <View testID="moodle-section-status" style={{ gap: theme.space('space_2') }}>
       <View testID="moodle-tool-row" style={{ flexDirection: 'row', flexWrap: 'wrap',
@@ -124,6 +132,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       </> : null}
     </View>
     {snapshot.phase === 'choosing' || !hasCourses ? null : <View testID="moodle-section-content"
+      onLayout={(event) => { contentTop.current = event.nativeEvent.layout.y; }}
       style={{ gap: theme.space('space_3') }}>
       {visibleModules.length === 0 ? <EmptyState
         testID={type !== null ? 'moodle-empty-all-types' : 'moodle-empty-sync'}
