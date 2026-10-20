@@ -85,14 +85,14 @@ describe('Posts Routes', () => {
       });
     }
 
-    it('persists a WX repost and returns it from create, list and detail without changing the body', async () => {
-      const metadata = { content_origin: 'repost', repost_source: 'WX' };
+    it.each(['WX', 'QQ', '抖音', 'INS', 'Telegram', 'X', 'Whatsapp'])('persists %s and returns it from create, list and detail without changing the body', async (source) => {
+      const metadata = { content_origin: 'repost', repost_source: source };
       acceptPost(metadata);
       const created = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', ...metadata });
       expect(created.status).toBe(200);
       expect(created.body.data).toMatchObject({ content: '正文', ...metadata });
       expect(query).toHaveBeenCalledWith(
-        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', 'repost', 'WX']
+        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', 'repost', source]
       );
       const list = await supertest(app()).get('/api/posts');
       expect(list.body.data.list[0]).toMatchObject(metadata);
@@ -102,6 +102,19 @@ describe('Posts Routes', () => {
         expect(sql).toContain('p.content_origin');
         expect(sql).toContain('p.repost_source');
       }
+    });
+
+    it.each([
+      ['  学院群聊  ', '学院群聊'],
+      ['来'.repeat(100), '来'.repeat(100)],
+    ])('normalizes a simple custom source before writing: %s', async (input, expected) => {
+      acceptPost({ content_origin: 'repost', repost_source: expected });
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', content_origin: 'repost', repost_source: input });
+      expect(res.status).toBe(200);
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', 'repost', expected]
+      );
+      expect(res.body.data.repost_source).toBe(expected);
     });
 
     it.each([
@@ -120,6 +133,12 @@ describe('Posts Routes', () => {
       { content_origin: 'repost' },
       { content_origin: 'repost', repost_source: '   ' },
       { content_origin: 'repost', repost_source: ['WX'] },
+      { content_origin: 'repost', repost_source: 123 },
+      { content_origin: 'repost', repost_source: { text: 'WX' } },
+      { content_origin: 'repost', repost_source: '来'.repeat(101) },
+      { content_origin: 'repost', repost_source: '<b>WX</b>' },
+      { content_origin: 'repost', repost_source: '群聊\n来源' },
+      { content_origin: 'repost', repost_source: '群聊\u0000来源' },
       { content_origin: 'unknown', repost_source: 'WX' },
       { repost_source: 'WX' },
     ])('rejects invalid declaration metadata before inserting: %j', async (metadata) => {
