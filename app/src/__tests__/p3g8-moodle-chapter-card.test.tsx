@@ -66,3 +66,8 @@ it('p3g8 still opens a module from inside the card', async () => {
 it('p3g8 renders the chapter name as the card header through the section header', () => {
   expect(source).toMatch(/<Card[\s\S]{0,240}<SectionHeader title=\{section\.title\}/);
 });
+
+it('p3g8 lets a long chapter name wrap instead of truncating', async () => {
+  const view = await renderApp(<MoodleWorkspaceScreen {...props} snapshot={oneChapter} onModule={jest.fn()} />);
+  expect(view.getByText('Week one').props.numberOfLines).toBe(2);
+});

@@ -139,6 +139,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
           <Text testID="moodle-current-course" role="headline" emphasis="strong">
             {currentCourse?.name ?? ''}</Text>
           <Button testID="moodle-switch-course" label={labels.switchCourse} variant="link" size="small"
+            style={{ alignSelf: 'flex-start' }}
             onPress={() => setPickerOpen((open) => !open)} />
         </View>
         {pickerOpen ? <Card variant="plain" padding="none">
@@ -167,7 +168,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
         const rows = visibleModules.filter((module) => module.sectionId === section.id);
         if (rows.length === 0) return null;
         return <Card key={section.id} testID={`moodle-chapter-${section.id}`} variant="plain" padding="none">
-          <SectionHeader title={section.title}
+          <SectionHeader title={section.title} numberOfLines={2}
             style={{ paddingHorizontal: theme.space('space_4'), paddingTop: theme.space('space_3') }} />
           {rows.map((module) => <ListItem key={module.id} testID={`moodle-module-${module.id}`}
             title={module.name}

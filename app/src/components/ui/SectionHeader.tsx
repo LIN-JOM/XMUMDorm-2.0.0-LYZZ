@@ -27,6 +27,11 @@ export type SectionHeaderProps = {
   /** `withAction` 必填 */
   actionLabel?: string;
   onActionPress?: () => void;
+  /**
+   * 标题换行上限（默认 1）。章节名这类**真实内容**可能放不下一行，
+   * 调用方按需给 2；⛔ 不是让标题随便换行 —— 分区标题仍以一行优先。
+   */
+  numberOfLines?: number;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -36,6 +41,7 @@ export function SectionHeader({
   variant = 'plain',
   actionLabel,
   onActionPress,
+  numberOfLines = 1,
   style,
   testID,
 }: SectionHeaderProps): React.ReactElement {
@@ -59,7 +65,7 @@ export function SectionHeader({
         style,
       ]}
     >
-      <Text role="headline" emphasis="strong" colorToken="text-primary" numberOfLines={1}>
+      <Text role="headline" emphasis="strong" colorToken="text-primary" numberOfLines={numberOfLines}>
         {title}
       </Text>
       {variant === 'withAction' && actionLabel ? (
