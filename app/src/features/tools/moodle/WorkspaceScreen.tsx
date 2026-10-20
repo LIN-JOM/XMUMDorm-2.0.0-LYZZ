@@ -81,9 +81,9 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
         <Button testID="moodle-login" label={labels.login} onPress={onLogin} variant="ghost" />
         {headerActions}
       </View>
-      <Text testID="moodle-entry">{entry === 'first-login' ? labels.firstLogin
+      <Text testID="moodle-entry" role="caption" colorToken="text-secondary">{entry === 'first-login' ? labels.firstLogin
         : entry === 'restored-native' ? labels.restoredNative : labels.nativeWorkspace}</Text>
-      <Text testID="moodle-phase">{labels.phase(snapshot.phase)}</Text>
+      <Text testID="moodle-phase" role="caption" colorToken="text-secondary">{labels.phase(snapshot.phase)}</Text>
       {!online ? <Text testID="moodle-offline" colorToken="text-warning">{labels.offline}</Text> : null}
       {snapshot.failure ? <Text colorToken="text-danger">{maintenance
         ? labels.maintenance : labels.failure(snapshot.failure)}</Text> : null}
@@ -126,7 +126,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
         const rows = visibleModules.filter((module) => module.sectionId === section.id);
         if (rows.length === 0) return null;
         return <View key={section.id} style={{ gap: theme.space('space_2') }}>
-          <Text role="title">{section.title}</Text>
+          <SectionHeader title={section.title} style={{ paddingHorizontal: 0 }} />
           <Card variant="plain" padding="none">
             {rows.map((module) => <View key={module.id}>
               <ListItem testID={`moodle-module-${module.id}`} title={module.name}
