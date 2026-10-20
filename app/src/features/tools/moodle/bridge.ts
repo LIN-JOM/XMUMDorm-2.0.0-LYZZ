@@ -1,6 +1,34 @@
 import { IDENTITY_INSPECT_SOURCE } from './identity';
-import { parseMoodleResponse, type MoodleMethod, type MoodleResponse } from './contract';
 
+/** ⚠️ Hermes 下 `Function.prototype.toString()` 返回 `"[bytecode]"`，注入源码必须是字面量。
+ * 只做「字段白名单 + URL 去 query/hash」，绝不把 sesskey/Cookie 等原始响应带过桥；
+ * 原生侧 `parseMoodleBridgeMessage` 会用同一套白名单再校验一次。 */
+const PROJECT_RAW_SOURCE = `function projectRaw(method, raw) {
+  function bareUrl(value) {
+    try { var u = new URL(value); return u.origin + u.pathname; } catch (e) { return null; }
+  }
+  function pick(source, keys) {
+    var out = {};
+    for (var i = 0; i < keys.length; i++) { var key = keys[i]; if (Object.prototype.hasOwnProperty.call(source, key)) out[key] = source[key]; }
+    if (typeof out.viewurl === 'string') { var v = bareUrl(out.viewurl); if (v) out.viewurl = v; else delete out.viewurl; }
+    if (typeof out.url === 'string') { var w = bareUrl(out.url); if (w) out.url = w; else delete out.url; }
+    return out;
+  }
+  var COURSE = ['id','fullname','fullnamedisplay','shortname','viewurl','startdate','enddate','visible','hidden','isfavourite','hasprogress','progress','summary','coursecategory','idnumber'];
+  var EVENT = ['id','name','description','timesort','timestart','timeduration','eventtype','normalisedeventtype','overdue','modulename','instance','url','course','action'];
+  try {
+    if (method === 'state') return typeof raw === 'string' ? raw : null;
+    if (raw === null || typeof raw !== 'object') return null;
+    var out = {};
+    if (Array.isArray(raw.courses)) out.courses = raw.courses.map(function (c) { return c && typeof c === 'object' ? pick(c, COURSE) : null; });
+    if (Array.isArray(raw.events)) out.events = raw.events.map(function (e) { return e && typeof e === 'object' ? pick(e, EVENT) : null; });
+    if (typeof raw.nextoffset === 'number') out.nextoffset = raw.nextoffset;
+    if (typeof raw.firstid === 'number') out.firstid = raw.firstid;
+    if (typeof raw.lastid === 'number') out.lastid = raw.lastid;
+    return out;
+  } catch (error) { return null; }
+}`;
+import { parseMoodleResponse, type MoodleMethod, type MoodleResponse } from './contract';
 export const MOODLE_MESSAGE_KIND = 'dorm:moodle';
 export type MoodleReadRequest =
   | { method: 'courses'; offset?: number }
@@ -48,13 +76,13 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
   return `(function () {
     var done = false, timer;
     var inspectIdentity = (${IDENTITY_INSPECT_SOURCE});
+    var project = (${PROJECT_RAW_SOURCE});
     function sameIdentity() {
       var expected = ${JSON.stringify(userId ?? null)};
       if (expected === null) return !document.querySelector('input[type=password]');
       var result = inspectIdentity(document, window.location.origin, window.M && window.M.cfg && window.M.cfg.userId);
       return result.status === 'confirmed' && result.userId === expected;
     }
-    var project = (${parseMoodleResponse.toString()});
     function send(status, data) {
       if (done) return;
       done = true;
@@ -81,6 +109,8 @@ export function buildMoodleReadScript(requestId: string, request: MoodleReadRequ
             .then(function (raw) {
               if (window.location.origin !== 'https://l.xmu.edu.my') { send('wrong-origin'); return; }
               if (!sameIdentity()) { send('expired'); return; }
+              // Field whitelist runs in-page (no sesskey/Cookie crosses the bridge);
+              // parseMoodleBridgeMessage repeats the whitelist natively.
               var data = project(${JSON.stringify(request.method)}, raw);
               if (data === null) send('invalid-data'); else send('success', data);
             }).catch(failure);
