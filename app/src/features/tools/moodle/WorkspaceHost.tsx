@@ -5,7 +5,8 @@ import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { SchoolSystemWebView, type SchoolSystemWebViewHandle } from '../SchoolSystemWebView';
 import { SCHOOL_SYSTEMS } from '../schoolSystems';
-import { MoodleWorkspaceScreen, type MoodleWorkspaceLabels } from './WorkspaceScreen';
+import { MoodleWorkspaceScreen, type MoodleDeadlineView,
+  type MoodleWorkspaceLabels } from './WorkspaceScreen';
 import { MoodleDetailScreen, type MoodleDetailLabels } from './DetailScreen';
 import { createMoodleSync } from './sync';
 import { clearMoodleCache, confirmedMoodleSchoolIdentity, persistMoodleSnapshot,
@@ -156,6 +157,23 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
   /** 原生模式的这条动作不进宿主自己的行：它由工作台的工具行承载（一屏只一条工具行）。 */
   const clearButton = <Button testID="moodle-clear" label={labels.clear} variant="ghost"
     onPress={clearMoodleCache} />;
+  /** 截止段的视图模型：分组与措辞归宿主，排版归屏幕（第四段只在一处定义顺序）。 */
+  const deadlineView: MoodleDeadlineView = {
+    title: labels.deadlines,
+    groups: [
+      ...deadlineRows.map(({ key, rows }) => ({ key, title: labels.deadlineBucket(key),
+        items: rows.map((row) => ({ key: `deadline-${row.event.id}`, title: row.event.name,
+          meta: labels.formatTime(row.dueAt) })) })),
+      { key: 'unset', title: labels.deadlineBucket('unset'),
+        items: buckets.unset.map((row) => ({ key: `unset-${row.courseId}:${row.module.id}`,
+          title: row.module.name, meta: null })) },
+    ],
+    otherTitle: labels.otherEvents,
+    others: otherEvents.map((event) => ({ key: `event-${event.id}`, title: event.name,
+      meta: [labels.eventType(event.eventType ?? null), labels.actionableStatus(event.action?.actionable ?? null)]
+        .join(' · ') })),
+    reminder: labels.reminderStatus(reminderStatus),
+  };
   return <View testID="moodle-host" style={{ flex: 1 }}>
     {mode === 'web' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2'),
       padding: theme.space('space_3') }}>
@@ -185,24 +203,7 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
           onSync={() => { pendingDetail.current = null; setDetail(null); controller.start(); }}
           onCancel={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(); }}
           onChoose={(ids) => controller.choose(ids)} onModule={readDetail} onOriginal={openOriginal}
-          footer={<View testID="moodle-deadlines" style={{ gap: theme.space('space_2') }}>
-            <Text role="headline">{labels.deadlines}</Text>
-            {deadlineRows.map(({ key, rows }) => <View key={key}>
-              <Text role="label">{labels.deadlineBucket(key)}</Text>
-              {rows.map((row) => <Text key={row.event.id}>{row.event.name} · {labels.formatTime(row.dueAt)}</Text>)}
-            </View>)}
-            <Text role="label">{labels.deadlineBucket('unset')}</Text>
-            {buckets.unset.map((row) => <Text key={`${row.courseId}:${row.module.id}`}>{row.module.name}</Text>)}
-            <Text role="headline">{labels.otherEvents}</Text>
-            {otherEvents.map((event) => <View key={event.id}>
-              <Text>{event.name}</Text>
-              <Text role="caption">{labels.eventType(event.eventType ?? null)} · {labels.actionableStatus(event.action?.actionable ?? null)}</Text>
-              {event.action?.name ? <Text>{event.action.name}</Text> : null}
-              {event.time > 0 && Number.isFinite(new Date(event.time * 1000).getTime())
-                ? <Text role="caption">{labels.formatTime(event.time * 1000)}</Text> : null}
-            </View>)}
-            <Text testID="moodle-reminder-status" role="caption">{labels.reminderStatus(reminderStatus)}</Text>
-          </View>} />
+          deadlines={deadlineView} />
       </>}
     </View> : null}
   </View>;

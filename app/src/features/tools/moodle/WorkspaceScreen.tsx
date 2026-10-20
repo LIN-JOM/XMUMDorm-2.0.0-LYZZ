@@ -25,8 +25,23 @@ export type MoodleWorkspaceLabels = {
   failure: (value: MoodleFailure) => string;
   moduleType: (value: string) => string;
 };
-export type MoodleWorkspaceScreenProps = {
-  labels: MoodleWorkspaceLabels;
+/** One deadline row: the event name plus its secondary line, already localised by the host. */
+export type MoodleDeadlineItem = { key: string; title: string; meta: string | null };
+/** One bucket or event group: a short group title and its rows. */
+export type MoodleDeadlineGroup = { key: string; title: string; items: MoodleDeadlineItem[] };
+/**
+ * The deadline section's view model. The host owns the bucketing and the wording; the
+ * screen only lays the section out, so the page keeps the section order in one place.
+ */
+export type MoodleDeadlineView = {
+  title: string;
+  groups: MoodleDeadlineGroup[];
+  otherTitle: string;
+  others: MoodleDeadlineItem[];
+  reminder: string;
+};
+
+export type MoodleWorkspaceScreenProps = {  labels: MoodleWorkspaceLabels;
   snapshot: MoodleSyncSnapshot;
   entry: 'first-login' | 'current-native' | 'restored-native';
   onLogin: () => void; onSync: () => void; onCancel: () => void;
@@ -36,6 +51,8 @@ export type MoodleWorkspaceScreenProps = {
   maintenance?: boolean;
   /** Host-owned actions that belong in the same tool row (clear cached data). */
   headerActions?: React.ReactNode;
+  /** Deadline section, rendered as the fourth section after the content section. */
+  deadlines?: MoodleDeadlineView;
   /** Content appended inside the single vertical scroller (deadlines, reminder status). */
   footer?: React.ReactNode;
 };
@@ -48,7 +65,7 @@ export type MoodleWorkspaceScreenProps = {
  * the deadline section behind `footer`.
  */
 export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync, onCancel,
-  onChoose, onModule, onOriginal, maintenance, headerActions, footer }: MoodleWorkspaceScreenProps): React.ReactElement {
+  onChoose, onModule, onOriginal, maintenance, headerActions, deadlines, footer }: MoodleWorkspaceScreenProps): React.ReactElement {
   const theme = useTheme();
   const [choice, setChoice] = React.useState({ generation: snapshot.data.generation, ids: snapshot.selectedIds });
   const draft = choice.generation === snapshot.data.generation ? choice.ids : snapshot.selectedIds;
@@ -159,6 +176,23 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
         </Card>;
       })}
     </View>}
+    {deadlines ? <View testID="moodle-section-deadlines" style={{ gap: theme.space('space_2') }}>
+      <SectionHeader title={deadlines.title} style={{ paddingHorizontal: 0 }} />
+      {deadlines.groups.length === 0 ? null : <Card variant="plain" padding="none">
+        {deadlines.groups.map((group) => <View key={group.key}>
+          <Text role="label" colorToken="text-secondary"
+            style={{ paddingHorizontal: theme.space('space_4'), paddingTop: theme.space('space_2') }}>
+            {group.title}</Text>
+          {group.items.map((item) => <View key={item.key} style={{ paddingHorizontal: theme.space('space_4'),
+            paddingVertical: theme.space('space_1'), gap: theme.space('space_1') }}>
+            <Text role="body">{item.title}</Text>
+            {item.meta ? <Text role="caption" colorToken="text-secondary">{item.meta}</Text> : null}
+          </View>)}
+        </View>)}
+      </Card>}
+      <Text testID="moodle-reminder-status" role="caption" colorToken="text-secondary">
+        {deadlines.reminder}</Text>
+    </View> : null}
     {footer}
   </ScrollView>;
 }
