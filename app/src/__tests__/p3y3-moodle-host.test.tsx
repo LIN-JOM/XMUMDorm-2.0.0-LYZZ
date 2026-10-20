@@ -1,6 +1,6 @@
 import * as mockReact from 'react';
 import { View as MockView } from 'react-native';
-import { act, fireEvent } from '@testing-library/react-native';
+import { act, fireEvent, within } from '@testing-library/react-native';
 import type { WebViewProps, WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 import { renderApp } from './helpers/renderApp';
 import { MoodleWorkspaceHost, type MoodleWorkspaceHostLabels } from '@/features/tools/moodle/WorkspaceHost';
@@ -89,6 +89,8 @@ it('p3y3 workspace closes login sync details original and reminder callbacks', a
   expect(view.getByText('Post body')).toBeTruthy();
   await fireEvent.press(view.getByTestId('moodle-post-original-81'));
   expect(onOriginal).toHaveBeenCalledWith(`${discussionUrl}#p81`);
+  // 清除数据现在位于工作台的工具行：从详情页回到工作台才够得着（G2 的结构变化）
+  await fireEvent.press(view.getByTestId('moodle-detail-back'));
   await fireEvent.press(view.getByTestId('moodle-clear'));
   expect(readMoodleCache().courses).toEqual([]);
   expect(onClear).toHaveBeenCalled();
@@ -166,4 +168,15 @@ it('p3y3 invalidates a changed project token once when a cache listener reads im
     readMoodleCache();
     expect(calls).toBe(1);
   } finally { unsubscribe(); if (previous === null) await clearToken(); else await saveToken(previous); moodleCacheGeneration(); }
+});
+
+it('p3g2 gathers the native workspace actions into one tool row', async () => {
+  const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => now}
+    onOpenOriginal={jest.fn()} />, { inScreen: true });
+  await confirm();
+  const row = within(view.getByTestId('moodle-tool-row'));
+  expect(row.getByTestId('moodle-sync')).toBeTruthy();
+  expect(row.getByTestId('moodle-clear')).toBeTruthy();
+  expect(view.queryByTestId('moodle-native')).toBeNull();
+  await view.unmount(); await settleMoodleStorage();
 });

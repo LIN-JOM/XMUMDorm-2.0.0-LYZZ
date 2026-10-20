@@ -153,15 +153,17 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     { key: 'valid' as const, rows: buckets.valid }, { key: 'past' as const, rows: buckets.past },
     { key: 'future-anomaly' as const, rows: buckets.futureAnomalies },
   ];
+  /** 原生模式的这条动作不进宿主自己的行：它由工作台的工具行承载（一屏只一条工具行）。 */
+  const clearButton = <Button testID="moodle-clear" label={labels.clear} variant="ghost"
+    onPress={clearMoodleCache} />;
   return <View testID="moodle-host" style={{ flex: 1 }}>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2'), padding: theme.space('space_3') }}>
-      {mode === 'web' ? <>
-        <Text>{labels.firstLogin}</Text>
-        <Button testID="moodle-native" label={labels.backToNative} disabled={!trusted} variant="secondary"
-          onPress={() => { controller.adoptCache(); setMode('native'); }} />
-      </> : null}
-      <Button testID="moodle-clear" label={labels.clear} variant="ghost" onPress={clearMoodleCache} />
-    </View>
+    {mode === 'web' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2'),
+      padding: theme.space('space_3') }}>
+      <Text>{labels.firstLogin}</Text>
+      <Button testID="moodle-native" label={labels.backToNative} disabled={!trusted} variant="secondary"
+        onPress={() => { controller.adoptCache(); setMode('native'); }} />
+      {clearButton}
+    </View> : null}
     <View testID="moodle-webview-area" style={mode === 'web' ? { flex: 1 } : { height: 0, overflow: 'hidden' }}
       accessibilityElementsHidden={mode !== 'web'} importantForAccessibility={mode === 'web' ? 'auto' : 'no-hide-descendants'}>
       <SchoolSystemWebView ref={bridge} system={SCHOOL_SYSTEMS.find((system) => system.id === 'moodle')!} preserveSnapshotOnClose
@@ -178,6 +180,7 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
           {detail.module.url ? <Button label={labels.original} variant="link" onPress={() => openOriginal(detail.module.url!)} /> : null}
         </ScrollView> : <>
         <MoodleWorkspaceScreen labels={labels} snapshot={snapshot} entry={entry} maintenance={maintenance}
+          headerActions={clearButton}
           onLogin={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(false); setMode('web'); }}
           onSync={() => { pendingDetail.current = null; setDetail(null); controller.start(); }}
           onCancel={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(); }}

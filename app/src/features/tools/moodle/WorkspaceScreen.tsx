@@ -31,6 +31,8 @@ export type MoodleWorkspaceScreenProps = {
   onModule: (courseId: number, module: MoodleModule) => void;
   onOriginal: (url: string) => void;
   maintenance?: boolean;
+  /** Host-owned actions that belong in the same tool row (clear cached data). */
+  headerActions?: React.ReactNode;
   /** Content appended inside the single vertical scroller (deadlines, reminder status). */
   footer?: React.ReactNode;
 };
@@ -43,7 +45,7 @@ export type MoodleWorkspaceScreenProps = {
  * the deadline section behind `footer`.
  */
 export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync, onCancel,
-  onChoose, onModule, onOriginal, maintenance, footer }: MoodleWorkspaceScreenProps): React.ReactElement {
+  onChoose, onModule, onOriginal, maintenance, headerActions, footer }: MoodleWorkspaceScreenProps): React.ReactElement {
   const theme = useTheme();
   const [choice, setChoice] = React.useState({ generation: snapshot.data.generation, ids: snapshot.selectedIds });
   const draft = choice.generation === snapshot.data.generation ? choice.ids : snapshot.selectedIds;
@@ -77,6 +79,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
         <Button testID="moodle-sync" label={labels.sync} onPress={onSync} disabled={busy} />
         {busy ? <Button testID="moodle-cancel" label={labels.cancel} onPress={onCancel} variant="ghost" /> : null}
         <Button testID="moodle-login" label={labels.login} onPress={onLogin} variant="ghost" />
+        {headerActions}
       </View>
       <Text testID="moodle-entry">{entry === 'first-login' ? labels.firstLogin
         : entry === 'restored-native' ? labels.restoredNative : labels.nativeWorkspace}</Text>
