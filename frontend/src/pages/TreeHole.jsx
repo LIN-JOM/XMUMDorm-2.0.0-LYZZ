@@ -6,6 +6,8 @@ import { useLanguage } from '../context/LanguageContextState';
 import { motion } from 'framer-motion';
 import { Heart, MessageCircle } from 'lucide-react';
 import TreeHoleToolbar from '../components/TreeHoleToolbar';
+import PostAttribution from '../components/PostAttribution';
+import { postAttributionLabel } from '../utils/postAttribution';
 import PageSkeleton from '../components/ui/PageSkeleton';
 import InterestRecommendationBlock from '../components/square/InterestRecommendationBlock';
 import RelatedCampusTopicsBlock from '../components/square/RelatedCampusTopicsBlock';
@@ -780,6 +782,7 @@ function TreeHoleGlassSkeleton() {
 }
 
 function TreeHoleGlassCard({ post, eager = false, mobileStable = false }) {
+  const { lang } = useLanguage();
   const author = getAuthor(post);
   const likeNum = post.like_count ?? post.likeCount ?? 0;
   const commentNum = post.comment_count ?? post.commentCount ?? 0;
@@ -801,11 +804,12 @@ function TreeHoleGlassCard({ post, eager = false, mobileStable = false }) {
     }
   }, [cover, coverThumb]);
   const display = title || (text.length > 64 ? `${text.slice(0, 64)}…` : text) || ' ';
+  const accessibleLabel = [display, postAttributionLabel(post, lang)].filter(Boolean).join(' · ');
 
   if (!cover) {
     return (
       <MotionDiv variants={cardIn} initial="hidden" animate="show">
-        <Link to={`/post/${post.id}`} className="treehole-glass-card treehole-glass-card--noimg" aria-label={display}>
+        <Link to={`/post/${post.id}`} className="treehole-glass-card treehole-glass-card--noimg" aria-label={accessibleLabel}>
           <div className="treehole-noimg-head">
             <span className="treehole-noimg-avatar">
               {author.avatar ? (
@@ -818,6 +822,7 @@ function TreeHoleGlassCard({ post, eager = false, mobileStable = false }) {
           </div>
 
           <div className="treehole-noimg-text">{display}</div>
+          <PostAttribution post={post} compact />
 
           <div className="treehole-noimg-actions">
             <MotionSpan
@@ -844,7 +849,7 @@ function TreeHoleGlassCard({ post, eager = false, mobileStable = false }) {
 
   return (
     <MotionDiv variants={cardIn} initial="hidden" animate="show">
-      <Link to={`/post/${post.id}`} className="treehole-glass-card" aria-label={display}>
+      <Link to={`/post/${post.id}`} className="treehole-glass-card" aria-label={accessibleLabel}>
         <div className="treehole-glass-media" aria-hidden>
           {cover && !errored ? (
             <>
@@ -894,6 +899,7 @@ function TreeHoleGlassCard({ post, eager = false, mobileStable = false }) {
 
         <div className="treehole-glass-content">
           <div className="treehole-glass-text">{display}</div>
+          <PostAttribution post={post} compact />
           <div className="treehole-glass-actions">
             <MotionSpan
               className="treehole-glass-action"

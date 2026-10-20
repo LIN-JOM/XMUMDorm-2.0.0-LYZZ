@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import PostDetailShell from '../components/PostDetailShell';
+import PostAttribution from '../components/PostAttribution';
 import { useAuth } from '../context/AuthContextState';
 import { useLanguage } from '../context/LanguageContextState';
 import {
@@ -379,7 +380,7 @@ export default function PostDetail() {
       onEmptyAction={() => navigate('/')}
       headerSlot={headerSlot}
       title={null}
-      metaSlot={null}
+      metaSlot={post ? <PostAttribution post={post} /> : null}
       tags={detailTags}
       reportTargetType={isAuthor ? null : 'post'}
       commentReportType="comment"

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
+import Select from '../components/ui/Select';
 import Tag from '../components/ui/Tag';
 import { useAuth } from '../context/AuthContextState';
 import { useLanguage } from '../context/LanguageContextState';
@@ -13,6 +14,8 @@ import { createPost, getPostTagsList } from '@shared/api/posts';
 import { getApiErrorMessage } from '@shared/utils/apiError';
 import { QK } from '@shared/query/queryKeys';
 import { FOOD_SQUARE_TAG_SLUG } from '@shared/constants/canteen';
+import { POST_REPOST_SOURCES, POST_REPOST_SOURCE_MAX_LENGTH } from '@shared/constants/postAttribution';
+import { buildPostAttribution } from '../utils/postAttribution';
 import './PostNew.css';
 
 const POST_TAGS_STALE_MS = 15 * 60 * 1000;
@@ -29,6 +32,9 @@ export default function PostNew() {
   const tokenKey = token ?? 'guest';
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [contentOrigin, setContentOrigin] = useState('original');
+  const [repostSource, setRepostSource] = useState('WX');
+  const [customSource, setCustomSource] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -96,6 +102,11 @@ export default function PostNew() {
       Toast.error(isEn ? 'Content is required' : '请输入内容');
       return;
     }
+    const attribution = isAdmin ? null : buildPostAttribution(contentOrigin, repostSource, customSource);
+    if (!isAdmin && !attribution) {
+      Toast.error(isEn ? 'Enter a plain-text source of 1–100 characters' : '请输入 1–100 字符的纯文本来源');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -107,8 +118,9 @@ export default function PostNew() {
 
       if (isAdmin) {
         payload.type = 'announcement';
-      } else if (selectedTagIds.length > 0) {
-        payload.tagIds = selectedTagIds;
+      } else {
+        Object.assign(payload, attribution);
+        if (selectedTagIds.length > 0) payload.tagIds = selectedTagIds;
       }
 
       const created = await createPost(payload);
@@ -174,6 +186,48 @@ export default function PostNew() {
         </div>
 
         <form className="postnew-form" onSubmit={handleSubmit}>
+          {!isAdmin ? (
+            <>
+              <Select
+                id="post-content-origin"
+                label={isEn ? 'Content declaration' : '内容声明'}
+                value={contentOrigin}
+                onChange={(event) => setContentOrigin(event.target.value)}
+                required
+                aria-required="true"
+              >
+                <option value="original">{isEn ? 'Original' : '原创'}</option>
+                <option value="repost">{isEn ? 'Repost' : '转载'}</option>
+              </Select>
+              {contentOrigin === 'repost' ? (
+                <>
+                  <Select
+                    id="post-repost-source"
+                    label={isEn ? 'Source' : '转载来源'}
+                    value={repostSource}
+                    onChange={(event) => setRepostSource(event.target.value)}
+                    required
+                    aria-required="true"
+                  >
+                    {POST_REPOST_SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
+                    <option value="custom">{isEn ? 'Custom' : '自定义'}</option>
+                  </Select>
+                  {repostSource === 'custom' ? (
+                    <Input
+                      id="post-custom-source"
+                      label={isEn ? 'Source description' : '来源说明'}
+                      hint={isEn ? 'Plain text, 1–100 characters. No link required.' : '1–100 字符纯文本，无需链接。'}
+                      value={customSource}
+                      onChange={(event) => setCustomSource(event.target.value)}
+                      maxLength={POST_REPOST_SOURCE_MAX_LENGTH}
+                      required
+                      aria-required="true"
+                    />
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          ) : null}
           {!isAdmin ? (
             <Input
               label={isEn ? 'Title' : '标题'}
