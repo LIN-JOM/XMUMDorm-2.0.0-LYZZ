@@ -12,7 +12,7 @@ import type { MoodleSyncSnapshot } from '@/features/tools/moodle/sync';
 
 const labels: MoodleWorkspaceLabels = { firstLogin: 'First login', restoredNative: 'Restored native',
   nativeWorkspace: 'Native workspace', login: 'Login', sync: 'Sync', cancel: 'Cancel',
-  confirmSelection: 'Confirm', chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types',
+  confirmSelection: 'Confirm', chooseCourses: 'Choose courses', courses: 'Courses', switchCourse: 'Switch course', allTypes: 'All types',
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
   maintenance: 'Maintenance', offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}` };

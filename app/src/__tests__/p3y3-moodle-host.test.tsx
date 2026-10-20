@@ -22,7 +22,7 @@ const moduleUrl = 'https://l.xmu.edu.my/mod/forum/view.php?id=101';
 const discussionUrl = 'https://l.xmu.edu.my/mod/forum/discuss.php?d=71';
 const labels: MoodleWorkspaceHostLabels = { firstLogin: 'First login', restoredNative: 'Restored native',
   nativeWorkspace: 'Native workspace', login: 'Login', sync: 'Sync', cancel: 'Cancel',
-  confirmSelection: 'Choose', chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types',
+  confirmSelection: 'Choose', chooseCourses: 'Choose courses', courses: 'Courses', switchCourse: 'Switch course', allTypes: 'All types',
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
   maintenance: 'Moodle maintenance', offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}`,

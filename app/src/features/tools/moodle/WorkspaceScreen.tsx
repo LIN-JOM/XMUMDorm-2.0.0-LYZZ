@@ -17,7 +17,7 @@ import type { MoodleSyncPhase, MoodleSyncSnapshot } from './sync';
 /** The route owner fills these labels from the single application t function. */
 export type MoodleWorkspaceLabels = {
   firstLogin: string; restoredNative: string; nativeWorkspace: string; login: string; sync: string; cancel: string;
-  confirmSelection: string; chooseCourses: string; courses: string; allTypes: string;
+  confirmSelection: string; chooseCourses: string; courses: string; allTypes: string; switchCourse: string;
   empty: string; original: string; details: string; unknownSection: string; maintenance: string; offline: string;
   phase: (value: MoodleSyncPhase) => string;
   failure: (value: MoodleFailure) => string;
@@ -52,6 +52,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
   const draft = choice.generation === snapshot.data.generation ? choice.ids : snapshot.selectedIds;
   const [courseId, setCourseId] = React.useState<number | null>(null);
   const [type, setType] = React.useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = React.useState(false);
   const currentCourse = snapshot.data.courses.find((course) => course.id === courseId)
     ?? snapshot.data.courses[0];
   const courseState = snapshot.data.states.find((state) => state.courseId === currentCourse?.id);
@@ -102,13 +103,17 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
       {snapshot.phase !== 'choosing' && !hasCourses ? <EmptyState kind="firstRun" testID="moodle-empty-sync"
         title={labels.empty} actionLabel={labels.sync} onAction={onSync} /> : null}
       {snapshot.phase !== 'choosing' && hasCourses ? <>
-        <Card variant="plain" padding="space_3">
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
-            {snapshot.data.courses.map((course) => <Button key={course.id} testID={`moodle-course-${course.id}`}
-              label={course.name} variant={course.id === currentCourse?.id ? 'secondary' : 'ghost'}
-              onPress={() => { setCourseId(course.id); setType(null); }} />)}
-          </View>
-        </Card>
+        <View style={{ gap: theme.space('space_1') }}>
+          <Text testID="moodle-current-course" role="headline" emphasis="strong">
+            {currentCourse?.name ?? ''}</Text>
+          <Button testID="moodle-switch-course" label={labels.switchCourse} variant="link" size="small"
+            onPress={() => setPickerOpen((open) => !open)} />
+        </View>
+        {pickerOpen ? <Card variant="plain" padding="none">
+          {snapshot.data.courses.map((course) => <ListItem key={course.id} testID={`moodle-course-${course.id}`}
+            title={course.name}
+            onPress={() => { setCourseId(course.id); setType(null); setPickerOpen(false); }} />)}
+        </Card> : null}
         <ScrollView testID="moodle-chips" horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: theme.space('space_2') }}>
           <Chip testID="moodle-type-all" variant="selectable" selected={type === null} label={labels.allTypes}

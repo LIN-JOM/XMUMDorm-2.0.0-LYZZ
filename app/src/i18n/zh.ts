@@ -116,6 +116,7 @@ export const zh = {
   'tools.moodle.confirmSelection': '确认课程',
   'tools.moodle.chooseCourses': '选择课程',
   'tools.moodle.courses': '课程',
+  'tools.moodle.switchCourse': '切换课程',
   'tools.moodle.allTypes': '全部类型',
   'tools.moodle.empty': '没有可显示的内容',
   'tools.moodle.original': '打开原页',

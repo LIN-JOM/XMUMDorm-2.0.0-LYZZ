@@ -5,14 +5,14 @@
  * 期望：状态段 / 课程段 / 内容段按顺序各成一段，内容落在自己那一段里。
  */
 import * as React from 'react';
-import { within } from '@testing-library/react-native';
+import { fireEvent, within } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
 import { MoodleWorkspaceScreen, type MoodleWorkspaceLabels } from '@/features/tools/moodle/WorkspaceScreen';
 import type { MoodleSyncSnapshot } from '@/features/tools/moodle/sync';
 
 const labels: MoodleWorkspaceLabels = { firstLogin: 'First login', restoredNative: 'Restored native',
   nativeWorkspace: 'Native workspace', login: 'Login', sync: 'Sync', cancel: 'Cancel',
-  confirmSelection: 'Confirm', chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types',
+  confirmSelection: 'Confirm', chooseCourses: 'Choose courses', courses: 'Courses', switchCourse: 'Switch course', allTypes: 'All types',
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
   maintenance: 'Maintenance', offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}` };
@@ -39,8 +39,10 @@ it('p3g1 renders the status, course and content sections in that order', async (
   expect(ids).toEqual(['moodle-section-status', 'moodle-section-courses', 'moodle-section-content']);
 });
 
-it('p3g1 keeps course buttons inside the course section', async () => {
+it('p3g1 keeps course rows inside the course section', async () => {
   const view = await renderApp(<MoodleWorkspaceScreen {...props} snapshot={ready} entry="current-native" />);
+  // G6 之后课程行只在切换列表展开时出现，所以先展开再断言归属
+  await fireEvent.press(view.getByTestId('moodle-switch-course'));
   const coursesSection = within(view.getByTestId('moodle-section-courses'));
   expect(coursesSection.getByTestId('moodle-course-1')).toBeTruthy();
   expect(coursesSection.getByTestId('moodle-course-2')).toBeTruthy();
