@@ -191,6 +191,7 @@ export const zh = {
 
   // ── 表单校验文案（`K01`/`K03` 用；**只给词条 key**，文案在这里）──────────
   'form.error.required': '这一项不能为空',
+  'form.required': '必填',
   'form.error.tooLong': '内容超过上限',
   'form.error.submit': '提交没有成功',
   // 表单骨架的固定标签（P2A-04：宿主统一给，⛔ 页面不再各写一份）

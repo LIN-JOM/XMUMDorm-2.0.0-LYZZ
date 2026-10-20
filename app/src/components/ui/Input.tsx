@@ -22,6 +22,7 @@ import {
 import X from 'lucide-react-native/icons/x';
 
 import { useTheme } from '@/design-system/theme';
+import { useI18n } from '@/i18n';
 import type { BorderWidthKey } from '@/design-system/px';
 import { Icon } from './Icon';
 import { Pressable } from './Pressable';
@@ -51,10 +52,10 @@ export function keyboardTypeFor(kind: InputKind): KeyboardTypeOptions | undefine
  */
 export function inputAccessibilityLabel(
   label: string,
-  options: { required?: boolean; errorText?: string } = {}
+  options: { required?: boolean; requiredLabel?: string; errorText?: string } = {}
 ): string {
   const parts = [label];
-  if (options.required) parts.push('必填');
+  if (options.required) parts.push(options.requiredLabel ?? '必填');
   if (options.errorText) parts.push(options.errorText);
   return parts.join('，');
 }
@@ -105,6 +106,7 @@ export function Input({
   testID,
 }: InputProps): React.ReactElement {
   const theme = useTheme();
+  const { t } = useI18n();
   const hasError = typeof errorText === 'string' && errorText.length > 0;
   const isEditable = editable && !disabled;
 
@@ -157,6 +159,7 @@ export function Input({
           allowFontScaling
           accessibilityLabel={inputAccessibilityLabel(label, {
             required,
+            requiredLabel: t('form.required'),
             errorText: hasError ? errorText : undefined,
           })}
           accessibilityState={{ disabled }}

@@ -13,6 +13,7 @@ import * as React from 'react';
 import { render, userEvent } from '@testing-library/react-native';
 
 import { ThemeProvider } from '@/design-system/theme';
+import { I18nProvider } from '@/i18n';
 
 import { Button, type ButtonVariant } from '@/components/ui/Button';
 import { Input, inputAccessibilityLabel, keyboardTypeFor } from '@/components/ui/Input';
@@ -49,7 +50,7 @@ const CONTROL_FILES = [
 ] as const;
 
 const wrap = (node: React.ReactElement) =>
-  render(<ThemeProvider source="dark" systemScheme="dark">{node}</ThemeProvider>);
+  render(<ThemeProvider source="dark" systemScheme="dark"><I18nProvider locale="zh">{node}</I18nProvider></ThemeProvider>);
 
 describe('TC-P1-05-1A · C 层 11 个控件齐备且都消费主题层', () => {
   it.each(CONTROL_FILES)('components/ui/%s 存在且非空', (file) => {
@@ -100,6 +101,7 @@ describe('TC-P1-05-3A · C04 Input：键盘映射与"错误是 label 的一部�
     expect(inputAccessibilityLabel('昵称', { required: true, errorText: '不能为空' })).toBe(
       '昵称，必填，不能为空'
     );
+    expect(inputAccessibilityLabel('Source', { required: true, requiredLabel: 'required' })).toBe('Source，required');
   });
 
   it('渲染出的 label 含错误文案，且 disabled 进 accessibilityState', async () => {

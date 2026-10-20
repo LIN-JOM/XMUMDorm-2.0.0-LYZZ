@@ -185,6 +185,7 @@ export const en: Record<MessageKey, string> = {
 
   // Form validation copy (K01/K03)
   'form.error.required': 'This field is required',
+  'form.required': 'required',
   'form.error.tooLong': 'Too long',
   'form.error.submit': 'Submit failed',
   // Fixed form-skeleton labels (P2A-04: the host supplies them once)

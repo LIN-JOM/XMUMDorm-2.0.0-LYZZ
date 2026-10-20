@@ -16,6 +16,7 @@ import { TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import TriangleAlert from 'lucide-react-native/icons/triangle-alert';
 
 import { useTheme } from '@/design-system/theme';
+import { useI18n } from '@/i18n';
 import { Icon } from './Icon';
 import { inputAccessibilityLabel } from './Input';
 import { Text } from './Text';
@@ -72,11 +73,13 @@ export function TextArea({
   testID,
 }: TextAreaProps): React.ReactElement {
   const theme = useTheme();
+  const { t } = useI18n();
   const hasError = typeof errorText === 'string' && errorText.length > 0;
   const state = counterState(value.length, maxLength);
   // 与 C04 共用同一个标签构造器：错误文案必须**是 label 的一部分**（§7.3）
   const a11yLabel = inputAccessibilityLabel(label, {
     required,
+    requiredLabel: t('form.required'),
     errorText: hasError ? errorText : undefined,
   });
 
