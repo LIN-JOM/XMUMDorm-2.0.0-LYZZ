@@ -21,7 +21,7 @@ const { attachExp } = require('../utils/expResponse');
 const { isPostContentEligible, isCommentEligible } = require('../utils/expEligibility');
 const { requireCurrentTerms } = require('../services/termsAcceptance');
 const { inlineLimit } = require('../utils/sqlLimit');
-const { POST_CONTENT_ORIGINS, POST_REPOST_SOURCES } = require('../shared/constants/postAttribution');
+const { POST_CONTENT_ORIGINS, normalizePostRepostSource } = require('../shared/constants/postAttribution');
 
 // 统一的文本清洗，防止 XSS 注入（去掉所有 HTML 标签，只保留纯文本）
 function cleanText(input) {
@@ -243,11 +243,11 @@ router.post('/', authenticateToken, requireCurrentTerms, checkSanction, sensitiv
     // Older clients omit the declaration; preserve unknown authorship instead of inventing it.
     const contentOrigin = type === 'normal' ? req.body?.content_origin ?? null : null;
     const rawSource = req.body?.repost_source;
-    const repostSource = contentOrigin === 'repost' && typeof rawSource === 'string' ? cleanText(rawSource) : null;
+    const repostSource = contentOrigin === 'repost' ? normalizePostRepostSource(rawSource) : null;
     if (type === 'normal' && (
       (contentOrigin !== null && !POST_CONTENT_ORIGINS.includes(contentOrigin)) ||
       (contentOrigin === null && rawSource != null) ||
-      (contentOrigin === 'repost' && !POST_REPOST_SOURCES.includes(repostSource))
+      (contentOrigin === 'repost' && repostSource === null)
     )) {
       return res.status(400).json({ status: -1, message: '请选择原创或转载，转载需填写有效来源' });
     }
