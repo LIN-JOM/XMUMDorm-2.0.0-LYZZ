@@ -39,6 +39,8 @@ export type MoodleDeadlineView = {
   otherTitle: string;
   others: MoodleDeadlineItem[];
   reminder: string;
+  /** Shown when every bucket and the other events are empty. */
+  empty: string;
 };
 
 export type MoodleWorkspaceScreenProps = {  labels: MoodleWorkspaceLabels;
@@ -178,7 +180,9 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
     </View>}
     {deadlines ? <View testID="moodle-section-deadlines" style={{ gap: theme.space('space_2') }}>
       <SectionHeader title={deadlines.title} style={{ paddingHorizontal: 0 }} />
-      {deadlines.groups.length === 0 ? null : <Card variant="plain" padding="none">
+      {deadlines.groups.length === 0 && deadlines.others.length === 0
+        ? <Text role="caption" colorToken="text-secondary">{deadlines.empty}</Text>
+        : <Card variant="plain" padding="none">
         {deadlines.groups.map((group) => <View key={group.key}>
           <Text role="label" colorToken="text-secondary"
             style={{ paddingHorizontal: theme.space('space_4'), paddingTop: theme.space('space_2') }}>
@@ -189,7 +193,7 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
             {item.meta ? <Text role="caption" colorToken="text-secondary">{item.meta}</Text> : null}
           </View>)}
         </View>)}
-      </Card>}
+        </Card>}
       <Text testID="moodle-reminder-status" role="caption" colorToken="text-secondary">
         {deadlines.reminder}</Text>
     </View> : null}

@@ -125,6 +125,7 @@ export const zh = {
   'tools.moodle.maintenance': 'Moodle 维护中（03:00–04:30）',
   'tools.moodle.offline': '当前离线',
   'tools.moodle.deadlines': '截止时间',
+  'tools.moodle.noDeadlines': '暂无截止',
   'tools.moodle.otherEvents': '其他事件',
   'tools.moodle.clear': '清除 Moodle 数据',
   'tools.moodle.backToNative': '进入工作台',

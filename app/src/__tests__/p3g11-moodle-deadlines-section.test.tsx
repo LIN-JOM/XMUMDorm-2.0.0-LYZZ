@@ -29,7 +29,7 @@ const snapshot: MoodleSyncSnapshot = { phase: 'ready', failure: null, candidates
 const deadlines: MoodleDeadlineView = { title: 'Deadlines', groups: [
   { key: 'valid', title: 'Due', items: [{ key: 'd1', title: 'Essay 1', meta: '2026-10-21 23:59' }] },
   { key: 'past', title: 'Past', items: [] },
-], otherTitle: 'Other events', others: [], reminder: 'Reminders planned' };
+], otherTitle: 'Other events', others: [], reminder: 'Reminders planned', empty: 'No deadlines yet' };
 const props = { labels, snapshot, entry: 'current-native' as const, onLogin: jest.fn(), onSync: jest.fn(),
   onCancel: jest.fn(), onChoose: jest.fn(), onModule: jest.fn(), onOriginal: jest.fn() };
 

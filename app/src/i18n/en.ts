@@ -121,6 +121,7 @@ export const en: Record<MessageKey, string> = {
   'tools.moodle.maintenance': 'Moodle under maintenance (03:00–04:30)',
   'tools.moodle.offline': 'You are offline',
   'tools.moodle.deadlines': 'Deadlines',
+  'tools.moodle.noDeadlines': 'No deadlines yet',
   'tools.moodle.otherEvents': 'Other events',
   'tools.moodle.clear': 'Clear Moodle data',
   'tools.moodle.backToNative': 'Open workspace',

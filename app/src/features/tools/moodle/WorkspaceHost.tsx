@@ -23,7 +23,7 @@ import { partitionMoodleDeadlines, planMoodleDeadlineReminders,
 export type MoodleReminderStatus = 'unavailable' | 'planned' | 'partial' | 'denied' | 'stale'
   | 'cleared' | 'failed';
 export type MoodleWorkspaceHostLabels = MoodleWorkspaceLabels & MoodleDetailLabels & {
-  clear: string; backToNative: string; deadlines: string; otherEvents: string;
+  clear: string; backToNative: string; deadlines: string; otherEvents: string; noDeadlines: string;
   eventType: (value: string | null) => string; actionableStatus: (value: boolean | null) => string;
   deadlineBucket: (value: 'valid' | 'past' | 'unset' | 'future-anomaly') => string;
   detailStatus: (value: 'loading' | MoodleDetailFailure) => string;
@@ -167,12 +167,13 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
       { key: 'unset', title: labels.deadlineBucket('unset'),
         items: buckets.unset.map((row) => ({ key: `unset-${row.courseId}:${row.module.id}`,
           title: row.module.name, meta: null })) },
-    ],
+    ].filter((group) => group.items.length > 0),
     otherTitle: labels.otherEvents,
     others: otherEvents.map((event) => ({ key: `event-${event.id}`, title: event.name,
       meta: [labels.eventType(event.eventType ?? null), labels.actionableStatus(event.action?.actionable ?? null)]
         .join(' · ') })),
     reminder: labels.reminderStatus(reminderStatus),
+    empty: labels.noDeadlines,
   };
   return <View testID="moodle-host" style={{ flex: 1 }}>
     {mode === 'web' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2'),

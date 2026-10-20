@@ -26,7 +26,7 @@ const labels: MoodleWorkspaceHostLabels = { firstLogin: 'First login', restoredN
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
   maintenance: 'Moodle maintenance', offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}`,
-  back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines', otherEvents: 'Other events',
+  back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines', noDeadlines: 'No deadlines', otherEvents: 'Other events',
   eventType: (value) => 'event type ' + String(value), actionableStatus: (value) => 'actionable ' + String(value),
   deadlineBucket: (value) => `bucket ${value}`, formatTime: (value) => new Date(value).toISOString(),
   detailStatus: (value) => `detail ${value}`, reminderStatus: (value) => `reminders ${value}`,
@@ -70,7 +70,13 @@ it('p3y3 workspace closes login sync details original and reminder callbacks', a
   await core('state', state);
   await core('events', { events: [{ id: 5, courseId: 1, moduleId: 999, name: 'Deadline',
     time: now / 1000 + 86400, eventType: 'expectcompletionon', url: moduleUrl, action: { name: 'Open', itemCount: 1, actionable: true } }], firstId: 5, lastId: 5 });
+  // G11/G12：截止成为独立分区，只有有内容的桶才出现
+  expect(view.getByTestId('moodle-section-deadlines')).toBeTruthy();
+  expect(view.getByText('bucket valid')).toBeTruthy();
+  expect(view.queryByText('bucket past')).toBeNull();
   await core('events', { events: [], firstId: null, lastId: null });
+  // 空尾页只是分页结束，已读到的截止还在这一段里
+  expect(view.getByText('Deadline')).toBeTruthy();
   expect(onPlan).toHaveBeenLastCalledWith([{ id: 'moodle:1:5', fireAt: now + 86400000 - 1800000 }]);
   await fireEvent.press(view.getByTestId('moodle-module-101'));
   const id = requestId('detail');
