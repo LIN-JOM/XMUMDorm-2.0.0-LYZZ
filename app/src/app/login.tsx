@@ -6,6 +6,10 @@
 import * as React from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
+import Mail from 'lucide-react-native/icons/mail';
+import Lock from 'lucide-react-native/icons/lock';
+import Eye from 'lucide-react-native/icons/eye';
+import EyeOff from 'lucide-react-native/icons/eye-off';
 
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
@@ -14,6 +18,8 @@ import { Button } from '@/components/ui/Button';
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
 import { InlineNotice } from '@/components/ui/InlineNotice';
 import { Input } from '@/components/ui/Input';
+import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { Text } from '@/components/ui/Text';
 import { useSession } from '@/features/auth/session';
 import { LoginLayout } from '@/features/auth/LoginLayout';
@@ -25,10 +31,13 @@ export default function LoginScreen(): React.ReactElement {
 
   const [identifier, setIdentifier] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   /** 错误直接存 `AppError`：`K04` 会用 `toErrorCopy` 渲染三段文案（⛔ 页面不写文案） */
   const [error, setError] = React.useState<AppError | null>(null);
-  const [identifierError, setIdentifierError] = React.useState<string | undefined>(undefined);
+  const [identifierError, setIdentifierError] = React.useState<
+    string | undefined
+  >(undefined);
 
   const submit = async (): Promise<void> => {
     if (submitting) return; // 防重复提交
@@ -52,23 +61,39 @@ export default function LoginScreen(): React.ReactElement {
 
   return (
     <LoginLayout>
-        <Text role="title" emphasis="strong" colorToken="text-primary">
-          {t('auth.title')}
-        </Text>
+      <Text
+        role="title"
+        emphasis="strong"
+        colorToken="text-primary"
+        accessibilityRole="header"
+      >
+        {t('auth.title')}
+      </Text>
 
-        <ErrorSummary testID="login-summary" title={t('auth.failed')} formError={error} />
+      <ErrorSummary
+        testID="login-summary"
+        title={t('auth.failed')}
+        formError={error}
+      />
 
-        {/* 会话过期被送到这里的（`A-01` 的门）：要说清**为什么**，⛔ 不是普通的"未登录" */}
-        {session.status === 'expired' ? (
-          <InlineNotice testID="login-expired" tone="warning" message={t('auth.expired')} />
-        ) : null}
+      {/* 会话过期被送到这里的（`A-01` 的门）：要说清**为什么**，⛔ 不是普通的"未登录" */}
+      {session.status === 'expired' ? (
+        <InlineNotice
+          testID="login-expired"
+          tone="warning"
+          message={t('auth.expired')}
+        />
+      ) : null}
 
+      <View style={{ gap: theme.space('space_4') }}>
         <Input
           testID="login-identifier"
           label={t('auth.identifier')}
           value={identifier}
           onChangeText={setIdentifier}
           kind="text"
+          appearance="underline"
+          prefix={<Icon source={Mail} size="body" tint="secondary" />}
           errorText={identifierError}
           required
         />
@@ -77,34 +102,93 @@ export default function LoginScreen(): React.ReactElement {
           label={t('auth.password')}
           value={password}
           onChangeText={setPassword}
-          kind="password"
+          kind={showPassword ? 'text' : 'password'}
+          appearance="underline"
+          prefix={<Icon source={Lock} size="body" tint="secondary" />}
+          suffix={
+            <IconButton
+              testID="login-toggle-password"
+              Icon={showPassword ? EyeOff : Eye}
+              accessibilityLabel={
+                showPassword ? t('auth.hidePassword') : t('auth.showPassword')
+              }
+              onPress={() => setShowPassword((shown) => !shown)}
+            />
+          }
           required
         />
+      </View>
 
-        <View style={{ flexDirection: 'row', gap: theme.space('space_2') }}>
+      <Button
+        testID="login-to-reset"
+        label={t('auth.forgotPassword')}
+        variant="link"
+        size="small"
+        style={{
+          alignSelf: 'flex-end',
+          paddingHorizontal: 0,
+          paddingVertical: 0,
+        }}
+        onPress={() => router.push('/reset-password')}
+      />
+      <View style={{ gap: theme.space('space_3') }}>
+        <Button
+          testID="login-submit"
+          label={t('auth.login')}
+          variant="primary"
+          loading={submitting}
+          fullWidth
+          // 用户确认稿为平面蓝色 CTA；只在登录页覆盖默认硬偏移，不改变共享按钮。
+          style={{
+            borderWidth: 0,
+            borderRightWidth: 0,
+            borderBottomWidth: 0,
+            minHeight: theme.touchTarget + theme.space('space_1'),
+          }}
+          onPress={() => {
+            void submit();
+          }}
+        />
+        {/* 页面清单：A-03/A-04 的入口就是 A-02（本页）—— ⛔ 不做"藏在设置里的注册" */}
+        <Button
+          testID="login-to-register"
+          label={t('auth.toRegister')}
+          variant="secondary"
+          fullWidth
+          style={{
+            backgroundColor: theme.color['bg-canvas'].value,
+            minHeight: theme.touchTarget + theme.space('space_1'),
+          }}
+          onPress={() => router.push('/register')}
+        />
+      </View>
+      <View style={{ alignItems: 'center', marginTop: theme.space('space_2') }}>
+        <Text role="caption" colorToken="text-muted" align="center">
+          {t('auth.legalIntro')}
+        </Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+          }}
+        >
           <Button
-            testID="login-submit"
-            label={t('auth.login')}
-            variant="primary"
-            loading={submitting}
-            onPress={() => {
-              void submit();
-            }}
+            testID="login-terms"
+            label={t('me.legal.terms')}
+            variant="link"
+            size="small"
+            onPress={() => router.push('/me/legal/terms')}
           />
-          {/* 页面清单：A-03/A-04 的入口就是 A-02（本页）—— ⛔ 不做"藏在设置里的注册" */}
           <Button
-            testID="login-to-register"
-            label={t('auth.toRegister')}
-            variant="ghost"
-            onPress={() => router.push('/register')}
-          />
-          <Button
-            testID="login-to-reset"
-            label={t('auth.toReset')}
-            variant="ghost"
-            onPress={() => router.push('/reset-password')}
+            testID="login-privacy"
+            label={t('me.legal.privacy')}
+            variant="link"
+            size="small"
+            onPress={() => router.push('/me/legal/privacy')}
           />
         </View>
+      </View>
     </LoginLayout>
   );
 }

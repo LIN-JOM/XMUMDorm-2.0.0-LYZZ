@@ -259,6 +259,10 @@ export const zh = {
   'auth.identifier': '学号或邮箱',
   'auth.password': '密码',
   'auth.login': '登录',
+  'auth.showPassword': '显示密码',
+  'auth.hidePassword': '隐藏密码',
+  'auth.forgotPassword': '忘记密码？',
+  'auth.legalIntro': '登录前可查阅',
   // ── 注册与找回密码（A-03/A-04；P2C2-02 起）──────────────────────────
   'auth.register': '注册',
   'auth.toRegister': '注册新账号',

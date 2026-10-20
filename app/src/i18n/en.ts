@@ -253,6 +253,10 @@ export const en: Record<MessageKey, string> = {
   'auth.identifier': 'Student ID or email',
   'auth.password': 'Password',
   'auth.login': 'Sign in',
+  'auth.showPassword': 'Show password',
+  'auth.hidePassword': 'Hide password',
+  'auth.forgotPassword': 'Forgot password?',
+  'auth.legalIntro': 'Before you sign in',
   // Sign up & password reset (A-03/A-04; from P2C2-02)
   'auth.register': 'Sign up',
   'auth.toRegister': 'Create account',
