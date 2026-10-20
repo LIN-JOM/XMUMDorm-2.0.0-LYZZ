@@ -58,6 +58,7 @@ it('选自定义才显示输入，填写来源后提交去空格文字', async (
   await fireEvent.press(view.getByLabelText('自定义'));
   expect(view.getByTestId('attribution-form-customRepostSource').props.maxLength).toBe(100);
   await fireEvent.changeText(view.getByTestId('attribution-form-customRepostSource'), '  学院群聊  ');
+  await waitFor(async () => expect(await getItem(draftKeyFor('publish:confession'))).toMatchObject({ repostSource: 'custom', customRepostSource: '  学院群聊  ' }));
   await fireEvent.press(view.getByTestId('attribution-form-submit'));
   await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ content: '正文', contentOrigin: 'repost', repostSource: '学院群聊' })));
 });
@@ -83,6 +84,53 @@ it('恢复转载草稿，切回原创后提交空来源', async () => {
   expect(view.getByLabelText('转载来源：WX')).toBeTruthy();
   await fireEvent.press(view.getByTestId('attribution-form-contentOrigin-original'));
   expect(view.queryByTestId('attribution-form-repostSource')).toBeNull();
+  await fireEvent.press(view.getByTestId('attribution-form-submit'));
+  await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ contentOrigin: 'original', repostSource: null })));
+});
+
+it.each(['WX', 'QQ', '抖音', 'INS', 'Telegram', 'X', 'Whatsapp'])('真实表单可选择并发布 %s', async source => {
+  (createPost as jest.Mock).mockResolvedValue({ id: 55 });
+  const view = await renderApp(<Host />);
+  await fireEvent.changeText(view.getByTestId('attribution-form-title'), '标题');
+  await fireEvent.changeText(view.getByTestId('attribution-form-content'), '正文');
+  await fireEvent.press(view.getByTestId('attribution-form-contentOrigin-repost'));
+  await fireEvent.press(view.getByTestId('attribution-form-repostSource'));
+  await fireEvent.press(view.getByLabelText(source));
+  expect(view.queryByTestId('attribution-form-customRepostSource')).toBeNull();
+  await fireEvent.press(view.getByTestId('attribution-form-submit'));
+  await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ contentOrigin: 'repost', repostSource: source })));
+});
+
+it.each(['zh', 'en'] as const)('自定义草稿恢复后可直接发布（%s）', async locale => {
+  await setItem(draftKeyFor('publish:confession'), { title: '标题', content: '正文', contentOrigin: 'repost', repostSource: 'custom', customRepostSource: '学院群聊' });
+  (createPost as jest.Mock).mockResolvedValue({ id: 56 });
+  const view = await renderApp(<Host />, { locale });
+  await waitFor(() => expect(view.getByTestId('attribution-form-customRepostSource').props.value).toBe('学院群聊'));
+  expect(view.getByTestId('attribution-form-customRepostSource').props.accessibilityLabel).toContain(locale === 'en' ? 'Source description' : '来源说明');
+  await fireEvent.press(view.getByTestId('attribution-form-submit'));
+  await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ contentOrigin: 'repost', repostSource: '学院群聊' })));
+});
+
+it('自定义草稿切到预设，不提交残留自定义内容', async () => {
+  await setItem(draftKeyFor('publish:confession'), { title: '标题', content: '正文', contentOrigin: 'repost', repostSource: 'custom', customRepostSource: '<旧草稿>' });
+  (createPost as jest.Mock).mockResolvedValue({ id: 57 });
+  const view = await renderApp(<Host />);
+  await waitFor(() => expect(view.getByTestId('attribution-form-customRepostSource').props.value).toBe('<旧草稿>'));
+  await fireEvent.press(view.getByTestId('attribution-form-repostSource'));
+  await fireEvent.press(view.getByLabelText('QQ'));
+  expect(view.queryByTestId('attribution-form-customRepostSource')).toBeNull();
+  await fireEvent.press(view.getByTestId('attribution-form-submit'));
+  await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ contentOrigin: 'repost', repostSource: 'QQ' })));
+});
+
+it('自定义草稿切到原创，不提交残留来源', async () => {
+  await setItem(draftKeyFor('publish:confession'), { title: '标题', content: '正文', contentOrigin: 'repost', repostSource: 'custom', customRepostSource: '学院群聊' });
+  (createPost as jest.Mock).mockResolvedValue({ id: 58 });
+  const view = await renderApp(<Host />);
+  await waitFor(() => expect(view.getByTestId('attribution-form-customRepostSource').props.value).toBe('学院群聊'));
+  await fireEvent.press(view.getByTestId('attribution-form-contentOrigin-original'));
+  expect(view.queryByTestId('attribution-form-repostSource')).toBeNull();
+  expect(view.queryByTestId('attribution-form-customRepostSource')).toBeNull();
   await fireEvent.press(view.getByTestId('attribution-form-submit'));
   await waitFor(() => expect(createPost).toHaveBeenCalledWith(expect.objectContaining({ contentOrigin: 'original', repostSource: null })));
 });

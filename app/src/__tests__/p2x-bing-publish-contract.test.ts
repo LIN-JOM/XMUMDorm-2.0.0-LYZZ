@@ -73,6 +73,15 @@ it('自定义来源提交实际文字，空白、超长、标记和控制字符�
  await d.submit({...pv,contentOrigin:'repost',repostSource:'custom',customRepostSource:'来'.repeat(100)});
  expect(createPost).toHaveBeenLastCalledWith(expect.objectContaining({repostSource:'来'.repeat(100)}));
 });
+it('新 App 不能省略声明，隐藏的无效自定义草稿不阻止预设或原创',async()=>{
+ const d=post();(createPost as jest.Mock).mockResolvedValue({id:26});
+ for(const contentOrigin of [undefined,null,'',[],true])await expect(d.submit({...pv,contentOrigin})).rejects.toMatchObject({kind:'validation'});
+ expect(createPost).not.toHaveBeenCalled();
+ await d.submit({...pv,contentOrigin:'repost',repostSource:'QQ',customRepostSource:'<旧草稿>'});
+ expect(createPost).toHaveBeenLastCalledWith(expect.objectContaining({contentOrigin:'repost',repostSource:'QQ'}));
+ await d.submit({...pv,repostSource:'custom',customRepostSource:'<旧草稿>'});
+ expect(createPost).toHaveBeenLastCalledWith(expect.objectContaining({contentOrigin:'original',repostSource:null}));
+});
 it('提交失败不清缓存且无效返回id不宣称成功',async()=>{
  getQueryClient().setQueryData(['bing-errand','list',{}],{old:true});(createErrand as jest.Mock).mockRejectedValue({kind:'unreachable'});await expect(errand().submit(ev)).rejects.toMatchObject({kind:'unreachable'});expect(getQueryClient().getQueryData(['bing-errand','list',{}])).toEqual({old:true});(createErrand as jest.Mock).mockResolvedValue({id:0});await expect(errand().submit(ev)).rejects.toMatchObject({kind:'unknown'});
 });

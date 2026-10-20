@@ -91,6 +91,20 @@ describe('P2X TreeholePostRow', () => {
     ['en', 'original', null, 'Original'],
     ['zh', 'repost', 'WX', '转载 · WX'],
     ['en', 'repost', 'WX', 'Repost · WX'],
+    ['zh', 'repost', 'QQ', '转载 · QQ'],
+    ['en', 'repost', 'QQ', 'Repost · QQ'],
+    ['zh', 'repost', '抖音', '转载 · 抖音'],
+    ['en', 'repost', '抖音', 'Repost · 抖音'],
+    ['zh', 'repost', 'INS', '转载 · INS'],
+    ['en', 'repost', 'INS', 'Repost · INS'],
+    ['zh', 'repost', 'Telegram', '转载 · Telegram'],
+    ['en', 'repost', 'Telegram', 'Repost · Telegram'],
+    ['zh', 'repost', 'X', '转载 · X'],
+    ['en', 'repost', 'X', 'Repost · X'],
+    ['zh', 'repost', 'Whatsapp', '转载 · Whatsapp'],
+    ['en', 'repost', 'Whatsapp', 'Repost · Whatsapp'],
+    ['zh', 'repost', '学院群聊', '转载 · 学院群聊'],
+    ['en', 'repost', '学院群聊', 'Repost · 学院群聊'],
   ] as const)('列表与详情共享声明，%s %s', async (locale, contentOrigin, repostSource, label) => {
     const attributed = { ...post, contentOrigin, repostSource };
     const view = await renderApp(<>
