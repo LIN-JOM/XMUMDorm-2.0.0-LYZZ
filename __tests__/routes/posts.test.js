@@ -129,6 +129,26 @@ describe('Posts Routes', () => {
       );
     });
 
+    it('returns unknown attribution for historical rows in both list and detail', async () => {
+      acceptPost({});
+      const list = await supertest(app()).get('/api/posts');
+      expect(list.status).toBe(200);
+      expect(list.body.data.list[0]).toMatchObject({ content: '正文', content_origin: null, repost_source: null });
+      const detail = await supertest(app()).get('/api/posts/44');
+      expect(detail.status).toBe(200);
+      expect(detail.body.data).toMatchObject({ content: '正文', content_origin: null, repost_source: null });
+    });
+
+    it.each(['content_origin', 'repost_source'])('does not report success when migration 076 is missing %s', async column => {
+      query.mockRejectedValueOnce({ code: 'ER_BAD_FIELD_ERROR', sqlMessage: `Unknown column '${column}' in 'field list'` });
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', content_origin: 'repost', repost_source: 'WX' });
+      expect(res.status).toBe(503);
+      expect(res.body.message).toContain('076_post_attribution.sql');
+      expect(res.body.status).toBe(-1);
+      expect(res.body.data).toBeUndefined();
+      expect(query).toHaveBeenCalledTimes(1);
+    });
+
     it.each([
       { content_origin: 'repost' },
       { content_origin: 'repost', repost_source: '   ' },

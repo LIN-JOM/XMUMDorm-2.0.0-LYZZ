@@ -1,8 +1,15 @@
 import { toTreeholePostViewModel } from '@/features/campus/treeholePostViewModel';
+import { asPost, asWall } from '@/features/campus/campusModel';
 
 const base = { id: 7, content: '正文', author: { nickname: '小蓝' } };
 
 describe('P2X Treehole post view model', () => {
+  it('旧帖经过正式校验和投影仍保留正文，匿名墙丢弃原始声明', () => {
+    const legacy = toTreeholePostViewModel(asPost({ id: 8, content: '旧正文' }));
+    expect(legacy).toMatchObject({ content: '旧正文', contentOrigin: null, repostSource: null });
+    const wall = toTreeholePostViewModel(asWall({ id: 9, content: '匿名正文', content_origin: 'repost', repost_source: '学院群聊', author: { nickname: '不应出现' } }));
+    expect(wall).toMatchObject({ content: '匿名正文', contentOrigin: null, repostSource: null, authorName: null });
+  });
   it('投影 WX 转载，原创忽略残留来源', () => {
     expect(toTreeholePostViewModel({ ...base, content_origin: 'repost', repost_source: 'WX' })).toMatchObject({ contentOrigin: 'repost', repostSource: 'WX' });
     expect(toTreeholePostViewModel({ ...base, content_origin: 'original', repost_source: 'WX' })).toMatchObject({ contentOrigin: 'original', repostSource: null });
