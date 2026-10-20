@@ -20,7 +20,6 @@ import { InlineNotice } from '@/components/ui/InlineNotice';
 import { Input } from '@/components/ui/Input';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
-import { Text } from '@/components/ui/Text';
 import { useSession } from '@/features/auth/session';
 import { LoginLayout } from '@/features/auth/LoginLayout';
 
@@ -61,15 +60,6 @@ export default function LoginScreen(): React.ReactElement {
 
   return (
     <LoginLayout>
-      <Text
-        role="title"
-        emphasis="strong"
-        colorToken="text-primary"
-        accessibilityRole="header"
-      >
-        {t('auth.title')}
-      </Text>
-
       <ErrorSummary
         testID="login-summary"
         title={t('auth.failed')}
@@ -85,7 +75,7 @@ export default function LoginScreen(): React.ReactElement {
         />
       ) : null}
 
-      <View style={{ gap: theme.space('space_4') }}>
+      <View style={{ gap: theme.space('space_8') }}>
         <Input
           testID="login-identifier"
           label={t('auth.identifier')}
@@ -93,6 +83,7 @@ export default function LoginScreen(): React.ReactElement {
           onChangeText={setIdentifier}
           kind="text"
           appearance="underline"
+          labelPlacement="inline"
           prefix={<Icon source={Mail} size="body" tint="secondary" />}
           errorText={identifierError}
           required
@@ -104,6 +95,7 @@ export default function LoginScreen(): React.ReactElement {
           onChangeText={setPassword}
           kind={showPassword ? 'text' : 'password'}
           appearance="underline"
+          labelPlacement="inline"
           prefix={<Icon source={Lock} size="body" tint="secondary" />}
           suffix={
             <IconButton
@@ -119,18 +111,6 @@ export default function LoginScreen(): React.ReactElement {
         />
       </View>
 
-      <Button
-        testID="login-to-reset"
-        label={t('auth.forgotPassword')}
-        variant="link"
-        size="small"
-        style={{
-          alignSelf: 'flex-end',
-          paddingHorizontal: 0,
-          paddingVertical: 0,
-        }}
-        onPress={() => router.push('/reset-password')}
-      />
       <View style={{ gap: theme.space('space_3') }}>
         <Button
           testID="login-submit"
@@ -157,37 +137,40 @@ export default function LoginScreen(): React.ReactElement {
           fullWidth
           style={{
             backgroundColor: theme.color['bg-canvas'].value,
+            borderColor: theme.color['border-strong'].value,
             minHeight: theme.touchTarget + theme.space('space_1'),
           }}
           onPress={() => router.push('/register')}
         />
       </View>
-      <View style={{ alignItems: 'center', marginTop: theme.space('space_2') }}>
-        <Text role="caption" colorToken="text-muted" align="center">
-          {t('auth.legalIntro')}
-        </Text>
-        <View
-          style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-          }}
-        >
-          <Button
-            testID="login-terms"
-            label={t('me.legal.terms')}
-            variant="link"
-            size="small"
-            onPress={() => router.push('/me/legal/terms')}
-          />
-          <Button
-            testID="login-privacy"
-            label={t('me.legal.privacy')}
-            variant="link"
-            size="small"
-            onPress={() => router.push('/me/legal/privacy')}
-          />
-        </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        }}
+      >
+        <Button
+          testID="login-to-reset"
+          label={t('auth.forgotPassword')}
+          variant="link"
+          size="small"
+          onPress={() => router.push('/reset-password')}
+        />
+        <Button
+          testID="login-terms"
+          label={t('me.legal.terms')}
+          variant="link"
+          size="small"
+          onPress={() => router.push('/me/legal/terms')}
+        />
+        <Button
+          testID="login-privacy"
+          label={t('me.legal.privacy')}
+          variant="link"
+          size="small"
+          onPress={() => router.push('/me/legal/privacy')}
+        />
       </View>
     </LoginLayout>
   );

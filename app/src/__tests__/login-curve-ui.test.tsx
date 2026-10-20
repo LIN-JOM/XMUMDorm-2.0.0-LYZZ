@@ -36,7 +36,9 @@ describe('登录曲面页面', () => {
   it('不再用大标题占据曲线下方空间，字段名称始终可见', async () => {
     const view = await renderApp(<LoginScreen />);
     expect(view.queryByRole('header')).toBeNull();
-    await userEvent.setup().type(view.getByTestId('login-identifier'), 'student');
+    await userEvent
+      .setup()
+      .type(view.getByTestId('login-identifier'), 'student');
     expect(view.getByText('学号或邮箱 *')).toBeTruthy();
     expect(view.getByText('密码 *')).toBeTruthy();
   });
