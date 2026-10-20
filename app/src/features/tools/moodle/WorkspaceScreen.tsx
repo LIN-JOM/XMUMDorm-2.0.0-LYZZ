@@ -2,9 +2,11 @@ import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import { onlineManager } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ListItem } from '@/components/ui/ListItem';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import type { MoodleFailure } from './bridge';
@@ -33,6 +35,13 @@ export type MoodleWorkspaceScreenProps = {
   footer?: React.ReactNode;
 };
 
+/**
+ * Native Moodle workspace as three stacked sections: status, courses, content.
+ *
+ * The section boundary is the hierarchy: the status row carries the actions, the course
+ * section owns picking and filtering, and the content section owns chapters. Phase 3 adds
+ * the deadline section behind `footer`.
+ */
 export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync, onCancel,
   onChoose, onModule, onOriginal, maintenance, footer }: MoodleWorkspaceScreenProps): React.ReactElement {
   const theme = useTheme();
@@ -59,57 +68,77 @@ export function MoodleWorkspaceScreen({ labels, snapshot, entry, onLogin, onSync
     () => onlineManager.isOnline(),
     () => true
   );
+  const hasCourses = snapshot.data.courses.length > 0;
   return <ScrollView testID="moodle-workspace" contentContainerStyle={{ padding: theme.space('space_4'),
-    gap: theme.space('space_4') }}>
-    <Text testID="moodle-entry">{entry === 'first-login' ? labels.firstLogin : entry === 'restored-native' ? labels.restoredNative : labels.nativeWorkspace}</Text>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
-      <Button testID="moodle-login" label={labels.login} onPress={onLogin} variant="secondary" />
-      <Button testID="moodle-sync" label={labels.sync} onPress={onSync} disabled={busy} />
-      {busy ? <Button testID="moodle-cancel" label={labels.cancel} onPress={onCancel} variant="ghost" /> : null}
+    gap: theme.space('space_6') }}>
+    <View testID="moodle-section-status" style={{ gap: theme.space('space_2') }}>
+      <View testID="moodle-tool-row" style={{ flexDirection: 'row', flexWrap: 'wrap',
+        alignItems: 'center', gap: theme.space('space_2') }}>
+        <Button testID="moodle-sync" label={labels.sync} onPress={onSync} disabled={busy} />
+        {busy ? <Button testID="moodle-cancel" label={labels.cancel} onPress={onCancel} variant="ghost" /> : null}
+        <Button testID="moodle-login" label={labels.login} onPress={onLogin} variant="ghost" />
+      </View>
+      <Text testID="moodle-entry">{entry === 'first-login' ? labels.firstLogin
+        : entry === 'restored-native' ? labels.restoredNative : labels.nativeWorkspace}</Text>
+      <Text testID="moodle-phase">{labels.phase(snapshot.phase)}</Text>
+      {!online ? <Text testID="moodle-offline" colorToken="text-warning">{labels.offline}</Text> : null}
+      {snapshot.failure ? <Text colorToken="text-danger">{maintenance
+        ? labels.maintenance : labels.failure(snapshot.failure)}</Text> : null}
     </View>
-    <Text testID="moodle-phase">{labels.phase(snapshot.phase)}</Text>
-    {!online ? <Text testID="moodle-offline" colorToken="text-warning">{labels.offline}</Text> : null}
-    {snapshot.failure ? <Text colorToken="text-danger">{maintenance
-      ? labels.maintenance : labels.failure(snapshot.failure)}</Text> : null}
-    {snapshot.data.courses.length === 0 ? <EmptyState kind="firstRun" testID="moodle-empty-sync"
-      title={labels.empty} actionLabel={labels.sync} onAction={onSync} /> : null}
-    {snapshot.phase === 'choosing' ? <View style={{ gap: theme.space('space_2') }}>
-      <Text role="title">{labels.chooseCourses}</Text>
-      {snapshot.candidates.map((course) => <Checkbox key={course.id} testID={`moodle-select-${course.id}`}
-        label={course.name} state={draft.includes(course.id) ? 'checked' : 'unchecked'}
-        onPress={() => setChoice({ generation: snapshot.data.generation, ids: draft.includes(course.id)
-          ? draft.filter((id) => id !== course.id) : [...draft, course.id] })} />)}
-      <Button testID="moodle-confirm-selection" label={labels.confirmSelection} onPress={() => onChoose(draft)} />
-    </View> : null}
-    <Text role="title">{labels.courses}</Text>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
-      {snapshot.data.courses.map((course) => <Button key={course.id} testID={`moodle-course-${course.id}`}
-        label={course.name} variant={course.id === currentCourse?.id ? 'secondary' : 'ghost'}
-        onPress={() => { setCourseId(course.id); setType(null); }} />)}
+    <View testID="moodle-section-courses" style={{ gap: theme.space('space_3') }}>
+      <SectionHeader title={snapshot.phase === 'choosing' ? labels.chooseCourses : labels.courses}
+        style={{ paddingHorizontal: 0 }} />
+      {snapshot.phase === 'choosing' ? <Card variant="plain" padding="space_3">
+        {snapshot.candidates.map((course) => <Checkbox key={course.id} testID={`moodle-select-${course.id}`}
+          label={course.name} state={draft.includes(course.id) ? 'checked' : 'unchecked'}
+          onPress={() => setChoice({ generation: snapshot.data.generation, ids: draft.includes(course.id)
+            ? draft.filter((id) => id !== course.id) : [...draft, course.id] })} />)}
+        <Button testID="moodle-confirm-selection" label={labels.confirmSelection} onPress={() => onChoose(draft)} />
+      </Card> : null}
+      {snapshot.phase !== 'choosing' && !hasCourses ? <EmptyState kind="firstRun" testID="moodle-empty-sync"
+        title={labels.empty} actionLabel={labels.sync} onAction={onSync} /> : null}
+      {snapshot.phase !== 'choosing' && hasCourses ? <>
+        <Card variant="plain" padding="space_3">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
+            {snapshot.data.courses.map((course) => <Button key={course.id} testID={`moodle-course-${course.id}`}
+              label={course.name} variant={course.id === currentCourse?.id ? 'secondary' : 'ghost'}
+              onPress={() => { setCourseId(course.id); setType(null); }} />)}
+          </View>
+        </Card>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
+          <Button testID="moodle-type-all" label={labels.allTypes} variant="ghost" onPress={() => setType(null)} />
+          {types.map((item) => <Button key={item} testID={`moodle-type-${item}`} label={labels.moduleType(item)}
+            variant={type === item ? 'secondary' : 'ghost'} onPress={() => setType(item)} />)}
+        </View>
+      </> : null}
     </View>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2') }}>
-      <Button testID="moodle-type-all" label={labels.allTypes} variant="ghost" onPress={() => setType(null)} />
-      {types.map((item) => <Button key={item} testID={`moodle-type-${item}`} label={labels.moduleType(item)}
-        variant={type === item ? 'secondary' : 'ghost'} onPress={() => setType(item)} />)}
-    </View>
-    {visibleModules.length === 0 ? <EmptyState testID={type !== null ? 'moodle-empty-all-types' : 'moodle-empty-sync'}
-      kind={type !== null ? 'noResult' : 'firstRun'} title={labels.empty}
-      actionLabel={type !== null ? labels.allTypes : labels.sync}
-      onAction={type !== null ? () => setType(null) : onSync} /> : null}
-    {sections.map((section) => {
-      const rows = visibleModules.filter((module) => module.sectionId === section.id);
-      if (rows.length === 0) return null;
-      return <View key={section.id} style={{ gap: theme.space('space_2') }}>
-        <Text role="title">{section.title}</Text>
-        {rows.map((module) => <View key={module.id} style={{ gap: theme.space('space_2') }}>
-          <ListItem testID={`moodle-module-${module.id}`} title={module.name}
-            subtitle={labels.moduleType(module.type)}
-            onPress={() => currentCourse && onModule(currentCourse.id, module)} />
-          {module.url ? <Button testID={`moodle-original-${module.id}`} label={labels.original}
-            variant="link" onPress={() => onOriginal(module.url!)} /> : null}
-        </View>)}
-      </View>;
-    })}
+    {snapshot.phase === 'choosing' || !hasCourses ? null : <View testID="moodle-section-content"
+      style={{ gap: theme.space('space_3') }}>
+      {visibleModules.length === 0 ? <EmptyState
+        testID={type !== null ? 'moodle-empty-all-types' : 'moodle-empty-sync'}
+        kind={type !== null ? 'noResult' : 'firstRun'} title={labels.empty}
+        actionLabel={type !== null ? labels.allTypes : labels.sync}
+        onAction={type !== null ? () => setType(null) : onSync} /> : null}
+      {sections.map((section) => {
+        const rows = visibleModules.filter((module) => module.sectionId === section.id);
+        if (rows.length === 0) return null;
+        return <View key={section.id} style={{ gap: theme.space('space_2') }}>
+          <Text role="title">{section.title}</Text>
+          <Card variant="plain" padding="none">
+            {rows.map((module) => <View key={module.id}>
+              <ListItem testID={`moodle-module-${module.id}`} title={module.name}
+                subtitle={labels.moduleType(module.type)}
+                onPress={() => currentCourse && onModule(currentCourse.id, module)} />
+              {module.url ? <View style={{ paddingHorizontal: theme.space('space_4'),
+                paddingBottom: theme.space('space_2') }}>
+                <Button testID={`moodle-original-${module.id}`} label={labels.original}
+                  variant="link" size="small" onPress={() => onOriginal(module.url!)} />
+              </View> : null}
+            </View>)}
+          </Card>
+        </View>;
+      })}
+    </View>}
     {footer}
   </ScrollView>;
 }
