@@ -1,6 +1,6 @@
 import * as mockReact from 'react';
 import { View as MockView } from 'react-native';
-import { act, fireEvent } from '@testing-library/react-native';
+import { act, fireEvent, within } from '@testing-library/react-native';
 import type { WebViewProps, WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 import { renderApp } from './helpers/renderApp';
 import { MoodleWorkspaceHost, type MoodleWorkspaceHostLabels } from '@/features/tools/moodle/WorkspaceHost';
@@ -22,11 +22,11 @@ const moduleUrl = 'https://l.xmu.edu.my/mod/forum/view.php?id=101';
 const discussionUrl = 'https://l.xmu.edu.my/mod/forum/discuss.php?d=71';
 const labels: MoodleWorkspaceHostLabels = { firstLogin: 'First login', restoredNative: 'Restored native',
   nativeWorkspace: 'Native workspace', login: 'Login', sync: 'Sync', cancel: 'Cancel',
-  confirmSelection: 'Choose', chooseCourses: 'Choose courses', courses: 'Courses', allTypes: 'All types',
+  confirmSelection: 'Choose', chooseCourses: 'Choose courses', courses: 'Courses', switchCourse: 'Switch course', allTypes: 'All types',
   empty: 'Empty', original: 'Original', details: 'Details', unknownSection: 'Other section',
   maintenance: 'Moodle maintenance', offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}`,
-  back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines', otherEvents: 'Other events',
+  back: 'Back', clear: 'Clear Moodle', backToNative: 'Native', deadlines: 'Deadlines', noDeadlines: 'No deadlines', otherEvents: 'Other events',
   eventType: (value) => 'event type ' + String(value), actionableStatus: (value) => 'actionable ' + String(value),
   deadlineBucket: (value) => `bucket ${value}`, formatTime: (value) => new Date(value).toISOString(),
   detailStatus: (value) => `detail ${value}`, reminderStatus: (value) => `reminders ${value}`,
@@ -70,7 +70,13 @@ it('p3y3 workspace closes login sync details original and reminder callbacks', a
   await core('state', state);
   await core('events', { events: [{ id: 5, courseId: 1, moduleId: 999, name: 'Deadline',
     time: now / 1000 + 86400, eventType: 'expectcompletionon', url: moduleUrl, action: { name: 'Open', itemCount: 1, actionable: true } }], firstId: 5, lastId: 5 });
+  // G11/G12：截止成为独立分区，只有有内容的桶才出现
+  expect(view.getByTestId('moodle-section-deadlines')).toBeTruthy();
+  expect(view.getByText('bucket valid')).toBeTruthy();
+  expect(view.queryByText('bucket past')).toBeNull();
   await core('events', { events: [], firstId: null, lastId: null });
+  // 空尾页只是分页结束，已读到的截止还在这一段里
+  expect(view.getByText('Deadline')).toBeTruthy();
   expect(onPlan).toHaveBeenLastCalledWith([{ id: 'moodle:1:5', fireAt: now + 86400000 - 1800000 }]);
   await fireEvent.press(view.getByTestId('moodle-module-101'));
   const id = requestId('detail');
@@ -89,6 +95,8 @@ it('p3y3 workspace closes login sync details original and reminder callbacks', a
   expect(view.getByText('Post body')).toBeTruthy();
   await fireEvent.press(view.getByTestId('moodle-post-original-81'));
   expect(onOriginal).toHaveBeenCalledWith(`${discussionUrl}#p81`);
+  // 清除数据现在位于工作台的工具行：从详情页回到工作台才够得着（G2 的结构变化）
+  await fireEvent.press(view.getByTestId('moodle-detail-back'));
   await fireEvent.press(view.getByTestId('moodle-clear'));
   expect(readMoodleCache().courses).toEqual([]);
   expect(onClear).toHaveBeenCalled();
@@ -166,4 +174,15 @@ it('p3y3 invalidates a changed project token once when a cache listener reads im
     readMoodleCache();
     expect(calls).toBe(1);
   } finally { unsubscribe(); if (previous === null) await clearToken(); else await saveToken(previous); moodleCacheGeneration(); }
+});
+
+it('p3g2 gathers the native workspace actions into one tool row', async () => {
+  const view = await renderApp(<MoodleWorkspaceHost labels={labels} now={() => now}
+    onOpenOriginal={jest.fn()} />, { inScreen: true });
+  await confirm();
+  const row = within(view.getByTestId('moodle-tool-row'));
+  expect(row.getByTestId('moodle-sync')).toBeTruthy();
+  expect(row.getByTestId('moodle-clear')).toBeTruthy();
+  expect(view.queryByTestId('moodle-native')).toBeNull();
+  await view.unmount(); await settleMoodleStorage();
 });

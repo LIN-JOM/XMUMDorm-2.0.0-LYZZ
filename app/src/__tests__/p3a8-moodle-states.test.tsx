@@ -17,7 +17,7 @@ import { renderApp } from './helpers/renderApp';
 const labels: MoodleWorkspaceLabels = {
   firstLogin: 'Login', restoredNative: 'Restored', nativeWorkspace: 'Native', login: 'Login',
   sync: 'Sync', cancel: 'Cancel', confirmSelection: 'Confirm', chooseCourses: 'Choose',
-  courses: 'Courses', allTypes: 'All types', empty: 'Empty', original: 'Original', details: 'Details',
+  courses: 'Courses', switchCourse: 'Switch course', allTypes: 'All types', empty: 'Empty', original: 'Original', details: 'Details',
   unknownSection: 'Other', maintenance: 'Maintenance', offline: 'Offline',
   phase: (value) => `phase ${value}`, failure: (value) => `failure ${value}`, moduleType: (value) => `type ${value}`,
 };

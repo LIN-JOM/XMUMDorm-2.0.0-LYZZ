@@ -199,6 +199,8 @@ L7 域专用    15 个 ← CommentThread / CommentItem / CommentComposer / Reply
 | Tab 栏由系统绘制（宪法 4.3 禁自绘） | Tab 图标**不能是 Lucide 组件** | Tab 图标以**平台图标名**传给原生 API（§6.1） |
 > **第 1 层图标清单**（不重抄，按[图标方案调研 §3.3–§3.6](../research/App图标方案-Lucide与平台图标.md) 的 kebab-case 引用）：食堂 `utensils` · 社团 `users` · 二手 `shopping-bag` · 跑腿 `bike`（备选 `package`）· 新生指南 `compass`（备选 `book-open`）· 课程表 `calendar-days` · 待办 `list-checks` · 放假日 `calendar-heart`（备选 `party-popper`）· AC 系统 `app-window` · Moodle `graduation-cap` · 签到 `qr-code` · 信箱 `mail` · 发布 `square-pen` · 搜索 `search` · 筛选 `list-filter` · 更多 `ellipsis` · 分享 `share` · 举报 `flag` · 屏蔽用户 `user-x` · 设置 `settings` · 通知 `bell` · 收藏 `star` · 点赞 `thumbs-up` · 评论 `message-circle` · 图片 `image` · 上传 `upload` · 空态 `package-open` · 错误 `circle-alert` · 加载 `loader-circle` · 树洞 `tree-pine` · 万能墙 `brick-wall`。三处备选二选一与屏蔽语义分叉仍属待决（§8.3）。
 **原子层的三条硬规则**：① **`A02 Text` 是唯一文字出口**（业务代码不得直接用 RN `Text`，否则字阶被绕过）；② **`A01 Surface` 是唯一底色出口**（不得写 `backgroundColor`）；③ **命中区在 `A12 Pressable` 内统一补足**（iOS ≥44×44pt / Android ≥48×48dp，宪法 7.1），视觉尺寸可更小——**四类元素最易违规**：`C02 IconButton`、`A09 Chip` 的删除叉、`A08 Badge`（若可点）、列表行尾部动作。
+> **消费补记（2026-10-20，Moodle 工作台）**：`T-05` 的 Moodle 原生页与本轮新增的详情页现在直接消费 `A01 Surface`（经 `K08 Card`）、`A02 Text`、`A09 Chip`（筛选与类型标签，`selectable` / `static`）、`K06 ListItem`（课程行、章节行、公告行）、`K07 SectionHeader`（四个分区与章节卡头）、`T01 EmptyState`、`O02 InlineNotice`（错误与无网）、`T03 LoadingState`（内容段骨架）、`C02 IconButton`（页头返回与原页、行内原页）。这九项**没有新增组件**，全部走既有注册表；截止段"分桶与措辞在宿主、排版在屏幕"的分工见 `docs/app/task/Moodle审计整改/G-Phase3小结.md`。
+
 ### 2.2 L3 控件（22 行 / **18 active**）
 | ID | 名称 | 类型 | 关键变体 / 形态 | 双端实现 | 引用 | 消费页 |
 |---|---|---|---|---|---|---|
