@@ -33,6 +33,11 @@ export function LoginLayout({
         curveHeight
     )
   );
+  // 键盘/横屏高度不足时收起整幅画，避免只露出截断的头部或手臂；字段状态不重建。
+  const showArtwork = blankHeight + curveHeight >= viewport.width * 0.75;
+  const artworkHeight = showArtwork
+    ? blankHeight + curveHeight
+    : theme.space('space_4');
   const backgroundColor = theme.color['bg-canvas'].value;
 
   return (
@@ -53,15 +58,14 @@ export function LoginLayout({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View
-            testID="login-brand-header"
-            style={{ height: blankHeight + curveHeight }}
-          >
-            <View testID="login-logo-space" style={{ height: blankHeight }} />
-            <LoginArtwork
-              width={viewport.width}
-              height={blankHeight + curveHeight}
+          <View testID="login-brand-header" style={{ height: artworkHeight }}>
+            <View
+              testID="login-logo-space"
+              style={{ height: showArtwork ? blankHeight : 0 }}
             />
+            {showArtwork ? (
+              <LoginArtwork width={viewport.width} height={artworkHeight} />
+            ) : null}
           </View>
           <View testID="login-front-layer" style={{ backgroundColor }}>
             <View
