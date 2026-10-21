@@ -122,3 +122,13 @@ No text, icons, inputs, buttons, phone frame or watermark. Output a square high 
 - 正文区无文字或控件；中央最终由真实原生组件的不透明主题底色承载。
 - 完整提示词与输出尺寸见 docs/app/task/login-dark-glass/04-夜间素材提示词.md。
 - 当前用户明确要求深色模式独立重做；浅色继续使用 `login-hero-sharp.png`。
+
+## 9. 登录人物自然轻动图层（2026-10-21）
+
+- 当前动态版本使用 `login-motion-light-plate.png` 与 `login-motion-dark-plate.png` 两套静态底图。
+- 人物为 `login-motion-{girl,goat}-{open,closed}.png` 四张共用透明图层。
+- 六张资源实测均为 1254×1254；人物 RGBA，alpha 范围 0–255。
+- 来源：内置 imagegen 编辑上述确认稿；旧完整插画保留，不覆盖。
+- 两套底图分别保持浅绿花园与夜蓝烟灰玻璃；共用人物避免主题切换时角色变化。
+- 提示词、生成标识、弃用版本说明见 `docs/app/task/login-character-motion/04-素材提示词.md`。
+- 用户选择“自然轻动效”，授权呼吸、眨眼与小羊耳朵小幅变化；不引入实时骨骼或 WebGL。
