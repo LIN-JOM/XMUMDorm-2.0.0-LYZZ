@@ -379,7 +379,7 @@ describe('TC-P1-13-7A · 登录页（最小链路）', () => {
     expect(view.getByTestId('login-password')).toBeTruthy();
   });
 
-  it('学号为空 → **不调接口**，就近报错', async () => {
+  it('学校邮箱为空 → 不调接口，以英文就近报错', async () => {
     const view = await renderApp(
       <SessionProvider>
         <LoginScreen />
@@ -388,7 +388,7 @@ describe('TC-P1-13-7A · 登录页（最小链路）', () => {
     await waitFor(() => expect(view.getByTestId('login-submit')).toBeTruthy());
     const user = require('@testing-library/react-native').userEvent.setup();
     await user.press(view.getByTestId('login-submit'));
-    await waitFor(() => expect(view.getByText('这一项不能为空')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('This field is required')).toBeTruthy());
     expect(loginApi).not.toHaveBeenCalled();
   });
 
@@ -418,6 +418,8 @@ describe('TC-P1-13-7A · 登录页（最小链路）', () => {
     await user.type(view.getByTestId('login-identifier'), 'a@b.c');
     await user.press(view.getByTestId('login-submit'));
     await waitFor(() => expect(view.getByTestId('login-summary')).toBeTruthy());
+    expect(view.getByText('Sign-in failed')).toBeTruthy();
+    expect(view.queryByText('登录失败')).toBeNull();
     expect(loginApi).toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text as NativeText } from 'react-native';
 import {
   act,
   fireEvent,
@@ -9,6 +9,7 @@ import {
 
 import { renderApp } from './helpers/renderApp';
 import LoginScreen from '@/app/login';
+import { useI18n } from '@/i18n';
 
 const mockLogin = jest.fn();
 let mockPathname = '/login';
@@ -37,14 +38,24 @@ beforeEach(() => {
 });
 
 describe('登录曲面页面', () => {
-  it('不再用大标题占据曲线下方空间，字段名称始终可见', async () => {
-    const view = await renderApp(<LoginScreen />);
+  it('中文 App 中登录仍为英文，学校邮箱标签输入后始终可见', async () => {
+    function OutsideLocale(): React.ReactElement {
+      return <NativeText testID="outside-locale">{useI18n().locale}</NativeText>;
+    }
+    const view = await renderApp(<><LoginScreen /><OutsideLocale /></>);
     expect(view.queryByRole('header')).toBeNull();
+    await userEvent.setup().press(view.getByTestId('login-submit'));
+    expect(view.getByText('This field is required')).toBeTruthy();
+    expect(view.getByTestId('login-identifier')).toHaveProp(
+      'accessibilityLabel', 'School email, Required, This field is required'
+    );
     await userEvent
       .setup()
       .type(view.getByTestId('login-identifier'), 'student');
-    expect(view.getByText('学号或邮箱 *')).toBeTruthy();
-    expect(view.getByText('密码 *')).toBeTruthy();
+    expect(view.getByText('School email *')).toBeTruthy();
+    expect(view.getByText('Password *')).toBeTruthy();
+    expect(view.getByTestId('login-identifier')).toHaveProp('keyboardType', 'email-address');
+    expect(view.getByTestId('outside-locale')).toHaveTextContent('zh');
   });
   it('密码显示切换保留已输入的值', async () => {
     const view = await renderApp(<LoginScreen />);
@@ -54,7 +65,7 @@ describe('登录曲面页面', () => {
       'secureTextEntry',
       true
     );
-    await user.press(view.getByRole('button', { name: '显示密码' }));
+    await user.press(view.getByRole('button', { name: 'Show password' }));
     expect(view.getByTestId('login-password')).toHaveProp(
       'secureTextEntry',
       false
@@ -63,7 +74,7 @@ describe('登录曲面页面', () => {
       'value',
       'sample-password'
     );
-    await user.press(view.getByRole('button', { name: '隐藏密码' }));
+    await user.press(view.getByRole('button', { name: 'Hide password' }));
     expect(view.getByTestId('login-password')).toHaveProp(
       'secureTextEntry',
       true
@@ -170,7 +181,7 @@ describe('登录曲面页面', () => {
     });
     expect(view.getByTestId('login-identifier')).toHaveProp(
       'accessibilityLabel',
-      expect.stringContaining('Student ID or email')
+      'School email, Required'
     );
     expect(view.getByRole('button', { name: 'Show password' })).toBeTruthy();
     expect(view.getByTestId('login-terms')).toBeTruthy();
