@@ -26,6 +26,7 @@ export function LoginArtwork({
     <View
       testID="login-background-layer"
       pointerEvents="none"
+      aria-hidden
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}
@@ -46,6 +47,7 @@ export function LoginArtwork({
       />
       {/* 图中只保留静态折射边沿，往内过渡到真实主题底色；表单中心始终不透明。 */}
       <Svg
+        aria-hidden
         width="100%"
         height={fadeHeight}
         style={{ position: 'absolute', bottom: 0 }}

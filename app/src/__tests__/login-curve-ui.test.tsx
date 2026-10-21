@@ -138,7 +138,10 @@ describe('登录曲面页面', () => {
       view.getByTestId('login-background-layer', {
         includeHiddenElements: true,
       })
-    ).toBeEmptyElement();
+    ).toHaveProp('pointerEvents', 'none');
+    expect(
+      view.getByTestId('login-brand-art', { includeHiddenElements: true })
+    ).toHaveProp('accessible', false);
   });
 
   it('浅色英文界面保留全部登录操作', async () => {
