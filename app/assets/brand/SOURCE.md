@@ -112,3 +112,13 @@ tack sharp. No halos from artificial oversharpening. This is an asset edit, not 
 No text, icons, inputs, buttons, phone frame or watermark. Output a square high resolution PNG, target
 2048 by 2048 or higher if supported, do not downsample.
 ```
+
+## 8. 独立深色登录素材（2026-10-21）
+
+- 文件：`login-hero-dark.png`，1254×1254 PNG，2,160,331 字节，随 App 本地打包。
+- 来源：内置 imagegen 编辑用户确认构图的精修图，保留人物、姿势与低拱接触线。
+- 生成标识：`exec-1207244f-30b7-48c8-b529-db5fca27511c.png`。
+- 设计：夜蓝花园、月光照明、烟灰蓝玻璃与细冷反光；不使用浅色乳白卡片再叠黑底。
+- 正文区无文字或控件；中央最终由真实原生组件的不透明主题底色承载。
+- 完整提示词与输出尺寸见 docs/app/task/login-dark-glass/04-夜间素材提示词.md。
+- 当前用户明确要求深色模式独立重做；浅色继续使用 `login-hero-sharp.png`。
