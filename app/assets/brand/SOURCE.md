@@ -132,3 +132,9 @@ No text, icons, inputs, buttons, phone frame or watermark. Output a square high 
 - 两套底图分别保持浅绿花园与夜蓝烟灰玻璃；共用人物避免主题切换时角色变化。
 - 提示词、生成标识、弃用版本说明见 `docs/app/task/login-character-motion/04-素材提示词.md`。
 - 用户选择“自然轻动效”，授权呼吸、眨眼与小羊耳朵小幅变化；不引入实时骨骼或 WebGL。
+
+### 慢动作修正（2026-10-22）
+
+- 人物身体固定使用 open 素材；closed 素材只作为眼部局部底片，取消整图交叉渐隐。
+- 眼部连续压合与展开，小羊耳朵通过同一张原画的 SVG 局部遮罩缓慢转动。
+- 未生成新素材。实际动作参数及时间采样见 `docs/app/task/login-character-motion/slow-correction/`。

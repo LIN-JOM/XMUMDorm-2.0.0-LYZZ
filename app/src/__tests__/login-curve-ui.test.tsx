@@ -45,22 +45,22 @@ describe('登录曲面页面', () => {
       nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 800 } },
     });
     const password = view.getByTestId('login-password');
-    const girlClosed = () => view.getByTestId('login-girl-closed', { includeHiddenElements: true });
-    const goatClosed = () => view.getByTestId('login-goat-closed', { includeHiddenElements: true });
-    await waitFor(() => expect(girlClosed()).toHaveStyle({ opacity: 0 }));
+    const girlEye = () => view.getByTestId('login-girl-eye-0', { includeHiddenElements: true });
+    const goatEye = () => view.getByTestId('login-goat-eye-0', { includeHiddenElements: true });
+    await waitFor(() => expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 1 }] }));
     await fireEvent.changeText(password, 'private-example');
     await fireEvent(password, 'focus');
-    expect(girlClosed()).toHaveStyle({ opacity: 1 });
-    expect(goatClosed()).toHaveStyle({ opacity: 1 });
+    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
+    expect(goatEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
     await fireEvent(password, 'blur');
-    expect(girlClosed()).toHaveStyle({ opacity: 0 });
+    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 1 }] });
     await fireEvent.press(view.getByTestId('login-toggle-password'));
-    expect(goatClosed()).toHaveStyle({ opacity: 1 });
+    expect(goatEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
     await fireEvent(password, 'focus');
     await fireEvent(password, 'blur');
-    expect(girlClosed()).toHaveStyle({ opacity: 1 });
+    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
     await fireEvent.press(view.getByTestId('login-toggle-password'));
-    expect(girlClosed()).toHaveStyle({ opacity: 0 });
+    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 1 }] });
     expect(password).toHaveProp('value', 'private-example');
   });
 
