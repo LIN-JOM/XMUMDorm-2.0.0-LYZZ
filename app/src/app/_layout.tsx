@@ -13,7 +13,7 @@
 
 import * as React from 'react';
 import { useColorScheme } from 'react-native';
-import { Stack, usePathname } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LucideProvider } from 'lucide-react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -81,14 +81,13 @@ function GlobalOverlays(): React.ReactElement {
 /** 需要主题才能决定的东西：状态栏图标颜色（17.3）与图标默认色 */
 function ThemedShell({ children }: { children: React.ReactNode }): React.ReactElement {
   const theme = useTheme();
-  const pathname = usePathname();
   return (
     <LucideProvider
       strokeWidth={ICON_STROKE_WIDTH}
       color={theme.color['icon-primary'].value}
     >
-      {/* 登录品牌画始终是浅绿底；由当前路径决定，避免压栈后泄漏到深色注册/重置页。 */}
-      <StatusBar style={pathname !== '/login' && theme.scheme === 'dark' ? 'light' : 'dark'} />
+      {/* 17.3：⛔ 不得出现"暗色主题 + 黑色状态栏字" */}
+      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       {children}
     </LucideProvider>
   );

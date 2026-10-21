@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { usePathname } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
 import { Screen } from '@/components/ui/Screen';
 import { useTheme } from '@/design-system/theme';
@@ -12,6 +14,7 @@ export function LoginLayout({
   children: React.ReactNode;
 }): React.ReactElement {
   const theme = useTheme();
+  const pathname = usePathname();
   const window = useWindowDimensions();
   const [viewport, setViewport] = React.useState({
     width: window.width,
@@ -42,6 +45,10 @@ export function LoginLayout({
 
   return (
     <Screen topMode="none" bottomMode="own" testID="login">
+      {/* 仅前台登录页覆盖全局样式；收起浅色插画后恢复主题颜色。 */}
+      {pathname === '/login' ? (
+        <StatusBar style={!showArtwork && theme.scheme === 'dark' ? 'light' : 'dark'} />
+      ) : null}
       <View
         testID="login-viewport"
         style={{ flex: 1 }}

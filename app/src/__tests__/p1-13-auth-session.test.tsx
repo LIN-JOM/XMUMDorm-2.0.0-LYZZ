@@ -47,6 +47,7 @@ jest.mock('../../../shared/api/auth', () => ({
 }));
 // 路由打桩（登录页成功后会 back/replace）
 jest.mock('expo-router', () => ({
+  usePathname: () => '/login',
   router: { canGoBack: jest.fn(() => false), back: jest.fn(), replace: jest.fn() },
 }));
 

@@ -11,10 +11,13 @@ import { renderApp } from './helpers/renderApp';
 import LoginScreen from '@/app/login';
 
 const mockLogin = jest.fn();
+let mockPathname = '/login';
+jest.mock('expo-status-bar', () => ({ StatusBar: jest.fn(() => null) }));
 jest.mock('@/features/auth/session', () => ({
   useSession: () => ({ status: 'signedOut', login: mockLogin }),
 }));
 jest.mock('expo-router', () => ({
+  usePathname: () => mockPathname,
   router: {
     push: jest.fn(),
     canGoBack: () => false,
@@ -28,6 +31,7 @@ const router = jest.requireMock('expo-router').router as {
 };
 
 beforeEach(() => {
+  mockPathname = '/login';
   mockLogin.mockReset();
   mockLogin.mockResolvedValue({ ok: true });
 });
@@ -124,6 +128,8 @@ describe('登录曲面页面', () => {
     ).height;
     // 草图上方约三分之一：800 高的画布保留 256，不能被 500 高的表单挤掉。
     expect(normalBlank).toBe(256);
+    const statusBar = jest.requireMock('expo-status-bar').StatusBar as jest.Mock;
+    expect(statusBar.mock.lastCall?.[0].style).toBe('dark');
     expect(
       view.getByTestId('login-background-layer', {
         includeHiddenElements: true,
@@ -145,6 +151,15 @@ describe('登录曲面页面', () => {
     expect(
       view.queryByTestId('login-brand-art', { includeHiddenElements: true })
     ).toBeNull();
+    expect(statusBar.mock.lastCall?.[0].style).toBe('light');
+    // 压栈后登录页可能仍挂载，但不应继续覆盖前台页面的状态栏。
+    mockPathname = '/register';
+    statusBar.mockClear();
+    await fireEvent(view.getByTestId('login-viewport'), 'layout', layout(390, 800));
+    expect(statusBar).not.toHaveBeenCalled();
+    mockPathname = '/login';
+    await fireEvent(view.getByTestId('login-viewport'), 'layout', layout(390, 800));
+    expect(statusBar.mock.lastCall?.[0].style).toBe('dark');
   });
 
   it('浅色英文界面保留全部登录操作', async () => {
