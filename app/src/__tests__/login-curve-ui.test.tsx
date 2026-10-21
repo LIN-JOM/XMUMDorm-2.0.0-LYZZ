@@ -124,6 +124,14 @@ describe('登录曲面页面', () => {
     ).height;
     // 草图上方约三分之一：800 高的画布保留 256，不能被 500 高的表单挤掉。
     expect(normalBlank).toBe(256);
+    expect(
+      view.getByTestId('login-background-layer', {
+        includeHiddenElements: true,
+      })
+    ).toHaveProp('pointerEvents', 'none');
+    expect(
+      view.getByTestId('login-brand-art', { includeHiddenElements: true })
+    ).toHaveProp('accessible', false);
     await fireEvent(
       view.getByTestId('login-viewport'),
       'layout',
@@ -135,13 +143,8 @@ describe('登录曲面页面', () => {
       'handled'
     );
     expect(
-      view.getByTestId('login-background-layer', {
-        includeHiddenElements: true,
-      })
-    ).toHaveProp('pointerEvents', 'none');
-    expect(
-      view.getByTestId('login-brand-art', { includeHiddenElements: true })
-    ).toHaveProp('accessible', false);
+      view.queryByTestId('login-brand-art', { includeHiddenElements: true })
+    ).toBeNull();
   });
 
   it('浅色英文界面保留全部登录操作', async () => {
