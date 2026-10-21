@@ -41,6 +41,9 @@ describe('登录曲面页面', () => {
   it('输入或显示密码时人物闭眼，移开并隐藏后恢复，字段值不丢失', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
     const view = await renderApp(<LoginScreen />);
+    await fireEvent(view.getByTestId('login-viewport'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 800 } },
+    });
     const password = view.getByTestId('login-password');
     const girlClosed = () => view.getByTestId('login-girl-closed', { includeHiddenElements: true });
     const goatClosed = () => view.getByTestId('login-goat-closed', { includeHiddenElements: true });
@@ -173,6 +176,7 @@ describe('登录曲面页面', () => {
     expect(
       view.getByTestId('login-brand-art', { includeHiddenElements: true })
     ).toHaveProp('accessible', false);
+    await fireEvent.changeText(view.getByTestId('login-password'), 'resize-example');
     await fireEvent(
       view.getByTestId('login-viewport'),
       'layout',
@@ -186,6 +190,7 @@ describe('登录曲面页面', () => {
     expect(
       view.queryByTestId('login-brand-art', { includeHiddenElements: true })
     ).toBeNull();
+    expect(view.getByTestId('login-password')).toHaveProp('value', 'resize-example');
     expect(statusBar.mock.lastCall?.[0].style).toBe('light');
     // 压栈后登录页可能仍挂载，但不应继续覆盖前台页面的状态栏。
     mockPathname = '/register';

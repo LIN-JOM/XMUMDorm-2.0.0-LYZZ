@@ -44,6 +44,7 @@ function LoginContent(): React.ReactElement {
   const [identifier, setIdentifier] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
+  const [passwordFocused, setPasswordFocused] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   /** 错误直接存 `AppError`：`K04` 会用 `toErrorCopy` 渲染三段文案（⛔ 页面不写文案） */
   const [error, setError] = React.useState<AppError | null>(null);
@@ -72,7 +73,7 @@ function LoginContent(): React.ReactElement {
   };
 
   return (
-    <LoginLayout>
+    <LoginLayout eyesClosed={passwordFocused || showPassword}>
       <ErrorSummary
         testID="login-summary"
         title={t('auth.failed')}
@@ -108,6 +109,8 @@ function LoginContent(): React.ReactElement {
           accessibilityCopy={inputAccessibilityCopy}
           value={password}
           onChangeText={setPassword}
+          onFocus={() => setPasswordFocused(true)}
+          onBlur={() => setPasswordFocused(false)}
           kind={showPassword ? 'text' : 'password'}
           appearance="underline"
           labelPlacement="inline"

@@ -11,8 +11,10 @@ import { LoginGlassSides } from './LoginGlassSides';
 /** 品牌装饰与真实表单分层；安全区和键盘仍由 Screen 处理。 */
 export function LoginLayout({
   children,
+  eyesClosed = false,
 }: {
   children: React.ReactNode;
+  eyesClosed?: boolean;
 }): React.ReactElement {
   const theme = useTheme();
   const pathname = usePathname();
@@ -72,7 +74,8 @@ export function LoginLayout({
               style={{ height: showArtwork ? blankHeight : 0 }}
             />
             {showArtwork ? (
-              <LoginArtwork width={viewport.width} height={artworkHeight} />
+              <LoginArtwork width={viewport.width} height={artworkHeight}
+                active={pathname === '/login'} eyesClosed={eyesClosed} />
             ) : null}
           </View>
           <View testID="login-front-layer" style={{ flexGrow: 1, backgroundColor }}>
