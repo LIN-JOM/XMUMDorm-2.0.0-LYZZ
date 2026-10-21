@@ -12,7 +12,7 @@ import Eye from 'lucide-react-native/icons/eye';
 import EyeOff from 'lucide-react-native/icons/eye-off';
 
 import { useTheme } from '@/design-system/theme';
-import { useI18n } from '@/i18n';
+import { I18nProvider, useI18n } from '@/i18n';
 import type { AppError } from '@/i18n/errors';
 import { Button } from '@/components/ui/Button';
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
@@ -24,6 +24,11 @@ import { useSession } from '@/features/auth/session';
 import { LoginLayout } from '@/features/auth/LoginLayout';
 
 export default function LoginScreen(): React.ReactElement {
+  // 登录入口统一英文；子树内的错误摘要和共享控件使用同一语言，退出后不影响 App 设置。
+  return <I18nProvider locale="en"><LoginContent /></I18nProvider>;
+}
+
+function LoginContent(): React.ReactElement {
   const theme = useTheme();
   const { t } = useI18n();
   const session = useSession();
@@ -81,7 +86,7 @@ export default function LoginScreen(): React.ReactElement {
           label={t('auth.identifier')}
           value={identifier}
           onChangeText={setIdentifier}
-          kind="text"
+          kind="email"
           appearance="underline"
           labelPlacement="inline"
           prefix={<Icon source={Mail} size="body" tint="secondary" />}

@@ -256,7 +256,7 @@ export const zh = {
   // ── 登录最小链路（P1-13；`P15` 完整鉴权原型属后续任务）──────────────
   'auth.splash': '厦马小筑',
   'auth.title': '登录',
-  'auth.identifier': '学号或邮箱',
+  'auth.identifier': '学校邮箱',
   'auth.password': '密码',
   'auth.login': '登录',
   'auth.showPassword': '显示密码',

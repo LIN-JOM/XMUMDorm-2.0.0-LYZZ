@@ -250,7 +250,7 @@ export const en: Record<MessageKey, string> = {
   // Minimal login chain (P1-13)
   'auth.splash': 'Jack Dorm',
   'auth.title': 'Sign in',
-  'auth.identifier': 'Student ID or email',
+  'auth.identifier': 'School email',
   'auth.password': 'Password',
   'auth.login': 'Sign in',
   'auth.showPassword': 'Show password',
