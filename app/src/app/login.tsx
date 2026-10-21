@@ -25,12 +25,20 @@ import { LoginLayout } from '@/features/auth/LoginLayout';
 
 export default function LoginScreen(): React.ReactElement {
   // 登录入口统一英文；子树内的错误摘要和共享控件使用同一语言，退出后不影响 App 设置。
-  return <I18nProvider locale="en"><LoginContent /></I18nProvider>;
+  return (
+    <I18nProvider locale="en">
+      <LoginContent />
+    </I18nProvider>
+  );
 }
 
 function LoginContent(): React.ReactElement {
   const theme = useTheme();
   const { t } = useI18n();
+  const inputAccessibilityCopy = {
+    required: t('form.required'),
+    separator: t('form.labelSeparator'),
+  };
   const session = useSession();
 
   const [identifier, setIdentifier] = React.useState('');
@@ -84,6 +92,7 @@ function LoginContent(): React.ReactElement {
         <Input
           testID="login-identifier"
           label={t('auth.identifier')}
+          accessibilityCopy={inputAccessibilityCopy}
           value={identifier}
           onChangeText={setIdentifier}
           kind="email"
@@ -96,6 +105,7 @@ function LoginContent(): React.ReactElement {
         <Input
           testID="login-password"
           label={t('auth.password')}
+          accessibilityCopy={inputAccessibilityCopy}
           value={password}
           onChangeText={setPassword}
           kind={showPassword ? 'text' : 'password'}
@@ -164,14 +174,14 @@ function LoginContent(): React.ReactElement {
         />
         <Button
           testID="login-terms"
-          label={t('me.legal.terms')}
+          label={t('auth.terms')}
           variant="link"
           size="small"
           onPress={() => router.push('/me/legal/terms')}
         />
         <Button
           testID="login-privacy"
-          label={t('me.legal.privacy')}
+          label={t('auth.privacy')}
           variant="link"
           size="small"
           onPress={() => router.push('/me/legal/privacy')}

@@ -243,6 +243,8 @@ export const zh = {
   'weekday.7': '周日',
 
   // ── 表单校验文案（`K01`/`K03` 用；**只给词条 key**，文案在这里）──────────
+  'form.required': '必填',
+  'form.labelSeparator': '，',
   'form.error.required': '这一项不能为空',
   'form.error.tooLong': '内容超过上限',
   'form.error.submit': '提交没有成功',
@@ -257,6 +259,8 @@ export const zh = {
   'auth.splash': '厦马小筑',
   'auth.title': '登录',
   'auth.identifier': '学校邮箱',
+  'auth.terms': '服务条款',
+  'auth.privacy': '隐私政策',
   'auth.password': '密码',
   'auth.login': '登录',
   'auth.showPassword': '显示密码',

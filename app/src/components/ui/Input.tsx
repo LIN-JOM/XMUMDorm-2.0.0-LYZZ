@@ -29,6 +29,7 @@ import { Text } from './Text';
 
 export type InputKind = 'text' | 'number' | 'email' | 'password' | 'tel';
 export type InputAppearance = 'boxed' | 'underline';
+export type InputAccessibilityCopy = { required: string; separator: string };
 
 /** 唯一的键盘映射点（§3.3.2） */
 export function keyboardTypeFor(
@@ -53,12 +54,12 @@ export function keyboardTypeFor(
  */
 export function inputAccessibilityLabel(
   label: string,
-  options: { required?: boolean; errorText?: string } = {}
+  options: { required?: boolean; errorText?: string; copy?: InputAccessibilityCopy } = {}
 ): string {
   const parts = [label];
-  if (options.required) parts.push('必填');
+  if (options.required) parts.push(options.copy?.required ?? '必填');
   if (options.errorText) parts.push(options.errorText);
-  return parts.join('，');
+  return parts.join(options.copy?.separator ?? '，');
 }
 
 export type InputProps = {
@@ -81,6 +82,8 @@ export type InputProps = {
   /** 清除按钮的读屏标签（默认"清除"） */
   clearLabel?: string;
   required?: boolean;
+  /** 局部语言页面可注入读屏词语；仍自动包含必填与错误，不改其他控件默认口径。 */
+  accessibilityCopy?: InputAccessibilityCopy;
   disabled?: boolean;
   editable?: boolean;
   onBlur?: () => void;
@@ -103,6 +106,7 @@ export function Input({
   clearable = false,
   clearLabel = '清除',
   required = false,
+  accessibilityCopy,
   disabled = false,
   editable = true,
   onBlur,
@@ -176,6 +180,7 @@ export function Input({
           accessibilityLabel={inputAccessibilityLabel(label, {
             required,
             errorText: hasError ? errorText : undefined,
+            copy: accessibilityCopy,
           })}
           accessibilityState={{ disabled }}
           style={{
