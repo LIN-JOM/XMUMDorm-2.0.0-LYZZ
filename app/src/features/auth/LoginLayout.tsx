@@ -75,7 +75,7 @@ export function LoginLayout({
               <LoginArtwork width={viewport.width} height={artworkHeight} />
             ) : null}
           </View>
-          <View testID="login-front-layer" style={{ backgroundColor }}>
+          <View testID="login-front-layer" style={{ flexGrow: 1, backgroundColor }}>
             <LoginGlassSides />
             <View
               testID="login-form-content"

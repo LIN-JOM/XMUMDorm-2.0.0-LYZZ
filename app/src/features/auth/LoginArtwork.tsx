@@ -4,7 +4,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { useTheme } from '@/design-system/theme';
 
-const LOGIN_HERO = require('../../../assets/brand/login-hero.png');
+const LOGIN_HERO = require('../../../assets/brand/login-hero-sharp.png');
 // 素材是正方形；卡片两侧的接触线位于图高约 81%，不是间距或字体数值。
 const CARD_CONTACT = 0.81;
 
