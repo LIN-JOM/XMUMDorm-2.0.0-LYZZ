@@ -37,6 +37,8 @@ export function LoginArtwork({
         accessible={false}
         fadeDuration={0}
         resizeMode="contain"
+        // 保留本地原图的解码细节，让硬件完成缩放，避免 Android 自动选用低分辨率采样。
+        resizeMethod="scale"
         style={{
           position: 'absolute',
           width: artSize,
