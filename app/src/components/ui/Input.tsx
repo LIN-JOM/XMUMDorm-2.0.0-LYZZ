@@ -86,7 +86,6 @@ export type InputProps = {
   accessibilityCopy?: InputAccessibilityCopy;
   disabled?: boolean;
   editable?: boolean;
-  onFocus?: () => void;
   onBlur?: () => void;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -110,7 +109,6 @@ export function Input({
   accessibilityCopy,
   disabled = false,
   editable = true,
-  onFocus,
   onBlur,
   style,
   testID,
@@ -176,7 +174,6 @@ export function Input({
           keyboardType={keyboardTypeFor(kind)}
           secureTextEntry={kind === 'password'}
           maxLength={maxLength}
-          onFocus={onFocus}
           onBlur={onBlur}
           // 7.2：允许系统字号放大（⛔ 不关掉 Dynamic Type）
           allowFontScaling

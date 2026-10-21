@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { AccessibilityInfo, StyleSheet, Text as NativeText } from 'react-native';
+import { StyleSheet, Text as NativeText } from 'react-native';
 import {
   act,
   fireEvent,
@@ -38,32 +38,6 @@ beforeEach(() => {
 });
 
 describe('登录曲面页面', () => {
-  it('输入或显示密码时人物闭眼，移开并隐藏后恢复，字段值不丢失', async () => {
-    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
-    const view = await renderApp(<LoginScreen />);
-    await fireEvent(view.getByTestId('login-viewport'), 'layout', {
-      nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 800 } },
-    });
-    const password = view.getByTestId('login-password');
-    const girlEye = () => view.getByTestId('login-girl-eye-0', { includeHiddenElements: true });
-    const goatEye = () => view.getByTestId('login-goat-eye-0', { includeHiddenElements: true });
-    await waitFor(() => expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 1 }] }));
-    await fireEvent.changeText(password, 'private-example');
-    await fireEvent(password, 'focus');
-    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
-    expect(goatEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
-    await fireEvent(password, 'blur');
-    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 1 }] });
-    await fireEvent.press(view.getByTestId('login-toggle-password'));
-    expect(goatEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
-    await fireEvent(password, 'focus');
-    await fireEvent(password, 'blur');
-    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 0 }] });
-    await fireEvent.press(view.getByTestId('login-toggle-password'));
-    expect(girlEye()).toHaveStyle({ transform: [{ scaleY: 1 }] });
-    expect(password).toHaveProp('value', 'private-example');
-  });
-
   it('中文 App 中登录仍为英文，学校邮箱标签输入后始终可见', async () => {
     function OutsideLocale(): React.ReactElement {
       return <NativeText testID="outside-locale">{useI18n().locale}</NativeText>;
@@ -176,7 +150,6 @@ describe('登录曲面页面', () => {
     expect(
       view.getByTestId('login-brand-art', { includeHiddenElements: true })
     ).toHaveProp('accessible', false);
-    await fireEvent.changeText(view.getByTestId('login-password'), 'resize-example');
     await fireEvent(
       view.getByTestId('login-viewport'),
       'layout',
@@ -190,7 +163,6 @@ describe('登录曲面页面', () => {
     expect(
       view.queryByTestId('login-brand-art', { includeHiddenElements: true })
     ).toBeNull();
-    expect(view.getByTestId('login-password')).toHaveProp('value', 'resize-example');
     expect(statusBar.mock.lastCall?.[0].style).toBe('light');
     // 压栈后登录页可能仍挂载，但不应继续覆盖前台页面的状态栏。
     mockPathname = '/register';

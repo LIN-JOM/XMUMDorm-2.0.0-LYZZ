@@ -3,24 +3,19 @@ import { Image, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { useTheme } from '@/design-system/theme';
-import { LoginCharacters } from './LoginCharacters';
 
-const LOGIN_HERO_LIGHT = require('../../../assets/brand/login-motion-light-plate.png');
-const LOGIN_HERO_DARK = require('../../../assets/brand/login-motion-dark-plate.png');
+const LOGIN_HERO_LIGHT = require('../../../assets/brand/login-hero-sharp.png');
+const LOGIN_HERO_DARK = require('../../../assets/brand/login-hero-dark.png');
 // 素材是正方形；卡片两侧的接触线位于图高约 81%，不是间距或字体数值。
 const CARD_CONTACT = 0.81;
 
-/** 静态花园与玻璃边沿托住独立人物层，不包含输入、文字或按钮。 */
+/** 静态品牌画与玻璃边沿；不包含任何输入、文字或按钮。 */
 export function LoginArtwork({
   width,
   height,
-  active,
-  eyesClosed,
 }: {
   width: number;
   height: number;
-  active: boolean;
-  eyesClosed: boolean;
 }): React.ReactElement {
   const theme = useTheme();
   const artSize = Math.max(width, height / CARD_CONTACT);
@@ -55,10 +50,6 @@ export function LoginArtwork({
           top: height - artSize * CARD_CONTACT,
         }}
       />
-      <View style={{ position: 'absolute', width: artSize, height: artSize,
-        left: (width - artSize) / 2, top: height - artSize * CARD_CONTACT }}>
-        <LoginCharacters size={artSize} active={active} eyesClosed={eyesClosed} />
-      </View>
       {/* 图中只保留静态折射边沿，往内过渡到真实主题底色；表单中心始终不透明。 */}
       <Svg
         aria-hidden
