@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Screen } from '@/components/ui/Screen';
 import { useTheme } from '@/design-system/theme';
 import { LoginArtwork } from './LoginArtwork';
+import { LoginGlassSides } from './LoginGlassSides';
 
 /** 品牌装饰与真实表单分层；安全区和键盘仍由 Screen 处理。 */
 export function LoginLayout({
@@ -75,6 +76,7 @@ export function LoginLayout({
             ) : null}
           </View>
           <View testID="login-front-layer" style={{ backgroundColor }}>
+            <LoginGlassSides />
             <View
               testID="login-form-content"
               onLayout={({ nativeEvent: { layout } }) =>
