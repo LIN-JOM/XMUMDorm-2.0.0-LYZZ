@@ -36,7 +36,7 @@ export function LoginGlassSides(): React.ReactElement {
               <Stop offset="0%" stopColor={theme.color['border-strong'].value} stopOpacity={0.4} />
               <Stop offset="10%" stopColor={theme.color['bg-raised'].value} />
               <Stop offset="25%" stopColor={theme.color['bg-brand-soft'].value} />
-              <Stop offset="50%" stopColor={theme.color['bg-success-soft'].value} />
+              <Stop offset="50%" stopColor={theme.color['bg-surface'].value} />
               <Stop offset="100%" stopColor={theme.color['bg-canvas'].value} stopOpacity={0} />
             </LinearGradient>
           </Defs>
