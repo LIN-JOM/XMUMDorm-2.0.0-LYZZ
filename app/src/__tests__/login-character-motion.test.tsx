@@ -1,0 +1,64 @@
+import * as React from 'react';
+import { AccessibilityInfo, Animated, AppState, type AppStateStatus } from 'react-native';
+import { act, waitFor } from '@testing-library/react-native';
+
+import { LoginCharacters } from '@/features/auth/LoginCharacters';
+import { renderApp } from './helpers/renderApp';
+
+function observeMotion() {
+  const loops: { start: jest.Mock; stop: jest.Mock; reset: jest.Mock }[] = [];
+  jest.spyOn(Animated, 'loop').mockImplementation(() => {
+    const loop = { start: jest.fn(), stop: jest.fn(), reset: jest.fn() };
+    loops.push(loop);
+    return loop;
+  });
+  let onState: ((state: AppStateStatus) => void) | undefined;
+  const remove = jest.fn();
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((event, listener) => {
+    if (event === 'change') onState = listener;
+    return { remove };
+  });
+  jest.replaceProperty(AppState, 'currentState', 'active');
+  return { loops, remove, change: (state: AppStateStatus) => onState?.(state) };
+}
+
+it('前台独立启动人物动画，后台停止，回到前台恢复，离开与卸载清理', async () => {
+  const motion = observeMotion();
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  const view = await renderApp(<LoginCharacters size={390} active eyesClosed={false} />);
+  expect(motion.loops).toHaveLength(4);
+  expect(motion.loops.every((loop) => loop.start.mock.calls.length === 1)).toBe(true);
+  await act(() => motion.change('background'));
+  expect(motion.loops.every((loop) => loop.stop.mock.calls.length === 1)).toBe(true);
+  await act(() => motion.change('active'));
+  expect(motion.loops).toHaveLength(8);
+  await view.rerender(<LoginCharacters size={390} active={false} eyesClosed={false} />);
+  expect(motion.loops.every((loop) => loop.stop.mock.calls.length === 1)).toBe(true);
+  await view.rerender(<LoginCharacters size={390} active eyesClosed={false} />);
+  expect(motion.loops).toHaveLength(12);
+  await view.unmount();
+  expect(motion.loops.every((loop) => loop.stop.mock.calls.length === 1)).toBe(true);
+  expect(motion.remove).toHaveBeenCalledTimes(1);
+});
+
+it('系统减少动态效果开启后停止环境动画，密码仍能立即闭眼', async () => {
+  const motion = observeMotion();
+  let reduceMotion: ((enabled: boolean) => void) | undefined;
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+  jest.spyOn(AccessibilityInfo, 'addEventListener').mockImplementation((event, listener) => {
+    if (event === 'reduceMotionChanged') reduceMotion = listener;
+    return { remove: jest.fn() };
+  });
+  const view = await renderApp(<LoginCharacters size={390} active eyesClosed={false} />);
+  await waitFor(() => expect(motion.loops.every((loop) => loop.stop.mock.calls.length === 1)).toBe(true));
+  const closed = () => view.getByTestId('login-goat-closed', { includeHiddenElements: true });
+  expect(closed()).toHaveStyle({ opacity: 0 });
+  await view.rerender(<LoginCharacters size={390} active eyesClosed />);
+  expect(closed()).toHaveStyle({ opacity: 1 });
+  const before = motion.loops.length;
+  await act(() => reduceMotion?.(false));
+  // 密码闭眼时仅恢复两个人物的呼吸，不启动眨眼循环。
+  expect(motion.loops).toHaveLength(before + 2);
+  await act(() => reduceMotion?.(true));
+  expect(motion.loops.every((loop) => loop.stop.mock.calls.length === 1)).toBe(true);
+});

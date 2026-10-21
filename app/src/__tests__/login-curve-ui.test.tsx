@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text as NativeText } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text as NativeText } from 'react-native';
 import {
   act,
   fireEvent,
@@ -38,6 +38,29 @@ beforeEach(() => {
 });
 
 describe('登录曲面页面', () => {
+  it('输入或显示密码时人物闭眼，移开并隐藏后恢复，字段值不丢失', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    const view = await renderApp(<LoginScreen />);
+    const password = view.getByTestId('login-password');
+    const girlClosed = () => view.getByTestId('login-girl-closed', { includeHiddenElements: true });
+    const goatClosed = () => view.getByTestId('login-goat-closed', { includeHiddenElements: true });
+    await waitFor(() => expect(girlClosed()).toHaveStyle({ opacity: 0 }));
+    await fireEvent.changeText(password, 'private-example');
+    await fireEvent(password, 'focus');
+    expect(girlClosed()).toHaveStyle({ opacity: 1 });
+    expect(goatClosed()).toHaveStyle({ opacity: 1 });
+    await fireEvent(password, 'blur');
+    expect(girlClosed()).toHaveStyle({ opacity: 0 });
+    await fireEvent.press(view.getByTestId('login-toggle-password'));
+    expect(goatClosed()).toHaveStyle({ opacity: 1 });
+    await fireEvent(password, 'focus');
+    await fireEvent(password, 'blur');
+    expect(girlClosed()).toHaveStyle({ opacity: 1 });
+    await fireEvent.press(view.getByTestId('login-toggle-password'));
+    expect(girlClosed()).toHaveStyle({ opacity: 0 });
+    expect(password).toHaveProp('value', 'private-example');
+  });
+
   it('中文 App 中登录仍为英文，学校邮箱标签输入后始终可见', async () => {
     function OutsideLocale(): React.ReactElement {
       return <NativeText testID="outside-locale">{useI18n().locale}</NativeText>;
