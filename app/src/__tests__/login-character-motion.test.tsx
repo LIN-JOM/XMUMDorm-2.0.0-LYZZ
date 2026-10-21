@@ -31,6 +31,17 @@ function createScene() {
   return { Scene, set: (settings: { active: boolean; eyesClosed: boolean }) => update(settings) };
 }
 
+it('闭合和睁开都有至少 700 毫秒的过程，不以快速换图模拟动作', async () => {
+  const motion = observeMotion();
+  const timing = jest.spyOn(Animated, 'timing');
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  await renderApp(<LoginCharacters size={390} active eyesClosed={false} />);
+  await act(() => motion.change('active'));
+  const visibleTransitions = timing.mock.calls.map(([, config]) => config.duration ?? 500);
+  expect(visibleTransitions.length).toBeGreaterThanOrEqual(8);
+  expect(Math.min(...visibleTransitions)).toBeGreaterThanOrEqual(700);
+});
+
 it('前台独立启动人物动画，后台停止，回到前台恢复，离开与卸载清理', async () => {
   const motion = observeMotion();
   const scene = createScene();
