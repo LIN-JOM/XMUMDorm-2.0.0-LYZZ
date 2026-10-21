@@ -129,7 +129,8 @@ describe('登录曲面页面', () => {
     // 草图上方约三分之一：800 高的画布保留 256，不能被 500 高的表单挤掉。
     expect(normalBlank).toBe(256);
     const statusBar = jest.requireMock('expo-status-bar').StatusBar as jest.Mock;
-    expect(statusBar.mock.lastCall?.[0].style).toBe('dark');
+    // 夜间插画顶部也是深底，不能再沿用旧浅色插画的黑色状态栏图标。
+    expect(statusBar.mock.lastCall?.[0].style).toBe('light');
     expect(
       view.getByTestId('login-background-layer', {
         includeHiddenElements: true,
@@ -159,7 +160,7 @@ describe('登录曲面页面', () => {
     expect(statusBar).not.toHaveBeenCalled();
     mockPathname = '/login';
     await fireEvent(view.getByTestId('login-viewport'), 'layout', layout(390, 800));
-    expect(statusBar.mock.lastCall?.[0].style).toBe('dark');
+    expect(statusBar.mock.lastCall?.[0].style).toBe('light');
   });
 
   it('浅色英文界面保留全部登录操作', async () => {
@@ -174,5 +175,7 @@ describe('登录曲面页面', () => {
     expect(view.getByRole('button', { name: 'Show password' })).toBeTruthy();
     expect(view.getByTestId('login-terms')).toBeTruthy();
     expect(view.getByTestId('login-privacy')).toBeTruthy();
+    const statusBar = jest.requireMock('expo-status-bar').StatusBar as jest.Mock;
+    expect(statusBar.mock.lastCall?.[0].style).toBe('dark');
   });
 });
