@@ -46,9 +46,9 @@ export function LoginLayout({
 
   return (
     <Screen topMode="none" bottomMode="own" testID="login">
-      {/* 仅前台登录页覆盖全局样式；收起浅色插画后恢复主题颜色。 */}
+      {/* 两套品牌画各有明暗底色；仅前台登录页覆盖全局样式。 */}
       {pathname === '/login' ? (
-        <StatusBar style={!showArtwork && theme.scheme === 'dark' ? 'light' : 'dark'} />
+        <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       ) : null}
       <View
         testID="login-viewport"

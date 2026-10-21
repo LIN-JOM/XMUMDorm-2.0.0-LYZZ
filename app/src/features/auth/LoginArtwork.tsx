@@ -4,7 +4,8 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { useTheme } from '@/design-system/theme';
 
-const LOGIN_HERO = require('../../../assets/brand/login-hero-sharp.png');
+const LOGIN_HERO_LIGHT = require('../../../assets/brand/login-hero-sharp.png');
+const LOGIN_HERO_DARK = require('../../../assets/brand/login-hero-dark.png');
 // 素材是正方形；卡片两侧的接触线位于图高约 81%，不是间距或字体数值。
 const CARD_CONTACT = 0.81;
 
@@ -18,7 +19,9 @@ export function LoginArtwork({
 }): React.ReactElement {
   const theme = useTheme();
   const artSize = Math.max(width, height / CARD_CONTACT);
-  const fadeHeight = Math.min(height, theme.space('space_12'));
+  const isDark = theme.scheme === 'dark';
+  // 夜间素材本身已经是烟灰玻璃，仅在接缝处短距离收口，保留细反光而不叠宽雾带。
+  const fadeHeight = Math.min(height, theme.space(isDark ? 'space_4' : 'space_12'));
   const fadeId = React.useId().replace(/:/g, '');
   const canvas = theme.color['bg-canvas'].value;
 
@@ -33,7 +36,7 @@ export function LoginArtwork({
     >
       <Image
         testID="login-brand-art"
-        source={LOGIN_HERO}
+        source={isDark ? LOGIN_HERO_DARK : LOGIN_HERO_LIGHT}
         accessible={false}
         fadeDuration={0}
         resizeMode="contain"
