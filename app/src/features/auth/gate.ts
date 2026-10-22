@@ -23,6 +23,8 @@ export const PROTECTED_ROUTE_PREFIXES: readonly string[] = [
 
 /** 这个路径需要身份吗？ */
 export function routeRequiresAuth(pathname: string): boolean {
+  // 登录页上的两份静态法务文档必须匿名可读；其余 /me 路径仍受保护。
+  if (pathname === '/me/legal/terms' || pathname === '/me/legal/privacy') return false;
   return PROTECTED_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );

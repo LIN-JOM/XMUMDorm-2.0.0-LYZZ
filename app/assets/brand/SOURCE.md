@@ -75,3 +75,50 @@
 
 - 本文件实测墨色 `#112D66`；官网 `images/logo2.png` 里切出的校徽实测为 `#0D2F6E`；设计文档里的品牌锚点 `#173874` 与两者均差 6–10 级（文档中的测量口径可能取了另一版资产/含抗锯齿均值）。**未对校徽重新上色**（保持官方原色），若要求与品牌 token 完全一致，需要产品侧决定是否统一改色。
 - 商标说明：校徽属厦门大学标识，含商标性权利（Commons 亦挂 Trademarked 模板）。本 App 为校内学生项目，用于表明所属学校；对外发布/商用前请按学校视觉标识管理办法确认授权。
+
+## 7. 登录页品牌画（2026-10-21）
+
+- 文件：`login-hero.png`，1254×1254 PNG，随 App 本地打包，不请求外网。
+- 来源：用户提供女孩和小山羊品牌参考，经 imagegen 生成并迭代的确认稿。
+- 确认稿标识：`exec-9d222077-bb66-4b5c-b46b-4f8fb3b39f16.png`。
+- 生成的装饰资源标识：`exec-4765c947-4302-4222-a3ba-31771237d827.png`。
+- 内容：浅绿花卉、女孩、纯白微笑小羊及静态边缘玻璃；已移除所有文字、输入线、图标和按钮。
+- 对齐：画中卡片两侧接触线约在图高 81%，仅用于装饰锚定；正文由真实原生组件渲染。
+- 材质：使用静态边沿折射装饰与原生 SVG 主题渐变，不包含 Plasma UI 的浏览器 WebGL 运行时。
+- 用户已授权按该设计图进行代码实现；本资源不替换上方登记的学校校徽。
+
+### 登录插画清晰度修正（2026-10-21）
+
+- 当前使用 `login-hero-sharp.png`；旧 `login-hero.png` 保留作原稿对照，不再被页面引用。
+- 内置 imagegen 编辑原图，输出 `exec-e7922e97-7a75-4ce7-a5eb-67d527e45c73.png`。
+- 实际输出仍为 1254×1254，未虚构升分辨率；主要改进是清晰线条、减少泛光和细碎纹理。
+- 保留人物、姿势、配色和卡片接触线。原生图片使用硬件缩放；原生显示仍待设备验证。
+- 精修提示词如下；工具使用内置模式，未调用 CLI/API。
+
+```text
+Edit this exact production illustration asset for sharper rendering in a 390px-wide mobile login header.
+Preserve the composition, framing, pose, character identity, character proportions, hand and hoof contact
+positions and the shallow arched glass rim EXACTLY. The white-haired blue-eyed girl with crystalline blue
+horn is on the left, and a pure white smiling baby goat with small ears and blue crystalline horn is on
+the right. Both lean on the rim, same expressions and gaze as the target. Keep the pale sage green floral
+background. Keep the arched blank milky-white lower card region empty; the two side contact heights remain
+at 81% of the square image and the arch crest remains around 69% of image height.
+Improve only clarity: clean crisp controlled anime line art on the face, eyelashes, large readable hair
+locks, ribbon shapes, bell contours, crystal facets, clear restrained local contrast. Remove painterly
+smearing, white bloom and overexposed haze on characters. Simplify tiny noisy hair/fur texture so the
+characters remain clean and legible at phone size. Goat fur stays very very pure white, short and simple,
+not detailed strands. Background flowers can remain softly out of focus but subjects and glass rim are
+tack sharp. No halos from artificial oversharpening. This is an asset edit, not a new UI mockup.
+No text, icons, inputs, buttons, phone frame or watermark. Output a square high resolution PNG, target
+2048 by 2048 or higher if supported, do not downsample.
+```
+
+## 8. 独立深色登录素材（2026-10-21）
+
+- 文件：`login-hero-dark.png`，1254×1254 PNG，2,160,331 字节，随 App 本地打包。
+- 来源：内置 imagegen 编辑用户确认构图的精修图，保留人物、姿势与低拱接触线。
+- 生成标识：`exec-1207244f-30b7-48c8-b529-db5fca27511c.png`。
+- 设计：夜蓝花园、月光照明、烟灰蓝玻璃与细冷反光；不使用浅色乳白卡片再叠黑底。
+- 正文区无文字或控件；中央最终由真实原生组件的不透明主题底色承载。
+- 完整提示词与输出尺寸见 docs/app/task/login-dark-glass/04-夜间素材提示词.md。
+- 当前用户明确要求深色模式独立重做；浅色继续使用 `login-hero-sharp.png`。

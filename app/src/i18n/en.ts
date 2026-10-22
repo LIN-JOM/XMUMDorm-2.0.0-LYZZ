@@ -239,6 +239,8 @@ export const en: Record<MessageKey, string> = {
   'weekday.7': 'Sun',
 
   // Form validation copy (K01/K03)
+  'form.required': 'Required',
+  'form.labelSeparator': ', ',
   'form.error.required': 'This field is required',
   'form.error.tooLong': 'Too long',
   'form.error.submit': 'Submit failed',
@@ -252,9 +254,15 @@ export const en: Record<MessageKey, string> = {
   // Minimal login chain (P1-13)
   'auth.splash': 'Jack Dorm',
   'auth.title': 'Sign in',
-  'auth.identifier': 'Student ID or email',
+  'auth.identifier': 'School email',
   'auth.password': 'Password',
   'auth.login': 'Sign in',
+  'auth.showPassword': 'Show password',
+  'auth.hidePassword': 'Hide password',
+  'auth.forgotPassword': 'Forgot password?',
+  'auth.terms': 'Terms',
+  'auth.privacy': 'Privacy',
+  'auth.legalIntro': 'Before you sign in',
   // Sign up & password reset (A-03/A-04; from P2C2-02)
   'auth.register': 'Sign up',
   'auth.toRegister': 'Create account',
