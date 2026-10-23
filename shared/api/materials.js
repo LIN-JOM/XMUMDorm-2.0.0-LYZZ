@@ -37,6 +37,20 @@ import {
   kindOf,
 } from '../constants/materials';
 
+/**
+ * Web-only local preview switch. It selects two fixed GET endpoints only;
+ * the gateway token itself stays in Vite's server-side environment.
+ */
+export const isMaterialsPreviewMode = import.meta.env?.VITE_MATERIALS_PREVIEW_GATEWAY === '1';
+
+function previewGet(path) {
+  // `VITE_API_BASE_URL` may point at production for normal local work. Preview
+  // must still go through this browser's Vite proxy, where the secret header
+  // is attached, rather than sending an unauthenticated request to that URL.
+  const localPath = typeof window === 'undefined' ? path : new URL(path, window.location.origin).toString();
+  return get(localPath, { skipAuth: true });
+}
+
 export {
   TYPES,
   TYPE_META,
@@ -89,7 +103,9 @@ export function listMaterials(opts = {}) {
   set('page', opts.page);
   set('pageSize', opts.pageSize);
   const qs = p.toString();
-  return get(`/api/materials${qs ? `?${qs}` : ''}`);
+  const endpoint = isMaterialsPreviewMode ? '/api/preview/materials' : '/api/materials';
+  const url = `${endpoint}${qs ? `?${qs}` : ''}`;
+  return isMaterialsPreviewMode ? previewGet(url) : get(url);
 }
 
 /** 课程字典（轻量，公开；供选课与自动补全） */
@@ -97,7 +113,9 @@ export function listCourses({ q = '', limit = 200 } = {}) {
   const p = new URLSearchParams();
   if (q) p.set('q', q);
   p.set('limit', String(limit));
-  return get(`/api/materials/courses?${p.toString()}`);
+  const endpoint = isMaterialsPreviewMode ? '/api/preview/materials/courses' : '/api/materials/courses';
+  const url = `${endpoint}?${p.toString()}`;
+  return isMaterialsPreviewMode ? previewGet(url) : get(url);
 }
 
 /**
@@ -175,6 +193,10 @@ export async function fetchMarkdownText({ cdnUrl, path }) {
       /* 落到后端兜底 */
     }
   }
+  // Preview gateway intentionally has no arbitrary file-read endpoint. A
+  // missing public CDN URL is an incomplete preview deployment, not a reason
+  // to fall back to the normal API.
+  if (isMaterialsPreviewMode) throw new Error('预览环境未配置资料文件地址');
   return fetchMaterialText(path);
 }
 

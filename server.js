@@ -50,6 +50,7 @@ const reportRoutes = require('./routes/reports');
 const advertisementRoutes = require('./routes/advertisements');
 const confessionRoutes = require('./routes/confessions');
 const materialsRoutes = require('./routes/materials');
+const previewRoutes = require('./routes/preview');
 
 // 8. 创建一个 Express 应用实例
 const app = express();
@@ -177,6 +178,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/confessions', confessionRoutes);
 app.use('/api/materials', materialsRoutes);
+app.use('/api/preview', previewRoutes);
 app.use('/api/shop', require('./routes/shop'));
 
 // ============================================

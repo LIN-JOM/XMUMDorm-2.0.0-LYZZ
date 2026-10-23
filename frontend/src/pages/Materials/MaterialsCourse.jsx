@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, GraduationCap, Upload } from 'lucide-react';
-import { listCourses, listMaterials } from '@shared/api/materials';
+import { isMaterialsPreviewMode, listCourses, listMaterials } from '@shared/api/materials';
 import { QK } from '@shared/query/queryKeys';
 import { useLanguage } from '../../context/LanguageContextState';
 import MaterialCard from '../../components/materials/MaterialCard';
@@ -87,11 +87,13 @@ export default function MaterialsCourse() {
                   : ''}
               </div>
             </div>
-            <div className="mat-toolbar" style={{ marginTop: 0 }}>
-              <Link className="mat-btn mat-btn--primary" to={`/materials/upload?course=${courseId}`}>
-                <Upload size={15} /> {isZh ? '传这门课的资料' : 'Upload'}
-              </Link>
-            </div>
+            {!isMaterialsPreviewMode && (
+              <div className="mat-toolbar" style={{ marginTop: 0 }}>
+                <Link className="mat-btn mat-btn--primary" to={`/materials/upload?course=${courseId}`}>
+                  <Upload size={15} /> {isZh ? '传这门课的资料' : 'Upload'}
+                </Link>
+              </div>
+            )}
           </div>
         </header>
 

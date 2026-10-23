@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -26,7 +26,27 @@ function manualChunks(id) {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, __dirname, '')
+  const previewGatewayUrl = env.PREVIEW_GATEWAY_URL?.trim()
+  const previewGatewayToken = env.PREVIEW_GATEWAY_TOKEN?.trim()
+  const previewGatewayOrigin = env.PREVIEW_GATEWAY_ORIGIN?.trim() || 'http://localhost:5173'
+  const previewProxy = previewGatewayUrl && previewGatewayToken
+    ? {
+        '/api/preview': {
+          target: previewGatewayUrl,
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('X-Preview-Token', previewGatewayToken)
+              proxyReq.setHeader('Origin', previewGatewayOrigin)
+            })
+          },
+        },
+      }
+    : {}
+
+  return {
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -49,6 +69,7 @@ export default defineConfig({
     host: true, // 允许局域网访问，便于手机通过电脑 IP 访问
     // 代理 /api 到后端，手机访问时请求同源 /api/* 会由 Vite 转发到本机后端
     proxy: {
+      ...previewProxy,
       '/api': {
         target: 'http://127.0.0.1:4040',
         changeOrigin: true,
@@ -59,4 +80,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })
