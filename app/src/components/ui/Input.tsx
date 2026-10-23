@@ -1,7 +1,7 @@
 /**
  * Input（C04）—— 单行文本字段（组件定义 §2.2 / §3.3.2）
  *
- * 解剖（§3.3.2）：**标签外置**（⛔ 不靠 placeholder 当标签）+ `Surface sunken` 底 +
+ * 解剖（§3.3.2）：默认标签外置；登录草图可选同行常驻标签（⛔ 不靠 placeholder 当标签）+ `Surface sunken` 底 +
  * `border.subtle` + 前缀/后缀 + 清除 + **错误就近显示**。
  * 外观变体 `underline`（＝口语里的"带下边框的文本输入框"）是**本组件的一个 prop**，
  * ⛔ 不是独立组件（§3.3.1）。
@@ -29,9 +29,12 @@ import { Text } from './Text';
 
 export type InputKind = 'text' | 'number' | 'email' | 'password' | 'tel';
 export type InputAppearance = 'boxed' | 'underline';
+export type InputAccessibilityCopy = { required: string; separator: string };
 
 /** 唯一的键盘映射点（§3.3.2） */
-export function keyboardTypeFor(kind: InputKind): KeyboardTypeOptions | undefined {
+export function keyboardTypeFor(
+  kind: InputKind
+): KeyboardTypeOptions | undefined {
   switch (kind) {
     case 'email':
       return 'email-address';
@@ -51,12 +54,12 @@ export function keyboardTypeFor(kind: InputKind): KeyboardTypeOptions | undefine
  */
 export function inputAccessibilityLabel(
   label: string,
-  options: { required?: boolean; errorText?: string } = {}
+  options: { required?: boolean; errorText?: string; copy?: InputAccessibilityCopy } = {}
 ): string {
   const parts = [label];
-  if (options.required) parts.push('必填');
+  if (options.required) parts.push(options.copy?.required ?? '必填');
   if (options.errorText) parts.push(options.errorText);
-  return parts.join('，');
+  return parts.join(options.copy?.separator ?? '，');
 }
 
 export type InputProps = {
@@ -66,6 +69,8 @@ export type InputProps = {
   placeholder?: string;
   kind?: InputKind;
   appearance?: InputAppearance;
+  /** 默认外置；登录草图用同行常驻标签，不依赖会随输入消失的 placeholder。 */
+  labelPlacement?: 'outside' | 'inline';
   /** 前缀 / 后缀（如货币符号、单位）；⛔ 不做成图标库依赖 */
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
@@ -77,6 +82,8 @@ export type InputProps = {
   /** 清除按钮的读屏标签（默认"清除"） */
   clearLabel?: string;
   required?: boolean;
+  /** 局部语言页面可注入读屏词语；仍自动包含必填与错误，不改其他控件默认口径。 */
+  accessibilityCopy?: InputAccessibilityCopy;
   disabled?: boolean;
   editable?: boolean;
   onBlur?: () => void;
@@ -91,6 +98,7 @@ export function Input({
   placeholder,
   kind = 'text',
   appearance = 'boxed',
+  labelPlacement = 'outside',
   prefix,
   suffix,
   errorText,
@@ -98,6 +106,7 @@ export function Input({
   clearable = false,
   clearLabel = '清除',
   required = false,
+  accessibilityCopy,
   disabled = false,
   editable = true,
   onBlur,
@@ -111,13 +120,25 @@ export function Input({
   const borderWidthKey: BorderWidthKey = hasError
     ? 'border_width_brutal'
     : 'border_width_hairline';
-  const borderColorToken = hasError ? 'state-danger' : 'border-subtle';
+  const borderColorToken = hasError
+    ? 'state-danger'
+    : labelPlacement === 'inline'
+    ? 'border-strong'
+    : 'border-subtle';
+
+  const fieldLabel = (
+    <Text
+      role="label"
+      colorToken={disabled ? 'text-disabled' : 'text-secondary'}
+      style={labelPlacement === 'inline' ? { flexShrink: 0 } : undefined}
+    >
+      {required ? `${label} *` : label}
+    </Text>
+  );
 
   return (
     <View style={[{ gap: theme.space('space_1') }, style]}>
-      <Text role="label" colorToken={disabled ? 'text-disabled' : 'text-secondary'}>
-        {required ? `${label} *` : label}
-      </Text>
+      {labelPlacement === 'outside' ? fieldLabel : null}
       <View
         style={[
           {
@@ -142,6 +163,7 @@ export function Input({
         ]}
       >
         {prefix}
+        {labelPlacement === 'inline' ? fieldLabel : null}
         <TextInput
           testID={testID}
           value={value}
@@ -158,11 +180,15 @@ export function Input({
           accessibilityLabel={inputAccessibilityLabel(label, {
             required,
             errorText: hasError ? errorText : undefined,
+            copy: accessibilityCopy,
           })}
           accessibilityState={{ disabled }}
           style={{
             flex: 1,
-            color: theme.color[isEditable ? 'text-primary' : 'text-disabled'].value,
+            // Web 的 input 默认最小宽度不能反过来挤断同行标签；原生也允许值区收缩。
+            ...(labelPlacement === 'inline' ? { minWidth: 0 } : null),
+            color:
+              theme.color[isEditable ? 'text-primary' : 'text-disabled'].value,
           }}
         />
         {suffix}

@@ -74,6 +74,99 @@ describe('Posts Routes', () => {
   });
 
   describe('POST /api/posts', () => {
+    function acceptPost(metadata) {
+      query.mockImplementation(async (sql) => {
+        if (sql.startsWith('INSERT INTO posts')) return { insertId: 44 };
+        if (sql.includes('p.content')) return [{
+          id: 44, user_id: 9, title: '标题', content: '正文', type: 'normal', ...metadata,
+        }];
+        if (sql.includes('SELECT p.id')) return [{ id: 44 }];
+        return [];
+      });
+    }
+
+    it.each(['WX', 'QQ', '抖音', 'INS', 'Telegram', 'X', 'Whatsapp'])('persists %s and returns it from create, list and detail without changing the body', async (source) => {
+      const metadata = { content_origin: 'repost', repost_source: source };
+      acceptPost(metadata);
+      const created = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', ...metadata });
+      expect(created.status).toBe(200);
+      expect(created.body.data).toMatchObject({ content: '正文', ...metadata });
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', 'repost', source]
+      );
+      const list = await supertest(app()).get('/api/posts');
+      expect(list.body.data.list[0]).toMatchObject(metadata);
+      const detail = await supertest(app()).get('/api/posts/44');
+      expect(detail.body.data).toMatchObject(metadata);
+      for (const [sql] of query.mock.calls.filter(([sql]) => sql.includes('p.content'))) {
+        expect(sql).toContain('p.content_origin');
+        expect(sql).toContain('p.repost_source');
+      }
+    });
+
+    it.each([
+      ['  学院群聊  ', '学院群聊'],
+      ['来'.repeat(100), '来'.repeat(100)],
+    ])('normalizes a simple custom source before writing: %s', async (input, expected) => {
+      acceptPost({ content_origin: 'repost', repost_source: expected });
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', content_origin: 'repost', repost_source: input });
+      expect(res.status).toBe(200);
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', 'repost', expected]
+      );
+      expect(res.body.data.repost_source).toBe(expected);
+    });
+
+    it.each([
+      [{ content_origin: 'original', repost_source: 'WX' }, 'original'],
+      [{}, null],
+    ])('keeps original sources empty and legacy declarations unknown: %j', async (input, origin) => {
+      acceptPost({ content_origin: origin, repost_source: null });
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', ...input });
+      expect(res.status).toBe(200);
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('content_origin, repost_source'), [9, '标题', '正文', 'normal', origin, null]
+      );
+    });
+
+    it('returns unknown attribution for historical rows in both list and detail', async () => {
+      acceptPost({});
+      const list = await supertest(app()).get('/api/posts');
+      expect(list.status).toBe(200);
+      expect(list.body.data.list[0]).toMatchObject({ content: '正文', content_origin: null, repost_source: null });
+      const detail = await supertest(app()).get('/api/posts/44');
+      expect(detail.status).toBe(200);
+      expect(detail.body.data).toMatchObject({ content: '正文', content_origin: null, repost_source: null });
+    });
+
+    it.each(['content_origin', 'repost_source'])('does not report success when migration 076 is missing %s', async column => {
+      query.mockRejectedValueOnce({ code: 'ER_BAD_FIELD_ERROR', sqlMessage: `Unknown column '${column}' in 'field list'` });
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', content_origin: 'repost', repost_source: 'WX' });
+      expect(res.status).toBe(503);
+      expect(res.body.message).toContain('076_post_attribution.sql');
+      expect(res.body.status).toBe(-1);
+      expect(res.body.data).toBeUndefined();
+      expect(query).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      { content_origin: 'repost' },
+      { content_origin: 'repost', repost_source: '   ' },
+      { content_origin: 'repost', repost_source: ['WX'] },
+      { content_origin: 'repost', repost_source: 123 },
+      { content_origin: 'repost', repost_source: { text: 'WX' } },
+      { content_origin: 'repost', repost_source: '来'.repeat(101) },
+      { content_origin: 'repost', repost_source: '<b>WX</b>' },
+      { content_origin: 'repost', repost_source: '群聊\n来源' },
+      { content_origin: 'repost', repost_source: '群聊\u0000来源' },
+      { content_origin: 'unknown', repost_source: 'WX' },
+      { repost_source: 'WX' },
+    ])('rejects invalid declaration metadata before inserting: %j', async (metadata) => {
+      const res = await supertest(app()).post('/api/posts').send({ title: '标题', content: '正文', ...metadata });
+      expect(res.status).toBe(400);
+      expect(query).not.toHaveBeenCalled();
+    });
+
     it('rejects announcement creation by non-admin users', async () => {
       const res = await supertest(app())
         .post('/api/posts')

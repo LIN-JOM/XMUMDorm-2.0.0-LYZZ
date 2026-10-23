@@ -9,6 +9,7 @@ import { useExpFeedback } from '../context/ExpFeedbackContextState';
 import UserLevelBadge from './UserLevelBadge';
 import ImagePreview from './ImagePreview';
 import Tag from './ui/Tag';
+import PostAttribution from './PostAttribution';
 import './PostCard.css';
 
 /** 兼容 API 与 Mock：author 为对象时用 nickname/username、avatar（需补全 URL） */
@@ -108,6 +109,7 @@ function PostCard({ post, variant = 'list' }) {
   return (
     <>
       <div className={`post-card ${showWaterfall ? 'post-card--waterfall' : ''} ${showWaterfall && hasImages ? 'post-card--waterfall-image' : ''}`}>
+        <PostAttribution post={post} compact />
         {!showWaterfall && (
           <div className="post-card-tags" aria-label={isZh ? '标签' : 'Tags'}>
             {tags.map((t) =>

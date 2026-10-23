@@ -146,3 +146,7 @@ node scripts/createAdmin.js
 `072_shop_merchants.sql`：独立商户、账号归属、按店铺隔离商品/时段/订单、付款方式与配送费用配置、私有付款截图；支持重复执行。
 `073_daily_delivery_schedule.sql`：历史迁移，曾用于每日重复配送时段。表结构为兼容既有数据库而保留；当前商城已改为商家指定日期开放下单，不再读取每日计划或接受非指定日期时段。
 `075_shop_store_soft_delete.sql`：为店铺增加逻辑删除时间和查询索引；商家可下架自己的店铺，管理员可下架任意店铺，历史订单与付款截图保留。使用 `npm run migrate:shop` 或 `node scripts/run-incremental-migrations.js` 执行；不会自动迁移生产数据库。
+
+`076_post_attribution.sql`：树洞原创/转载声明及简单来源，旧帖保留 NULL，不回填原创。
+核实目标库与备份后，使用 `node scripts/apply-sql-file.js migrations/076_post_attribution.sql` 执行单个迁移。
+先迁移，再部署接口和网站；本功能无需重跑其他历史迁移或 init-db.sql。

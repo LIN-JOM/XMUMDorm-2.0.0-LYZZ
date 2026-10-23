@@ -1,41 +1,55 @@
 /**
- * 登录页（P1-13「登录最小链路」）
- *
- * ⚠️ **它不是 `P15 鉴权`原型**：`P15`（品牌头 + 表单卡 + 验证码倒计时 + 条款链接）
- * 不在本包的四个骨架里，属后续任务。本页只把**链路**接通：
- * 真实调 `POST /api/auth/login` → 令牌进 `expo-secure-store` → 请求层立刻能带上它。
- * ⛔ 所以这里**没有**注册/找回密码/条款勾选（那些属于 `A-03`/`A-04`/`A-05`）。
- *
- * 用到的既有件：`Screen`（安全区唯一容器）· `Input`（`C04`）· `Button`（`C01`）
- * · `ErrorSummary`（`K04`，三段文案来自 `toErrorCopy`）。
+ * 登录页：用户确认的双层曲面布局；提交仍沿用 P1-13 的会话与安全令牌链路。
+ * 布局见 docs/app/task/login-curve-ui/00-实施计划.md。
  */
 
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
+import Mail from 'lucide-react-native/icons/mail';
+import Lock from 'lucide-react-native/icons/lock';
+import Eye from 'lucide-react-native/icons/eye';
+import EyeOff from 'lucide-react-native/icons/eye-off';
 
 import { useTheme } from '@/design-system/theme';
-import { useI18n } from '@/i18n';
+import { I18nProvider, useI18n } from '@/i18n';
 import type { AppError } from '@/i18n/errors';
 import { Button } from '@/components/ui/Button';
 import { ErrorSummary } from '@/components/ui/ErrorSummary';
 import { InlineNotice } from '@/components/ui/InlineNotice';
 import { Input } from '@/components/ui/Input';
-import { Screen } from '@/components/ui/Screen';
-import { Text } from '@/components/ui/Text';
+import { Icon } from '@/components/ui/Icon';
+import { IconButton } from '@/components/ui/IconButton';
 import { useSession } from '@/features/auth/session';
+import { LoginLayout } from '@/features/auth/LoginLayout';
 
 export default function LoginScreen(): React.ReactElement {
+  // 登录入口统一英文；子树内的错误摘要和共享控件使用同一语言，退出后不影响 App 设置。
+  return (
+    <I18nProvider locale="en">
+      <LoginContent />
+    </I18nProvider>
+  );
+}
+
+function LoginContent(): React.ReactElement {
   const theme = useTheme();
   const { t } = useI18n();
+  const inputAccessibilityCopy = {
+    required: t('form.required'),
+    separator: t('form.labelSeparator'),
+  };
   const session = useSession();
 
   const [identifier, setIdentifier] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   /** 错误直接存 `AppError`：`K04` 会用 `toErrorCopy` 渲染三段文案（⛔ 页面不写文案） */
   const [error, setError] = React.useState<AppError | null>(null);
-  const [identifierError, setIdentifierError] = React.useState<string | undefined>(undefined);
+  const [identifierError, setIdentifierError] = React.useState<
+    string | undefined
+  >(undefined);
 
   const submit = async (): Promise<void> => {
     if (submitting) return; // 防重复提交
@@ -58,65 +72,121 @@ export default function LoginScreen(): React.ReactElement {
   };
 
   return (
-    <Screen topMode="topbar" testID="login">
-      <ScrollView
-        contentContainerStyle={{ padding: theme.space('space_4'), gap: theme.space('space_4') }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text role="title" emphasis="strong" colorToken="text-primary">
-          {t('auth.title')}
-        </Text>
+    <LoginLayout>
+      <ErrorSummary
+        testID="login-summary"
+        title={t('auth.failed')}
+        formError={error}
+      />
 
-        <ErrorSummary testID="login-summary" title={t('auth.failed')} formError={error} />
+      {/* 会话过期被送到这里的（`A-01` 的门）：要说清**为什么**，⛔ 不是普通的"未登录" */}
+      {session.status === 'expired' ? (
+        <InlineNotice
+          testID="login-expired"
+          tone="warning"
+          message={t('auth.expired')}
+        />
+      ) : null}
 
-        {/* 会话过期被送到这里的（`A-01` 的门）：要说清**为什么**，⛔ 不是普通的"未登录" */}
-        {session.status === 'expired' ? (
-          <InlineNotice testID="login-expired" tone="warning" message={t('auth.expired')} />
-        ) : null}
-
+      <View style={{ gap: theme.space('space_8') }}>
         <Input
           testID="login-identifier"
           label={t('auth.identifier')}
+          accessibilityCopy={inputAccessibilityCopy}
           value={identifier}
           onChangeText={setIdentifier}
-          kind="text"
+          kind="email"
+          appearance="underline"
+          labelPlacement="inline"
+          prefix={<Icon source={Mail} size="body" tint="secondary" />}
           errorText={identifierError}
           required
         />
         <Input
           testID="login-password"
           label={t('auth.password')}
+          accessibilityCopy={inputAccessibilityCopy}
           value={password}
           onChangeText={setPassword}
-          kind="password"
+          kind={showPassword ? 'text' : 'password'}
+          appearance="underline"
+          labelPlacement="inline"
+          prefix={<Icon source={Lock} size="body" tint="secondary" />}
+          suffix={
+            <IconButton
+              testID="login-toggle-password"
+              Icon={showPassword ? EyeOff : Eye}
+              accessibilityLabel={
+                showPassword ? t('auth.hidePassword') : t('auth.showPassword')
+              }
+              onPress={() => setShowPassword((shown) => !shown)}
+            />
+          }
           required
         />
+      </View>
 
-        <View style={{ flexDirection: 'row', gap: theme.space('space_2') }}>
-          <Button
-            testID="login-submit"
-            label={t('auth.login')}
-            variant="primary"
-            loading={submitting}
-            onPress={() => {
-              void submit();
-            }}
-          />
-          {/* 页面清单：A-03/A-04 的入口就是 A-02（本页）—— ⛔ 不做"藏在设置里的注册" */}
-          <Button
-            testID="login-to-register"
-            label={t('auth.toRegister')}
-            variant="ghost"
-            onPress={() => router.push('/register')}
-          />
-          <Button
-            testID="login-to-reset"
-            label={t('auth.toReset')}
-            variant="ghost"
-            onPress={() => router.push('/reset-password')}
-          />
-        </View>
-      </ScrollView>
-    </Screen>
+      <View style={{ gap: theme.space('space_3') }}>
+        <Button
+          testID="login-submit"
+          label={t('auth.login')}
+          variant="primary"
+          loading={submitting}
+          fullWidth
+          // 用户确认稿为平面蓝色 CTA；只在登录页覆盖默认硬偏移，不改变共享按钮。
+          style={{
+            borderWidth: 0,
+            borderRightWidth: 0,
+            borderBottomWidth: 0,
+            minHeight: theme.touchTarget + theme.space('space_1'),
+          }}
+          onPress={() => {
+            void submit();
+          }}
+        />
+        {/* 页面清单：A-03/A-04 的入口就是 A-02（本页）—— ⛔ 不做"藏在设置里的注册" */}
+        <Button
+          testID="login-to-register"
+          label={t('auth.toRegister')}
+          variant="secondary"
+          fullWidth
+          style={{
+            backgroundColor: theme.color['bg-canvas'].value,
+            borderColor: theme.color['border-strong'].value,
+            minHeight: theme.touchTarget + theme.space('space_1'),
+          }}
+          onPress={() => router.push('/register')}
+        />
+      </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        }}
+      >
+        <Button
+          testID="login-to-reset"
+          label={t('auth.forgotPassword')}
+          variant="link"
+          size="small"
+          onPress={() => router.push('/reset-password')}
+        />
+        <Button
+          testID="login-terms"
+          label={t('auth.terms')}
+          variant="link"
+          size="small"
+          onPress={() => router.push('/me/legal/terms')}
+        />
+        <Button
+          testID="login-privacy"
+          label={t('auth.privacy')}
+          variant="link"
+          size="small"
+          onPress={() => router.push('/me/legal/privacy')}
+        />
+      </View>
+    </LoginLayout>
   );
 }

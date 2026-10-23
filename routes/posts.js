@@ -21,6 +21,7 @@ const { attachExp } = require('../utils/expResponse');
 const { isPostContentEligible, isCommentEligible } = require('../utils/expEligibility');
 const { requireCurrentTerms } = require('../services/termsAcceptance');
 const { inlineLimit } = require('../utils/sqlLimit');
+const { POST_CONTENT_ORIGINS, normalizePostRepostSource } = require('../shared/constants/postAttribution');
 
 // 统一的文本清洗，防止 XSS 注入（去掉所有 HTML 标签，只保留纯文本）
 function cleanText(input) {
@@ -126,6 +127,8 @@ function attachPostExtra(rows, req) {
       title: row.title ?? null,
       content: row.content,
       type: row.type,
+      content_origin: row.content_origin ?? null,
+      repost_source: row.repost_source ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       hidden_by_admin: !!row.hidden_by_admin,
@@ -173,6 +176,8 @@ function mergePostRows(rows, req) {
         title: row.title ?? null,
         content: row.content,
         type: row.type,
+        content_origin: row.content_origin ?? null,
+        repost_source: row.repost_source ?? null,
         created_at: row.created_at,
         updated_at: row.updated_at,
         hidden_by_admin: !!row.hidden_by_admin,
@@ -235,11 +240,23 @@ router.post('/', authenticateToken, requireCurrentTerms, checkSanction, sensitiv
       return res.status(400).json({ status: -1, message: '标题不能为空' });
     }
 
+    // Older clients omit the declaration; preserve unknown authorship instead of inventing it.
+    const contentOrigin = type === 'normal' ? req.body?.content_origin ?? null : null;
+    const rawSource = req.body?.repost_source;
+    const repostSource = contentOrigin === 'repost' ? normalizePostRepostSource(rawSource) : null;
+    if (type === 'normal' && (
+      (contentOrigin !== null && !POST_CONTENT_ORIGINS.includes(contentOrigin)) ||
+      (contentOrigin === null && rawSource != null) ||
+      (contentOrigin === 'repost' && repostSource === null)
+    )) {
+      return res.status(400).json({ status: -1, message: '请选择原创或转载，转载需填写有效来源' });
+    }
+
     let result;
     try {
       result = await query(
-        'INSERT INTO posts (user_id, title, content, type) VALUES (?, ?, ?, ?)',
-        [req.user.id, type === 'normal' ? title : null, content, type]
+        'INSERT INTO posts (user_id, title, content, type, content_origin, repost_source) VALUES (?, ?, ?, ?, ?, ?)',
+        [req.user.id, type === 'normal' ? title : null, content, type, contentOrigin, repostSource]
       );
     } catch (e) {
       // 数据库尚未迁移 title 字段时，给出明确提示（避免 500 迷惑）
@@ -248,6 +265,9 @@ router.post('/', authenticateToken, requireCurrentTerms, checkSanction, sensitiv
           status: -1,
           message: '数据库缺少 posts.title，请先执行迁移 migrations/013_posts_title.sql',
         });
+      }
+      if (e?.code === 'ER_BAD_FIELD_ERROR' && /content_origin|repost_source/.test(e.sqlMessage || '')) {
+        return res.status(503).json({ status: -1, message: '请先执行迁移 migrations/076_post_attribution.sql' });
       }
       throw e;
     }
@@ -331,7 +351,7 @@ router.post('/', authenticateToken, requireCurrentTerms, checkSanction, sensitiv
     const posterUid = req.user && req.user.id != null ? parseInt(req.user.id, 10) : 0;
     const likeUserParam = Number.isFinite(posterUid) && posterUid > 0 ? posterUid : 0;
     const rows = await query(
-      `SELECT p.id, p.user_id, p.title, p.content, p.type, p.created_at, p.updated_at, p.hidden_by_admin,
+      `SELECT p.id, p.user_id, p.title, p.content, p.type, p.content_origin, p.repost_source, p.created_at, p.updated_at, p.hidden_by_admin,
         u.id AS author_id, u.username AS author_username, u.nickname AS author_nickname, u.avatar AS author_avatar,
           u.level AS author_level, u.badge AS author_badge,
         u.level AS author_level, u.badge AS author_badge,
@@ -351,7 +371,7 @@ router.post('/', authenticateToken, requireCurrentTerms, checkSanction, sensitiv
       return res.status(200).json({
         status: 0,
         message: '发布成功！',
-        data: { id: postId, content, type, created_at: new Date().toISOString(), images: [] }
+        data: { id: postId, content, type, content_origin: contentOrigin, repost_source: repostSource, created_at: new Date().toISOString(), images: [] }
       });
     }
     const [withTags] = await enrichPostsWithTags([post]);
@@ -442,7 +462,7 @@ router.get('/', async (req, res) => {
       const detailParams = [likeUserParam, ...postIds];
       try {
         rows = await query(
-          `SELECT p.id, p.user_id, p.title, p.content, p.type, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
+          `SELECT p.id, p.user_id, p.title, p.content, p.type, p.content_origin, p.repost_source, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
           u.id AS author_id, u.username AS author_username, u.nickname AS author_nickname, u.avatar AS author_avatar,
           u.level AS author_level, u.badge AS author_badge,
           pi.file_path AS image_path, pi.sort_order,
@@ -460,7 +480,7 @@ router.get('/', async (req, res) => {
         // 兼容未执行 013 迁移：降级不查询 title，避免列表直接 500
         if (e && e.code === 'ER_BAD_FIELD_ERROR' && String(e.sqlMessage || '').includes("p.title")) {
           rows = await query(
-            `SELECT p.id, p.user_id, p.content, p.type, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
+            `SELECT p.id, p.user_id, p.content, p.type, p.content_origin, p.repost_source, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
             u.id AS author_id, u.username AS author_username, u.nickname AS author_nickname, u.avatar AS author_avatar,
           u.level AS author_level, u.badge AS author_badge,
             pi.file_path AS image_path, pi.sort_order,
@@ -702,7 +722,7 @@ router.get('/:id', async (req, res) => {
     let rows;
     try {
       rows = await query(
-        `SELECT p.id, p.user_id, p.title, p.content, p.type, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
+        `SELECT p.id, p.user_id, p.title, p.content, p.type, p.content_origin, p.repost_source, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
           u.id AS author_id, u.username AS author_username, u.nickname AS author_nickname, u.avatar AS author_avatar,
           u.level AS author_level, u.badge AS author_badge,
           pi.file_path AS image_path, pi.sort_order,
@@ -737,7 +757,7 @@ router.get('/:id', async (req, res) => {
     } catch (e) {
       if (e && e.code === 'ER_BAD_FIELD_ERROR' && String(e.sqlMessage || '').includes("p.title")) {
         rows = await query(
-          `SELECT p.id, p.user_id, p.content, p.type, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
+          `SELECT p.id, p.user_id, p.content, p.type, p.content_origin, p.repost_source, p.deleted_at, p.hidden_by_admin, p.created_at, p.updated_at,
             u.id AS author_id, u.username AS author_username, u.nickname AS author_nickname, u.avatar AS author_avatar,
           u.level AS author_level, u.badge AS author_badge,
             pi.file_path AS image_path, pi.sort_order,

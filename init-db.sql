@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS posts (
   user_id INT NOT NULL COMMENT '发帖用户ID',
   content TEXT NOT NULL COMMENT '正文',
   type ENUM('normal', 'announcement') DEFAULT 'normal' COMMENT '普通帖/公告',
+  content_origin ENUM('original', 'repost') NULL DEFAULT NULL COMMENT '原创/转载，NULL 为未声明',
+  repost_source VARCHAR(100) NULL DEFAULT NULL COMMENT '转载来源',
   deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '逻辑删除时间',
   hidden_by_admin TINYINT(1) DEFAULT 0 COMMENT '是否被管理员隐藏',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
