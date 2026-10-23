@@ -9,12 +9,14 @@ const proofUpload = multer({storage:multer.memoryStorage(),limits:{fileSize:5*10
 const { checkBan } = require('../middleware/checkSanction');
 const { logAudit } = require('../services/auditLog');
 const s = require('../services/shop');
+const coupons = require('../services/shopCoupons');
+const rateLimit = require('express-rate-limit');
 const wrap = fn => async (req, res) => {
   try { await fn(req, res); }
   catch (err) {
     const status = err.status || (['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT','ER_DUP_ENTRY'].includes(err.code) ? 409 : 500);
     if (status === 500) console.error('[shop]', err.code || err.name);
-    res.status(status).json({ status: -1, message: status === 500 ? '商城暂时不可用，请重试 / Shop unavailable' : (err.status ? err.message : '订单处理中，请重试 / Please retry') });
+    res.status(status).json({ status: -1, ...(err.publicCode ? {code:err.publicCode} : {}), message: status === 500 ? '商城暂时不可用，请重试 / Shop unavailable' : (err.status ? err.message : '订单处理中，请重试 / Please retry') });
   }
 };
 const ok = (res, data) => res.json({ status: 0, data });
@@ -45,9 +47,14 @@ router.get('/catalog', wrap(async (req, res) => {
     payment_methods: availableSlots.length ? paymentMethods : [],
     delivery_zones: [],
   } : null;
-  ok(res, { merchant:req.merchant, products, categories: s.CATEGORIES, has_scheduled_slots: specialSlots.length > 0, order_window_open: availableSlots.length > 0, slots: availableSlots, settings: setting });
+  ok(res, { merchant:req.merchant, products, categories: s.CATEGORIES, coupons_enabled:await coupons.ready(), has_scheduled_slots: specialSlots.length > 0, order_window_open: availableSlots.length > 0, slots: availableSlots, settings: setting });
 }));
 router.use(auth, checkBan);
+const quoteLimitResponse = (req,res) => res.status(429).json({status:-1,message:'优惠码试算过于频繁，请稍后重试 / Too many coupon attempts'});
+router.post('/checkout-quote',
+  rateLimit({windowMs:60000,limit:60,standardHeaders:true,legacyHeaders:false,handler:quoteLimitResponse}),
+  rateLimit({windowMs:60000,limit:20,keyGenerator:req=>String(req.user.id),standardHeaders:true,legacyHeaders:false,handler:quoteLimitResponse}),
+  wrap(async(req,res)=>ok(res,await s.checkout(req.user.id,req.body,'coupon-quote-readonly',req.merchant.id,{quote:true}))));
 // Check the current database role even when an old JWT still says admin.
 const currentAdmin = async (req, res, next) => {
   try {
@@ -69,6 +76,10 @@ router.use('/admin', (req, res, next) => {
   });
   next();
 });
+router.get('/admin/coupons',wrap(async(req,res)=>ok(res,await coupons.list(req.merchant.id,req.query))));
+router.post('/admin/coupons',wrap(async(req,res)=>ok(res,await coupons.create(req.merchant.id,req.user.id,req.body,req.get('Idempotency-Key')))));
+router.patch('/admin/coupons/:id/status',wrap(async(req,res)=>ok(res,await coupons.setStatus(req.merchant.id,id(req.params.id),req.body.status))));
+router.get('/admin/coupons/:id/redemptions',wrap(async(req,res)=>ok(res,await coupons.redemptions(req.merchant.id,id(req.params.id),req.query))));
 router.delete('/admin/store', wrap(async (req,res)=>{
   await s.transaction(async conn=>{
     const [stores]=await conn.execute('SELECT id FROM shop_merchants WHERE id=? AND deleted_at IS NULL FOR UPDATE',[req.merchant.id]);

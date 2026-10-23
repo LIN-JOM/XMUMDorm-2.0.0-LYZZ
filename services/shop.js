@@ -1,6 +1,7 @@
 const { pool } = require('../database');
 const sanitize = require('sanitize-html');
 const crypto = require('crypto');
+const coupons = require('./shopCoupons');
 
 const CATEGORIES = ['offers', 'water', 'drinks', 'noodles', 'eggs', 'groceries', 'snacks'];
 const TRANSITIONS = {
@@ -90,7 +91,7 @@ function specialSlot(body) {
 function decode(row) {
   if (!row) return row;
   const result = { ...row };
-  for (const key of ['address_json', 'items_json', 'slot_json', 'payment_json']) {
+  for (const key of ['address_json', 'items_json', 'slot_json', 'payment_json', 'coupon_json']) {
     if (typeof result[key] === 'string') result[key] = JSON.parse(result[key]);
   }
   return result;
@@ -105,23 +106,28 @@ async function lockUser(conn, userId) {
   const [users] = await conn.execute('SELECT id, status FROM users WHERE id = ? FOR UPDATE', [userId]);
   if (!users[0] || users[0].status === 'deactivated') fail('账号不可用 / Account unavailable', 403);
 }
-async function checkout(userId, body, key, merchantId = 1) {
+async function checkout(userId, body, key, merchantId = 1, options = {}) {
   if (typeof key !== 'string' || !/^[\w-]{16,80}$/.test(key)) fail('缺少有效下单标识 / Invalid request key');
-  const location = address(body.address || {});
+  const location = options.quote ? null : address(body.address || {});
   const slotId = integer(body.slot_id, 1);
-  const expected = integer(body.expected_total_cents, 1);
+  const expected = options.quote ? null : integer(body.expected_total_cents, 1);
+  const couponCode = coupons.normalizeCode(body.coupon_code);
+  // Check capability before taking a transaction connection; do not exhaust the
+  // pool by asking it for a second connection while every checkout holds one.
+  const couponAvailable = (couponCode || options.quote || coupons.enabled()) ? await coupons.ready() : false;
   const paymentMethod = body.payment_method || null;
-  const fingerprint = crypto.createHash('sha256').update(JSON.stringify({ location, slotId, expected, merchantId, paymentMethod })).digest('hex');
+  const fingerprint = crypto.createHash('sha256').update(JSON.stringify({ location, slotId, expected, merchantId, paymentMethod, ...(couponCode ? {couponCode} : {}) })).digest('hex');
   return transaction(async (conn) => {
     await lockUser(conn, userId); // serializes cart writes, checkout and repeated requests for this user
     const [merchants] = await conn.execute('SELECT id FROM shop_merchants WHERE id=? AND enabled=1 AND deleted_at IS NULL FOR UPDATE', [merchantId]);
     if (!merchants[0]) fail('店铺已停止营业 / Store is unavailable', 409);
-    const [existing] = await conn.execute('SELECT * FROM shop_orders WHERE user_id = ? AND idempotency_key = ?', [userId, key]);
+    const [existing] = options.quote ? [[]] : await conn.execute('SELECT * FROM shop_orders WHERE user_id = ? AND idempotency_key = ?', [userId, key]);
     if (existing[0]) {
       if (existing[0].merchant_id !== merchantId) fail('订单不属于此商户 / Wrong merchant', 404);
       if (existing[0].request_hash !== fingerprint) fail('下单标识已用于其他内容 / Request key reused', 409);
       return { order: decode(existing[0]), replayed: true };
     }
+    if ((couponCode || options.quote) && !couponAvailable) throw Object.assign(new Error('优惠券暂未开放，请稍后重试 / Coupons are unavailable'),{status:503,publicCode:'COUPONS_UNAVAILABLE'});
     const [slots] = await conn.execute('SELECT *, CAST(delivery_date AS CHAR) AS delivery_date, CAST(cutoff_at AS CHAR) AS cutoff_at FROM shop_slots WHERE id = ? AND deleted_at IS NULL FOR UPDATE', [slotId]);
     const selected = slots[0];
     if (!selected || selected.merchant_id !== merchantId || Number(selected.is_special) !== 1 || !selected.enabled || !isSpecialSlotOpen(selected)) fail('当前不在商家开放的下单时段内 / Ordering is currently outside the merchant’s open period', 409);
@@ -156,13 +162,20 @@ async function checkout(userId, body, key, merchantId = 1) {
     const parse = value => typeof value === 'string' ? JSON.parse(value) : value;
     const methods = paymentMethods(settings[0].payment_methods);
     const method = methods.find(m => m.id === paymentMethod);
-    if (methods.length && !method) fail('请选择付款方式 / Choose payment method');
+    if (!options.quote && methods.length && !method) fail('请选择付款方式 / Choose payment method');
     const payment = { ...settings[0], payment_methods: methods, delivery_zones: [], selected_method: method || null, delivery_zone: null };
-    if (total !== expected) fail('价格已变更，请刷新购物车并确认 / Price changed', 409);
+    const subtotal = total;
+    const coupon = couponCode ? await coupons.discount(conn,couponCode,merchantId,userId,subtotal,campusNow()) : null;
+    const discount = coupon?.discount_cents || 0;
+    total -= discount;
+    if (options.quote) return {subtotal_cents:subtotal,discount_cents:discount,total_cents:total,coupon,server_time:campusNow()};
+    if (total !== expected) throw Object.assign(new Error('价格或优惠已变更，请重新确认 / Price or discount changed'),{status:409,publicCode:'PRICE_CHANGED'});
     for (const item of items) await conn.execute('UPDATE shop_products SET stock = stock - ? WHERE id = ?', [item.quantity, item.product_id]);
     const [insert] = await conn.execute(`INSERT INTO shop_orders (user_id, slot_id, idempotency_key, request_hash, address_json, items_json, slot_json, payment_json, total_cents, merchant_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [userId, slotId, key, fingerprint, JSON.stringify(location), JSON.stringify(items),
       JSON.stringify({ delivery_date: selected.delivery_date, label_zh: selected.label_zh, label_en: selected.label_en, is_demo: selected.is_demo }), JSON.stringify(payment), total, merchantId]);
+    if (couponAvailable) await conn.execute('UPDATE shop_orders SET subtotal_cents=?,discount_cents=?,coupon_json=? WHERE id=?',[subtotal,discount,coupon?JSON.stringify(coupon):null,insert.insertId]);
+    if (coupon) await coupons.reserve(conn,coupon,insert.insertId,userId);
     await conn.execute('UPDATE shop_cart_items c JOIN shop_products p ON p.id=c.product_id SET c.deleted_at = NOW() WHERE c.user_id = ? AND p.merchant_id = ? AND c.deleted_at IS NULL', [userId, merchantId]);
     await conn.execute(`INSERT INTO shop_addresses (user_id, contact_name, contact, building, room) VALUES (?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE contact_name=VALUES(contact_name), contact=VALUES(contact), building=VALUES(building), room=VALUES(room)`, [userId, ...Object.values(location)]);
@@ -187,6 +200,7 @@ async function changeStatus(id, next, merchantId = 1) {
         await conn.execute('UPDATE shop_products SET stock = stock + ? WHERE id = ?', [item.quantity, item.product_id]);
       }
     }
+    await coupons.transition(conn,order,next);
     await conn.execute('UPDATE shop_orders SET status = ? WHERE id = ?', [next, id]);
     return { ...order, status: next };
   });

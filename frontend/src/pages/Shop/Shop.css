@@ -47,3 +47,9 @@
 .shop-order-select input { width:20px; height:20px; accent-color:var(--color-brand-text); }
 .shop-batch-result { flex-direction:column; }
 .shop-batch-result ul { max-height:240px; overflow:auto; }
+.shop-coupons .shop-order-top h3 { margin:0; }
+.shop-coupons input[type="datetime-local"] { width:100%; min-width:0; }
+.shop-coupon-code { overflow-wrap:anywhere; letter-spacing:.06em; }
+.shop-coupon-entry { border-top:1px solid var(--color-border-default); margin:20px 0; padding-top:16px; }
+.shop-order-amounts { padding:12px 0; }
+.shop-order-amounts .shop-line { display:flex; justify-content:space-between; gap:16px; }
