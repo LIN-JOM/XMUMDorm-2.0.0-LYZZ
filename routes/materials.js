@@ -23,6 +23,7 @@ const { inlineLimit, inlineOffset } = require('../utils/sqlLimit');
 const { logAudit } = require('../services/auditLog');
 const gm = require('../services/githubMaterials');
 const cc = require('../services/courseCatalog');
+const { syncMaterialStatus } = require('../services/materialStatusSync');
 const mv = require('../services/materialValidation');
 const { MaterialError, httpStatusFor } = require('../services/materialErrors');
 const {
@@ -585,34 +586,10 @@ router.get(
 
     let github = null;
     let status = row.status;
-
-    if (row.pr_number && gm.isConfigured() && status === 'pending') {
-      try {
-        const pr = await gm.getPullRequest(row.pr_number);
-        github = {
-          state: pr.state,
-          merged: Boolean(pr.merged),
-          mergeableState: pr.mergeable_state,
-          labels: (pr.labels || []).map((l) => (typeof l === 'string' ? l : l.name)),
-        };
-        if (pr.merged) {
-          status = 'merged';
-          await query('UPDATE materials SET status = ?, commit_sha = ? WHERE id = ?', [
-            'merged',
-            pr.merge_commit_sha || row.commit_sha,
-            id,
-          ]);
-        } else if (pr.state === 'closed') {
-          status = 'rejected';
-          await query('UPDATE materials SET status = ?, reject_reason = ? WHERE id = ?', [
-            'rejected',
-            'PR 被关闭',
-            id,
-          ]);
-        }
-      } catch (e) {
-        console.warn('[materials] 查询 PR 状态失败:', e.message);
-      }
+    try {
+      ({ status, github } = await syncMaterialStatus(row));
+    } catch (e) {
+      console.warn('[materials] 查询 PR 状态失败:', e.message);
     }
 
     return ok(res, {
