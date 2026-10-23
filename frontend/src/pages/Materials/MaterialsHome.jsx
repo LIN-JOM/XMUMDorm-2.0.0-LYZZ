@@ -5,7 +5,7 @@
  * 下方附「最新资料」便于新内容被发现。
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, Clock, Search, GraduationCap } from 'lucide-react';
@@ -21,7 +21,6 @@ export default function MaterialsHome() {
   const isZh = lang !== 'en';
   const { isLoggedIn } = useAuth();
   const [q, setQ] = useState('');
-  const [courseQuery, setCourseQuery] = useState('');
 
   // 课程搜索做防抖，避免每个字符都请求
   const [debouncedQ, setDebouncedQ] = useState('');
@@ -46,16 +45,9 @@ export default function MaterialsHome() {
     staleTime: 60 * 1000,
   });
 
-  const courses = useMemo(() => {
-    const list = (courseData && courseData.courses) || [];
-    if (!courseQuery) return list;
-    const kw = courseQuery.toLowerCase();
-    return list.filter(
-      (c) =>
-        String(c.name || '').toLowerCase().includes(kw) ||
-        String(c.lecturer || '').toLowerCase().includes(kw)
-    );
-  }, [courseData, courseQuery]);
+  // 课程字典由后端按 `q` 过滤（课程名 / 讲师同一份数据），前端不再做二次过滤 ——
+  // 之前页面并排放了两个搜索框，实际过滤的是同一组字段，重复且容易让人以为各有分工。
+  const courses = (courseData && courseData.courses) || [];
 
   const recentItems = (recent && recent.items) || [];
   const configured = !recent || recent.configured !== false;
@@ -120,6 +112,7 @@ export default function MaterialsHome() {
             <div style={{ position: 'relative', flex: '1 1 240px' }}>
               <Search
                 size={15}
+                aria-hidden
                 style={{ position: 'absolute', left: 11, top: 12, color: 'rgba(15,23,42,.4)' }}
               />
               <input
@@ -130,12 +123,6 @@ export default function MaterialsHome() {
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
-            <input
-              className="mat-input mat-search"
-              placeholder={isZh ? '在当前结果里筛选…' : 'Filter results…'}
-              value={courseQuery}
-              onChange={(e) => setCourseQuery(e.target.value)}
-            />
           </div>
 
           {coursesLoading && <div className="mat-state">{isZh ? '加载中…' : 'Loading…'}</div>}
@@ -157,15 +144,23 @@ export default function MaterialsHome() {
           )}
 
           <div className="mat-course-grid">
-            {courses.map((c) => (
-              <Link key={c.courseId} className="mat-glass mat-course-card" to={`/materials/course/${c.courseId}`}>
-                <div className="mat-course-name">{c.name}</div>
-                <div className="mat-course-meta">
-                  {c.lecturer ? <span className="mat-pill mat-pill--ghost">{c.lecturer}</span> : null}
-                  <span>{c.materialCount ?? 0} {isZh ? '份资料' : 'files'}</span>
-                </div>
-              </Link>
-            ))}
+            {courses.map((c) => {
+              const count = c.materialCount ?? 0;
+              return (
+                <Link
+                  key={c.courseId}
+                  className="mat-course-row"
+                  to={`/materials/course/${c.courseId}`}
+                  title={c.name}
+                >
+                  <span className="mat-course-name">{c.name}</span>
+                  <span className="mat-course-lecturer">{c.lecturer || '—'}</span>
+                  <span className="mat-course-count">
+                    {isZh ? `${count} 份` : `${count} ${count === 1 ? 'file' : 'files'}`}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
