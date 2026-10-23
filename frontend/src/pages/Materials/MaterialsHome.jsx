@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, Clock, Search, GraduationCap } from 'lucide-react';
-import { listCourses, listMaterials } from '@shared/api/materials';
+import { isMaterialsPreviewMode, listCourses, listMaterials } from '@shared/api/materials';
 import { QK } from '@shared/query/queryKeys';
 import { useLanguage } from '../../context/LanguageContextState';
 import { useAuth } from '../../context/AuthContextState';
@@ -76,14 +76,16 @@ export default function MaterialsHome() {
               </div>
             </div>
             <div className="mat-toolbar" style={{ marginTop: 0 }}>
-              {isLoggedIn && (
+              {isLoggedIn && !isMaterialsPreviewMode && (
                 <Link className="mat-btn mat-btn--primary" to="/materials/upload">
                   {isZh ? '上传资料' : 'Upload'}
                 </Link>
               )}
-              <Link className="mat-btn" to="/materials/me">
-                {isZh ? '我上传的' : 'My uploads'}
-              </Link>
+              {!isMaterialsPreviewMode && (
+                <Link className="mat-btn" to="/materials/me">
+                  {isZh ? '我上传的' : 'My uploads'}
+                </Link>
+              )}
             </div>
           </div>
         </header>
@@ -93,6 +95,13 @@ export default function MaterialsHome() {
             {isZh
               ? '学习资料库尚未配置（服务端缺少 GITHUB_MATERIALS_* 环境变量），暂时读不到任何资料。请联系管理员。'
               : 'Materials repository is not configured on the server yet.'}
+          </div>
+        )}
+        {isMaterialsPreviewMode && (
+          <div className="mat-banner mat-banner--warn">
+            {isZh
+              ? '当前为生产数据只读预览：可浏览和下载资料，上传、收藏及下载计数均已关闭。'
+              : 'Read-only production preview: browsing and downloads are available; uploads, saves and download tracking are disabled.'}
           </div>
         )}
         {recent && recent.stale && (
