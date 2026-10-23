@@ -502,6 +502,22 @@
   background: rgba(99, 102, 241, 0.12);
 }
 
+.mat-status-loader,
+.mat-step-loader {
+  animation: mat-status-spin 0.9s linear infinite;
+}
+
+.mat-status-note {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-left: 3px solid var(--brand-2, #6366f1);
+  border-radius: 0 var(--radius-sm, 8px) var(--radius-sm, 8px) 0;
+  background: rgba(99, 102, 241, 0.07);
+  color: rgba(49, 46, 129, 0.92);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .mat-step--done {
   color: #166534;
   font-weight: 700;
@@ -520,6 +536,17 @@
 .mat-step--fail .mat-step-dot {
   border-color: #ef4444;
   background: rgba(239, 68, 68, 0.12);
+}
+
+@keyframes mat-status-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mat-status-loader,
+  .mat-step-loader {
+    animation: none;
+  }
 }
 
 /* ---------------------------------------------------------------- 预览器 */

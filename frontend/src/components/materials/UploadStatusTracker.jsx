@@ -9,7 +9,7 @@
  *                                    └→ timeout（仍可能后续成功）
  */
 
-import { Check, CircleDashed, ExternalLink, Loader, X } from 'lucide-react';
+import { Check, CircleDashed, ExternalLink, LoaderCircle, X } from 'lucide-react';
 
 const ORDER = ['uploading', 'submitted', 'validating', 'merged'];
 
@@ -35,7 +35,7 @@ export default function UploadStatusTracker({ status, rejectReason, prUrl, prNum
 
   return (
     <>
-      <div className="mat-steps">
+      <div className="mat-steps" role="status" aria-live="polite">
         {steps.map((s) => {
           const st = stepState(status, s.key);
           const cls =
@@ -43,13 +43,21 @@ export default function UploadStatusTracker({ status, rejectReason, prUrl, prNum
           return (
             <div key={s.key} className={`mat-step ${cls}`}>
               <span className="mat-step-dot">
-                {st === 'done' ? <Check size={12} /> : st === 'active' ? <Loader size={12} /> : st === 'fail' ? <X size={12} /> : <CircleDashed size={12} />}
+                {st === 'done' ? <Check size={12} /> : st === 'active' ? <LoaderCircle className="mat-step-loader" size={13} /> : st === 'fail' ? <X size={12} /> : <CircleDashed size={12} />}
               </span>
               <span>{isZh ? s.labelZh : s.labelEn}</span>
             </div>
           );
         })}
       </div>
+
+      {(status === 'submitted' || status === 'validating') && (
+        <div className="mat-status-note">
+          {isZh
+            ? '已提交的资料会由服务器继续跟踪；现在离开此页不会取消 PR。'
+            : 'The server will keep tracking this submission; leaving this page will not cancel the PR.'}
+        </div>
+      )}
 
       {status === 'rejected' && (
         <div className="mat-banner mat-banner--error">

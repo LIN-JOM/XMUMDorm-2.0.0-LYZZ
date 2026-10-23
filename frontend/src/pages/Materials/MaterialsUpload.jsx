@@ -151,7 +151,7 @@ export default function MaterialsUpload() {
       });
 
       setResult(res);
-      setPhase('submitted');
+      setPhase('validating');
       Toast.success(isZh ? '已提交，正在等校验' : 'Submitted; awaiting checks');
 
       if (res.autoMergeEnabled === false) {
@@ -217,7 +217,7 @@ export default function MaterialsUpload() {
         {phase !== 'idle' ? (
           <section className="mat-glass mat-section">
             <div className="mat-section-title">
-              {phase === 'merged' ? <CheckCircle2 size={17} /> : phase === 'rejected' ? <AlertTriangle size={17} /> : <Loader size={17} />}
+              {phase === 'merged' ? <CheckCircle2 size={17} /> : phase === 'rejected' ? <AlertTriangle size={17} /> : <Loader className="mat-status-loader" size={17} />}
               {phase === 'merged'
                 ? (isZh ? '上传完成' : 'Done')
                 : phase === 'rejected'
@@ -361,7 +361,14 @@ export default function MaterialsUpload() {
                 {submitting ? <Loader size={15} /> : <Upload size={15} />}
                 {submitting ? (isZh ? '提交中…' : 'Submitting…') : (isZh ? '提交' : 'Submit')}
               </button>
-              <Link className="mat-btn" to="/materials">{isZh ? '取消' : 'Cancel'}</Link>
+              <Link
+                className="mat-btn"
+                to="/materials"
+                aria-disabled={submitting}
+                onClick={(event) => { if (submitting) event.preventDefault(); }}
+              >
+                {submitting ? (isZh ? '正在提交，请稍候' : 'Submitting…') : (isZh ? '取消' : 'Cancel')}
+              </Link>
             </div>
 
             <div className="mat-hint" style={{ marginTop: 10 }}>
