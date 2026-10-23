@@ -315,12 +315,15 @@ describe('TC-P1-16-7A · T-02 页面', () => {
     expect(view.getByTestId('timetable-next')).toBeTruthy();
   });
 
-  it('空周 → `T01` 空态且给"去导入"（⛔ 不留死屏）', async () => {
+  it('空周 → **仍画 08:00–21:00 时间轴**，并给"去导入"（⛔ 不留死屏、不拿空态替换网格）', async () => {
     api.getScheduleWeek.mockResolvedValue({ ...WEEK_PAYLOAD, days: {} });
     const view = await renderApp(withProviders(<TimetableScreen />));
-    await waitFor(() => expect(view.getByTestId('timetable-empty')).toBeTruthy());
+    await waitFor(() => expect(view.getByTestId('timetable-grid')).toBeTruthy());
+    // 没有课也要有空时间轴
+    expect(view.getByTestId('timetable-grid-hour-8')).toBeTruthy();
+    expect(view.getByTestId('timetable-grid-hour-21')).toBeTruthy();
     const user = require('@testing-library/react-native').userEvent.setup();
-    await user.press(view.getByText('课表导入'));
+    await user.press(view.getByTestId('timetable-import'));
     expect(routerState.pushed).toContain('/tools/schedule-import');
   });
 

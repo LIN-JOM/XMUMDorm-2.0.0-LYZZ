@@ -37,6 +37,16 @@ Thumbs.db
 # 本地浏览器调试配置与页面截图
 frontend/.chrome-debug/
 frontend/canteen-production.png
+.playwright-cli/
+club-profile-error.png
+# 模拟器验证截图（Me 模块四 Tab）
+me_tab_*.png
+
+# 本地素材/数据文件（个人收集，不入库）
+厦马选课推荐.xlsx
+
+# 本地 AI 协作数据（仅本机使用，不入库）
+.workbuddy/
 
 # 上传文件目录（2.0.0）
 uploads/

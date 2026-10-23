@@ -1,6 +1,7 @@
 import { createElement, lazy, Suspense } from 'react';
 import { Route, Navigate } from 'react-router-dom';
 import RouteErrorBoundary from '../components/RouteErrorBoundary';
+import { isMaterialsPreviewMode } from '@shared/api/materials';
 import TreeHole from '../pages/TreeHole';
 import SquareHome from '../pages/SquareHome';
 import MyZone from '../pages/MyZone';
@@ -197,9 +198,9 @@ export const layoutRoutes = (
     <Route path="materials" element={renderLazyRoute(MaterialsHome)} />
     <Route path="materials/course/:id" element={renderLazyRoute(MaterialsCourse)} />
     <Route path="materials/file" element={renderLazyRoute(MaterialDetail)} />
-    <Route path="materials/upload" element={renderLazyRoute(MaterialsUpload)} />
-    <Route path="materials/me" element={renderLazyRoute(MaterialsMine)} />
-    <Route path="admin/materials" element={renderLazyRoute(AdminMaterials)} />
+    <Route path="materials/upload" element={isMaterialsPreviewMode ? <Navigate to="/materials" replace /> : renderLazyRoute(MaterialsUpload)} />
+    <Route path="materials/me" element={isMaterialsPreviewMode ? <Navigate to="/materials" replace /> : renderLazyRoute(MaterialsMine)} />
+    <Route path="admin/materials" element={isMaterialsPreviewMode ? <Navigate to="/materials" replace /> : renderLazyRoute(AdminMaterials)} />
     <Route path="*" element={<Navigate to="/" replace />} />
   </>
 );

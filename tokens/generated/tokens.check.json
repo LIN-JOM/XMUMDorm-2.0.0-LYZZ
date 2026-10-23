@@ -110,6 +110,66 @@
     "generatedFrom": "tokens/design-tokens.css"
   },
   {
+    "label": "course-1-on #0e1520 on #4da7ff (dark·text)",
+    "fg": "#0e1520",
+    "bg": "#4da7ff",
+    "level": "AA",
+    "measuredRatio": 7.23,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-2-on #191307 on #f2b64c (dark·text)",
+    "fg": "#191307",
+    "bg": "#f2b64c",
+    "level": "AA",
+    "measuredRatio": 10.17,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-3-on #0b1a14 on #3dd9a6 (dark·text)",
+    "fg": "#0b1a14",
+    "bg": "#3dd9a6",
+    "level": "AA",
+    "measuredRatio": 9.96,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-4-on #1a0f15 on #f0a6c8 (dark·text)",
+    "fg": "#1a0f15",
+    "bg": "#f0a6c8",
+    "level": "AA",
+    "measuredRatio": 9.79,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-5-on #0c1a22 on #7ccdf2 (dark·text)",
+    "fg": "#0c1a22",
+    "bg": "#7ccdf2",
+    "level": "AA",
+    "measuredRatio": 10.01,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-6-on #1a1a07 on #f5e97a (dark·text)",
+    "fg": "#1a1a07",
+    "bg": "#f5e97a",
+    "level": "AA",
+    "measuredRatio": 14.08,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
     "label": "text-primary #1b1f2c on #f7f8fa (light·text)",
     "fg": "#1b1f2c",
     "bg": "#f7f8fa",
@@ -215,6 +275,66 @@
     "bg": "#29845e",
     "level": "AA",
     "measuredRatio": 4.61,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-1-on #ffffff on #0072b2 (light·text)",
+    "fg": "#ffffff",
+    "bg": "#0072b2",
+    "level": "AA",
+    "measuredRatio": 5.19,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-2-on #12141a on #e69f00 (light·text)",
+    "fg": "#12141a",
+    "bg": "#e69f00",
+    "level": "AA",
+    "measuredRatio": 8.17,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-3-on #ffffff on #007a5a (light·text)",
+    "fg": "#ffffff",
+    "bg": "#007a5a",
+    "level": "AA",
+    "measuredRatio": 5.34,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-4-on #12141a on #cc79a7 (light·text)",
+    "fg": "#12141a",
+    "bg": "#cc79a7",
+    "level": "AA",
+    "measuredRatio": 6.01,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-5-on #12141a on #56b4e9 (light·text)",
+    "fg": "#12141a",
+    "bg": "#56b4e9",
+    "level": "AA",
+    "measuredRatio": 7.98,
+    "requiredRatio": 4.5,
+    "generatedBy": "scripts/gen-tokens.js",
+    "generatedFrom": "tokens/design-tokens.css"
+  },
+  {
+    "label": "course-6-on #12141a on #f0e442 (light·text)",
+    "fg": "#12141a",
+    "bg": "#f0e442",
+    "level": "AA",
+    "measuredRatio": 13.92,
     "requiredRatio": 4.5,
     "generatedBy": "scripts/gen-tokens.js",
     "generatedFrom": "tokens/design-tokens.css"

@@ -24,6 +24,7 @@ let lastSchoolUserId: number | null = null;
 let storageEpoch = 0;
 let storageQueue: Promise<void> = Promise.resolve();
 const invalidationListeners = new Set<() => void>();
+const dataListeners = new Set<() => void>();
 
 function enqueue<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
   const result = storageQueue.then(operation).catch(() => fallback);
@@ -33,9 +34,17 @@ function enqueue<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
 function notifyInvalidated() {
   for (const listener of invalidationListeners) { try { listener(); } catch { /* Privacy clearing still completes. */ } }
 }
+function notifyDataChanged() {
+  for (const listener of dataListeners) { try { listener(); } catch { /* A stale view must not block the write. */ } }
+}
 export function subscribeMoodleInvalidation(listener: () => void): () => void {
   invalidationListeners.add(listener);
   return () => { invalidationListeners.delete(listener); };
+}
+/** Data-channel listeners update views (today pane); they do not cancel in-flight reads. */
+export function subscribeMoodleDataChanged(listener: () => void): () => void {
+  dataListeners.add(listener);
+  return () => { dataListeners.delete(listener); };
 }
 export function settleMoodleStorage(): Promise<void> { return storageQueue; }
 
@@ -47,6 +56,7 @@ export function clearMoodleCache(): void {
     if (keys.length) await AsyncStorage.multiRemove(keys);
   }, undefined);
   notifyInvalidated();
+  notifyDataChanged();
 }
 
 /** On opt-in startup, hide private memory while waiting for the current page proof. No disk is read. */
@@ -135,6 +145,7 @@ export function selectMoodleCourses(ids: readonly number[]): void {
   for (const id of courses.keys()) if (!selected.has(id)) courses.delete(id);
   for (const id of states.keys()) if (!selected.has(id)) states.delete(id);
   for (const [id, event] of events) if (!selected.has(event.courseId)) events.delete(id);
+  notifyDataChanged();
 }
 
 /** Append projected pages from the current scan, never merge two separate scans. */
@@ -155,6 +166,7 @@ export function writeMoodleCache(method: MoodleMethod, raw: unknown, expectedGen
       if (selected.has(event.courseId) && courses.has(event.courseId)) events.set(event.id, event);
     }
   }
+  notifyDataChanged();
   return true;
 }
 

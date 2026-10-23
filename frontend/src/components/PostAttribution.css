@@ -1,0 +1,20 @@
+.post-attribution {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.post-attribution--compact {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-detail-time-extra .post-attribution {
+  color: var(--post-ios-label, #1d1d1f);
+}
+
+.treehole-glass-content .post-attribution {
+  color: #fff;
+}

@@ -3,7 +3,7 @@
  */
 import { Link } from 'react-router-dom';
 import { Download, Eye } from 'lucide-react';
-import { countDownload } from '@shared/api/materials';
+import { countDownload, isMaterialsPreviewMode } from '@shared/api/materials';
 import { humanSize, formatDate } from '@shared/utils/materialDisplay';
 import { downloadMaterial } from './downloadMaterial';
 import { TYPE_META, EXAM_NODE_META, SOURCE_META } from '@shared/constants/materials';
@@ -46,7 +46,10 @@ export default function MaterialCard({ item, isZh = true, onDownload }) {
           className="mat-btn mat-btn--sm mat-btn--primary"
           onClick={() => {
             // 下载计数是尽力而为：下载本身不依赖它成功
-            const count = () => countDownload(item.path).catch(() => {});
+            const count = () => {
+              if (!isMaterialsPreviewMode) return countDownload(item.path).catch(() => {});
+              return undefined;
+            };
             if (onDownload) onDownload(item, count);
             else downloadMaterial(item, { onCount: count });
           }}

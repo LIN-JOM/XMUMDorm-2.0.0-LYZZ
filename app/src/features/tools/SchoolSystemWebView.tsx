@@ -173,7 +173,12 @@ export const SchoolSystemWebView = React.forwardRef<SchoolSystemWebViewHandle, S
     const handleMessage = React.useCallback((event: WebViewMessageEvent) => {
       const url = currentUrl.current;
       const nativeUrl = event.nativeEvent.url;
-      const samePage = system.id === 'moodle' && !!url && isMoodleOrigin(url) && nativeUrl === url;
+      // Android WebView 在部分导航/注入时机把消息 URL 报成裸 origin（实测 /my/ 页面报
+      // `https://l.xmu.edu.my`），严格相等会把真机消息全部丢掉；同源 + 裸 origin 容忍。
+      const sameOrigin = system.id === 'moodle' && !!url && isMoodleOrigin(url) && isMoodleOrigin(nativeUrl)
+        && new URL(nativeUrl).origin === new URL(url).origin;
+      const bareOrigin = (value: string) => new URL(value).pathname === '/';
+      const samePage = sameOrigin && (nativeUrl === url || bareOrigin(nativeUrl) || bareOrigin(url));
       const identityResult = parseMoodleIdentityMessage(event.nativeEvent.data);
       if (identityResult) {
         const item = identityRead.current;

@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Linking } from 'react-native';
+import { act } from '@testing-library/react-native';
 import { renderApp } from './helpers/renderApp';
+import { readSchoolSessions } from '@/features/tools/schoolSession';
 
 const routerState = { id: 'moodle' };
 jest.mock('expo-router', () => ({
@@ -43,6 +45,16 @@ describe('P3A-Y public integration', () => {
     expect(typeof moodleProps.current.onOpenOriginal).toBe('function');
     expect(typeof moodleProps.current.onReminderPlan).toBe('function');
     expect(typeof moodleProps.current.onClearReminders).toBe('function');
+  });
+
+  it('supplies a Moodle session probe that records the session state', async () => {
+    const Screen = require('../app/system/[id]').default as () => React.ReactElement;
+    await renderApp(<Screen />);
+    expect(typeof moodleProps.current.onSessionProbe).toBe('function');
+    await act(async () => {
+      await moodleProps.current.onSessionProbe({ hasPasswordField: false });
+    });
+    expect((await readSchoolSessions()).moodle.state).toBe('signedIn');
   });
 
   it('only forwards a trusted Moodle original URL to the host callback', async () => {

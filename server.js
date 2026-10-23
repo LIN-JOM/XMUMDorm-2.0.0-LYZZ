@@ -50,6 +50,7 @@ const reportRoutes = require('./routes/reports');
 const advertisementRoutes = require('./routes/advertisements');
 const confessionRoutes = require('./routes/confessions');
 const materialsRoutes = require('./routes/materials');
+const previewRoutes = require('./routes/preview');
 
 // 8. 创建一个 Express 应用实例
 const app = express();
@@ -177,6 +178,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/confessions', confessionRoutes);
 app.use('/api/materials', materialsRoutes);
+app.use('/api/preview', previewRoutes);
 app.use('/api/shop', require('./routes/shop'));
 
 // ============================================
@@ -207,6 +209,22 @@ app.listen(PORT, process.env.HOST || undefined, async () => {
   
   // 测试数据库连接
   await testConnection();
+
+  // 资料 PR 的合并发生在 GitHub 侧；状态回收不能依赖上传者一直停留在网页上。
+  try {
+    const { syncPendingMaterialStatuses } = require('./services/materialStatusSync');
+    const runMaterialStatusSync = () => {
+      syncPendingMaterialStatuses().then((summary) => {
+        if (summary.merged || summary.rejected || summary.errors) {
+          console.log('[materials] PR 状态回收:', summary);
+        }
+      }).catch((e) => console.warn('[materials] PR 状态回收未完成:', e.message || e));
+    };
+    runMaterialStatusSync();
+    setInterval(runMaterialStatusSync, 60 * 1000);
+  } catch (e) {
+    console.warn('[materials] PR 状态回收未启动:', e.message);
+  }
 
   // 后台定时任务（本地开发默认关闭，避免“没开页面也在狂查库”导致你觉得很卡）
   const ENABLE_JOBS = String(process.env.ENABLE_BACKGROUND_JOBS || '') === '1';

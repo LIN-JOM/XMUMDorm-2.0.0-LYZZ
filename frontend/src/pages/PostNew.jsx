@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
+import Select from '../components/ui/Select';
 import Tag from '../components/ui/Tag';
 import { useAuth } from '../context/AuthContextState';
 import { useLanguage } from '../context/LanguageContextState';
@@ -13,6 +14,10 @@ import { createPost, getPostTagsList } from '@shared/api/posts';
 import { getApiErrorMessage } from '@shared/utils/apiError';
 import { QK } from '@shared/query/queryKeys';
 import { FOOD_SQUARE_TAG_SLUG } from '@shared/constants/canteen';
+import { POST_REPOST_SOURCES, POST_REPOST_SOURCE_MAX_LENGTH } from '@shared/constants/postAttribution';
+import { acceptCurrentTerms, getMyTermsStatus } from '@shared/api/users';
+import { buildPostAttribution } from '../utils/postAttribution';
+import TermsAcceptanceGate from '../components/TermsAcceptanceGate';
 import './PostNew.css';
 
 const POST_TAGS_STALE_MS = 15 * 60 * 1000;
@@ -29,11 +34,55 @@ export default function PostNew() {
   const tokenKey = token ?? 'guest';
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [contentOrigin, setContentOrigin] = useState('original');
+  const [repostSource, setRepostSource] = useState('WX');
+  const [customSource, setCustomSource] = useState('');
   const [imageFiles, setImageFiles] = useState([]);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState([]);
   const fileInputRef = useRef(null);
+  const [termsStatus, setTermsStatus] = useState(null);
+  const [termsLoading, setTermsLoading] = useState(true);
+  const [termsAccepting, setTermsAccepting] = useState(false);
+  const [termsError, setTermsError] = useState('');
+
+  const loadTermsStatus = useCallback(async () => {
+    if (!isLoggedIn) {
+      setTermsStatus(null);
+      setTermsLoading(false);
+      return;
+    }
+
+    setTermsLoading(true);
+    setTermsError('');
+    try {
+      setTermsStatus(await getMyTermsStatus());
+    } catch (error) {
+      setTermsStatus(null);
+      setTermsError(getApiErrorMessage(error));
+    } finally {
+      setTermsLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    loadTermsStatus();
+  }, [loadTermsStatus]);
+
+  const handleAcceptTerms = async () => {
+    if (!termsStatus?.version) return;
+
+    setTermsAccepting(true);
+    setTermsError('');
+    try {
+      setTermsStatus(await acceptCurrentTerms(termsStatus.version));
+    } catch (error) {
+      setTermsError(getApiErrorMessage(error));
+    } finally {
+      setTermsAccepting(false);
+    }
+  };
 
   const { data: allTags = [] } = useQuery({
     queryKey: QK.postTagsList(),
@@ -86,6 +135,8 @@ export default function PostNew() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (termsStatus?.accepted !== true) return;
+
     const trimmedTitle = title.trim();
     const trimmedContent = content.trim();
     if (!isAdmin && !trimmedTitle) {
@@ -94,6 +145,11 @@ export default function PostNew() {
     }
     if (!trimmedContent) {
       Toast.error(isEn ? 'Content is required' : '请输入内容');
+      return;
+    }
+    const attribution = isAdmin ? null : buildPostAttribution(contentOrigin, repostSource, customSource);
+    if (!isAdmin && !attribution) {
+      Toast.error(isEn ? 'Enter a plain-text source of 1–100 characters' : '请输入 1–100 字符的纯文本来源');
       return;
     }
 
@@ -107,8 +163,9 @@ export default function PostNew() {
 
       if (isAdmin) {
         payload.type = 'announcement';
-      } else if (selectedTagIds.length > 0) {
-        payload.tagIds = selectedTagIds;
+      } else {
+        Object.assign(payload, attribution);
+        if (selectedTagIds.length > 0) payload.tagIds = selectedTagIds;
       }
 
       const created = await createPost(payload);
@@ -154,6 +211,14 @@ export default function PostNew() {
         navigate(created?.id ? `/post/${created.id}` : '/', { replace: true });
       }
     } catch (error) {
+      if (error?.body?.code === 'TERMS_NOT_ACCEPTED') {
+        setTermsStatus({
+          version: error.body.data?.version || termsStatus?.version || '',
+          accepted: false,
+        });
+        setTermsError(isEn ? 'Please accept the current Terms of Service first.' : '请先接受当前服务条款。');
+        return;
+      }
       Toast.error(getApiErrorMessage(error));
     } finally {
       setLoading(false);
@@ -173,7 +238,60 @@ export default function PostNew() {
           <h1>{pageTitle}</h1>
         </div>
 
-        <form className="postnew-form" onSubmit={handleSubmit}>
+        {termsLoading || termsStatus?.accepted !== true ? (
+          <TermsAcceptanceGate
+            isEn={isEn}
+            version={termsStatus?.version}
+            loading={termsLoading}
+            accepting={termsAccepting}
+            error={termsError}
+            onAccept={handleAcceptTerms}
+            onRetry={loadTermsStatus}
+          />
+        ) : (
+          <form className="postnew-form" onSubmit={handleSubmit}>
+          {!isAdmin ? (
+            <>
+              <Select
+                id="post-content-origin"
+                label={isEn ? 'Content declaration' : '内容声明'}
+                value={contentOrigin}
+                onChange={(event) => setContentOrigin(event.target.value)}
+                required
+                aria-required="true"
+              >
+                <option value="original">{isEn ? 'Original' : '原创'}</option>
+                <option value="repost">{isEn ? 'Repost' : '转载'}</option>
+              </Select>
+              {contentOrigin === 'repost' ? (
+                <>
+                  <Select
+                    id="post-repost-source"
+                    label={isEn ? 'Source' : '转载来源'}
+                    value={repostSource}
+                    onChange={(event) => setRepostSource(event.target.value)}
+                    required
+                    aria-required="true"
+                  >
+                    {POST_REPOST_SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
+                    <option value="custom">{isEn ? 'Custom' : '自定义'}</option>
+                  </Select>
+                  {repostSource === 'custom' ? (
+                    <Input
+                      id="post-custom-source"
+                      label={isEn ? 'Source description' : '来源说明'}
+                      hint={isEn ? 'Plain text, 1–100 characters. No link required.' : '1–100 字符纯文本，无需链接。'}
+                      value={customSource}
+                      onChange={(event) => setCustomSource(event.target.value)}
+                      maxLength={POST_REPOST_SOURCE_MAX_LENGTH}
+                      required
+                      aria-required="true"
+                    />
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          ) : null}
           {!isAdmin ? (
             <Input
               label={isEn ? 'Title' : '标题'}
@@ -261,7 +379,8 @@ export default function PostNew() {
               {loading ? (isEn ? 'Publishing…' : '发布中…') : pageTitle}
             </Button>
           </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );

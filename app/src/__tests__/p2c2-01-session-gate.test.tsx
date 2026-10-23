@@ -64,6 +64,18 @@ describe('P2C2-01 A-01 启动与会话水合', () => {
   });
 
   describe('TC-P2C2-01-2A · 需要身份的路由清单', () => {
+    it.each(['/me/legal/terms', '/me/legal/privacy'])('静态法务页 %s 在未登录和过期时可读', (pathname) => {
+      expect(resolveGateAction('signedOut', routeRequiresAuth(pathname))).toBe('allow');
+      expect(resolveGateAction('expired', routeRequiresAuth(pathname))).toBe('allow');
+      expect(resolveGateAction('restoring', routeRequiresAuth(pathname))).toBe('splash');
+    });
+
+    it('法务豁免不放开我的其他路由或法务子路径', () => {
+      for (const pathname of ['/me', '/me/settings', '/me/legal', '/me/legal/terms/edit', '/me/legal/privacy/edit']) {
+        expect(resolveGateAction('signedOut', routeRequiresAuth(pathname))).toBe('toLogin');
+      }
+    });
+
     it('「我的」与发布链路要身份；广场/工具/校园里不要', () => {
       expect(routeRequiresAuth('/me')).toBe(true);
       expect(routeRequiresAuth('/me/settings')).toBe(true);
@@ -86,6 +98,18 @@ describe('P2C2-01 A-01 启动与会话水合', () => {
   });
 
   describe('TC-P2C2-01-3A · 启动位', () => {
+    it.each(['/me/legal/terms', '/me/legal/privacy'])('未登录访问法务页 %s 不会被会话门送回登录页', async (pathname) => {
+      routerState.replaced.length = 0;
+      routerState.pathname = pathname;
+      const view = await renderApp(
+        <SessionProvider>
+          <SessionGate topInset={24} bottomInset={48} />
+        </SessionProvider>
+      );
+      await waitFor(() => expect(view.queryByTestId('session-splash')).toBeNull());
+      expect(routerState.replaced).toEqual([]);
+    });
+
     it('启动位渲染品牌位 + spinner（整块由根布局传入的 insets 夹在安全区内）', async () => {
       const view = await renderApp(<SessionSplash topInset={24} bottomInset={48} />);
       expect(view.getByTestId('session-splash')).toBeTruthy();

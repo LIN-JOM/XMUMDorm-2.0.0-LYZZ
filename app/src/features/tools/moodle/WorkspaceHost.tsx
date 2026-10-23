@@ -5,7 +5,8 @@ import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/design-system/theme';
 import { SchoolSystemWebView, type SchoolSystemWebViewHandle } from '../SchoolSystemWebView';
 import { SCHOOL_SYSTEMS } from '../schoolSystems';
-import { MoodleWorkspaceScreen, type MoodleWorkspaceLabels } from './WorkspaceScreen';
+import { MoodleWorkspaceScreen, type MoodleDeadlineView,
+  type MoodleWorkspaceLabels } from './WorkspaceScreen';
 import { MoodleDetailScreen, type MoodleDetailLabels } from './DetailScreen';
 import { createMoodleSync } from './sync';
 import { clearMoodleCache, confirmedMoodleSchoolIdentity, persistMoodleSnapshot,
@@ -15,12 +16,14 @@ import type { MoodleBridgeResult, MoodleReadRequest } from './bridge';
 import type { MoodleModule } from './contract';
 import { safeMoodleReadUrl, type MoodleDetail, type MoodleDetailFailure, type MoodleDetailRequest,
   type MoodleDetailResult } from './detail';
+import { isMoodleMaintenanceWindow } from './maintenance';
 import { partitionMoodleDeadlines, planMoodleDeadlineReminders,
-  type MoodleDeadlinePolicy, type MoodleReminderPlan } from './deadlines';
+  type MoodleDeadlinePolicy, type MoodleReminderDelivery, type MoodleReminderPlan } from './deadlines';
 
-export type MoodleReminderStatus = 'unavailable' | 'planned' | 'cleared' | 'failed';
+export type MoodleReminderStatus = 'unavailable' | 'planned' | 'partial' | 'denied' | 'stale'
+  | 'cleared' | 'failed';
 export type MoodleWorkspaceHostLabels = MoodleWorkspaceLabels & MoodleDetailLabels & {
-  clear: string; backToNative: string; deadlines: string; otherEvents: string;
+  clear: string; backToNative: string; deadlines: string; otherEvents: string; noDeadlines: string;
   eventType: (value: string | null) => string; actionableStatus: (value: boolean | null) => string;
   deadlineBucket: (value: 'valid' | 'past' | 'unset' | 'future-anomaly') => string;
   detailStatus: (value: 'loading' | MoodleDetailFailure) => string;
@@ -30,7 +33,10 @@ export type MoodleWorkspaceHostProps = {
   /** Role A supplies every app-authored label from the single application t function. */
   labels: MoodleWorkspaceHostLabels;
   onOpenOriginal: (url: string) => void;
-  onReminderPlan?: (plan: MoodleReminderPlan) => void | Promise<void>;
+  /** T-04 session probe forwarded from the embedded school page (password field present or not). */
+  onSessionProbe?: (probe: { hasPasswordField: boolean }) => void;
+  onReminderPlan?: (plan: MoodleReminderPlan) =>
+    void | MoodleReminderDelivery | Promise<void | MoodleReminderDelivery>;
   onClearReminders?: () => void | Promise<void>;
   deadlinePolicy?: MoodleDeadlinePolicy;
   now?: () => number;
@@ -67,8 +73,13 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     if (!action) { setReminderStatus('unavailable'); return; }
     reminderQueue.current = reminderQueue.current.catch(() => undefined).then(async () => {
       try {
-        await action();
-        if (mounted.current && sequence === reminderSequence.current) setReminderStatus(plan === null ? 'cleared' : 'planned');
+        const delivery = await action();
+        if (mounted.current && sequence === reminderSequence.current) {
+          const next: MoodleReminderStatus = plan === null ? 'cleared'
+            : delivery === 'planned' || delivery === 'partial' || delivery === 'denied'
+              || delivery === 'stale' ? delivery : 'planned';
+          setReminderStatus(next);
+        }
       } catch {
         if (mounted.current && sequence === reminderSequence.current) setReminderStatus('failed');
       }
@@ -127,6 +138,7 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
   }, []);
 
   const now = (props.now ?? Date.now)();
+  const maintenance = isMoodleMaintenanceWindow(now);
   const buckets = partitionMoodleDeadlines(snapshot.data.states, snapshot.data.events, now, deadlinePolicy);
   const plan = planMoodleDeadlineReminders(buckets, now, deadlinePolicy);
   const planSignature = JSON.stringify(plan);
@@ -142,22 +154,45 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
     { key: 'valid' as const, rows: buckets.valid }, { key: 'past' as const, rows: buckets.past },
     { key: 'future-anomaly' as const, rows: buckets.futureAnomalies },
   ];
+  /** 原生模式的这条动作不进宿主自己的行：它由工作台的工具行承载（一屏只一条工具行）。 */
+  const clearButton = <Button testID="moodle-clear" label={labels.clear} variant="ghost"
+    onPress={clearMoodleCache} />;
+  /** 截止段的视图模型：分组与措辞归宿主，排版归屏幕（第四段只在一处定义顺序）。 */
+  const deadlineView: MoodleDeadlineView = {
+    title: labels.deadlines,
+    groups: [
+      ...deadlineRows.map(({ key, rows }) => ({ key, title: labels.deadlineBucket(key),
+        items: rows.map((row) => ({ key: `deadline-${row.event.id}`, title: row.event.name,
+          meta: labels.formatTime(row.dueAt) })) })),
+      { key: 'unset', title: labels.deadlineBucket('unset'),
+        items: buckets.unset.map((row) => ({ key: `unset-${row.courseId}:${row.module.id}`,
+          title: row.module.name, meta: null })) },
+    ].filter((group) => group.items.length > 0),
+    otherTitle: labels.otherEvents,
+    others: otherEvents.map((event) => ({ key: `event-${event.id}`, title: event.name,
+      meta: [labels.eventType(event.eventType ?? null), labels.actionableStatus(event.action?.actionable ?? null),
+        event.time > 0 && Number.isFinite(new Date(event.time * 1000).getTime())
+          ? labels.formatTime(event.time * 1000) : null].filter(Boolean).join(' · ') })),
+    reminder: labels.reminderStatus(reminderStatus),
+    empty: labels.noDeadlines,
+  };
   return <View testID="moodle-host" style={{ flex: 1 }}>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2'), padding: theme.space('space_3') }}>
-      {mode === 'web' ? <>
-        <Text>{labels.firstLogin}</Text>
-        <Button testID="moodle-native" label={labels.backToNative} disabled={!trusted} variant="secondary"
-          onPress={() => { controller.adoptCache(); setMode('native'); }} />
-      </> : null}
-      <Button testID="moodle-clear" label={labels.clear} variant="ghost" onPress={clearMoodleCache} />
-    </View>
+    {mode === 'web' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space('space_2'),
+      padding: theme.space('space_3') }}>
+      <Text>{labels.firstLogin}</Text>
+      <Button testID="moodle-native" label={labels.backToNative} disabled={!trusted} variant="secondary"
+        onPress={() => { controller.adoptCache(); setMode('native'); }} />
+      {clearButton}
+    </View> : null}
     <View testID="moodle-webview-area" style={mode === 'web' ? { flex: 1 } : { height: 0, overflow: 'hidden' }}
       accessibilityElementsHidden={mode !== 'web'} importantForAccessibility={mode === 'web' ? 'auto' : 'no-hide-descendants'}>
       <SchoolSystemWebView ref={bridge} system={SCHOOL_SYSTEMS.find((system) => system.id === 'moodle')!} preserveSnapshotOnClose
-        onMoodleIdentity={onIdentity} onMoodleResponse={onResponse} onMoodleDetail={onDetail} />
+        onMoodleIdentity={onIdentity} onMoodleResponse={onResponse} onMoodleDetail={onDetail}
+        onSessionProbe={(probe) => latest.current.onSessionProbe?.(probe)} />
     </View>
     {mode === 'native' ? <View style={{ flex: 1 }}>
       {detail ? detail.status === 'success' && detail.data ? <MoodleDetailScreen detail={detail.data} labels={labels}
+        title={detail.module.name}
         onBack={() => { pendingDetail.current = null; setDetail(null); }} onOriginal={openOriginal}
         onDiscussion={(url) => readDetail(detail.courseId, detail.module, url)} /> : <ScrollView>
           <Button label={labels.back} variant="ghost" onPress={() => { pendingDetail.current = null; setDetail(null); }} />
@@ -165,31 +200,14 @@ export function MoodleWorkspaceHost(props: MoodleWorkspaceHostProps): React.Reac
             {labels.detailStatus(detail.status === 'success' ? 'invalid-data' : detail.status)}</Text>
           {detail.module.url ? <Button label={labels.original} variant="link" onPress={() => openOriginal(detail.module.url!)} /> : null}
         </ScrollView> : <>
-        <MoodleWorkspaceScreen labels={labels} snapshot={snapshot} entry={entry}
+        <MoodleWorkspaceScreen labels={labels} snapshot={snapshot} entry={entry} maintenance={maintenance}
+          headerActions={clearButton}
           onLogin={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(false); setMode('web'); }}
           onSync={() => { pendingDetail.current = null; setDetail(null); controller.start(); }}
           onCancel={() => { bridge.current?.cancelMoodleReads?.(); controller.cancel(); }}
-          onChoose={(ids) => controller.choose(ids)} onModule={readDetail} onOriginal={openOriginal} />
-        <ScrollView testID="moodle-deadlines" style={{ maxHeight: theme.space('space_6') * 8 }}
-          contentContainerStyle={{ padding: theme.space('space_4'), gap: theme.space('space_2') }}>
-          <Text role="headline">{labels.deadlines}</Text>
-          {deadlineRows.map(({ key, rows }) => <View key={key}>
-            <Text role="label">{labels.deadlineBucket(key)}</Text>
-            {rows.map((row) => <Text key={row.event.id}>{row.event.name} · {labels.formatTime(row.dueAt)}</Text>)}
-          </View>)}
-          <Text role="label">{labels.deadlineBucket('unset')}</Text>
-          {buckets.unset.map((row) => <Text key={`${row.courseId}:${row.module.id}`}>{row.module.name}</Text>)}
-          <Text role="headline">{labels.otherEvents}</Text>
-          {otherEvents.map((event) => <View key={event.id}>
-            <Text>{event.name}</Text>
-            <Text role="caption">{labels.eventType(event.eventType ?? null)} · {labels.actionableStatus(event.action?.actionable ?? null)}</Text>
-            {event.action?.name ? <Text>{event.action.name}</Text> : null}
-            {event.time > 0 && Number.isFinite(new Date(event.time * 1000).getTime())
-              ? <Text role="caption">{labels.formatTime(event.time * 1000)}</Text> : null}
-          </View>)}
-        </ScrollView>
+          onChoose={(ids) => controller.choose(ids)} onModule={readDetail} onOriginal={openOriginal}
+          deadlines={deadlineView} />
       </>}
-      <Text testID="moodle-reminder-status" role="caption">{labels.reminderStatus(reminderStatus)}</Text>
     </View> : null}
   </View>;
 }

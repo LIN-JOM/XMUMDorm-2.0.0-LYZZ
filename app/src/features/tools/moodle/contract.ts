@@ -10,6 +10,10 @@ export type MoodleCourse = {
   startDate: number | null;
   endDate: number | null;
   visible: boolean;
+  /** Official course summary exporter `isfavourite`: pinned in the dashboard. */
+  favourite: boolean;
+  /** Official course summary exporter `progress`: percentage, null when not tracked. */
+  progress: number | null;
 };
 
 export type MoodleSection = {
@@ -17,7 +21,14 @@ export type MoodleSection = {
   number: number;
   title: string;
   moduleIds: number[];
+  /** Official state `sectionurl`, same-origin filtered. */
+  url: string | null;
+  visible: boolean;
+  /** Format's current-section flag. */
+  current: boolean;
 };
+
+export type MoodleModuleCompletion = { state: number; complete: boolean };
 
 export type MoodleModule = {
   id: number;
@@ -28,6 +39,10 @@ export type MoodleModule = {
   visible: boolean;
   userVisible: boolean;
   accessVisible: boolean;
+  /** Official cm state `hascmrestrictions`. */
+  restrictions: boolean;
+  /** Official cm state `completionstate`/`isoverallcomplete`; null when not tracked. */
+  completion: MoodleModuleCompletion | null;
 };
 
 export type MoodleActionEvent = {
@@ -58,6 +73,7 @@ export function parseMoodleResponse<M extends MoodleMethod>(method: M, data: unk
 /**
  * This function is also the page-side projection injected into WebView.
  * Keep every helper inside it and avoid syntax that Babel rewrites to imported helpers.
+ * ⚠️ 注入 WebView 的函数必须自包含：域名与 URL 白名单等字面量只能内联，不能改成模块常量。
  * It returns new whitelist objects; it never forwards the raw response or credentials.
  */
 export function parseMoodleResponse(method: MoodleMethod, data: unknown): MoodleResponse | null {
@@ -70,12 +86,31 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
     return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum ? value : null;
   }
 
+  /** Campus 4.x `core_courseformat_get_state` exports ids/counters as decimal **strings**
+   * (e.g. `"course":{"id":"13593"}`, `"cmlist":["293322"]`); other methods keep numbers. */
+  function stateInteger(value: unknown, minimum: number): number | null {
+    if (typeof value === 'number') return Number.isSafeInteger(value) && value >= minimum ? value : null;
+    if (typeof value === 'string' && /^\d+$/.test(value)) {
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) && parsed >= minimum ? parsed : null;
+    }
+    return null;
+  }
+
   function text(value: unknown): string | null {
     return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
   }
 
   function enabled(value: unknown): boolean {
     return value === true || value === 1;
+  }
+
+  /** Official cm state completion pair; absent fields stay null instead of guessing false. */
+  function completionOf(value: unknown): MoodleModuleCompletion | null {
+    const item = record(value);
+    if (item === null) return null;
+    const state = integer(item.state, 0);
+    return state === null ? null : { state: state, complete: item.complete === true };
   }
 
   function safeUrl(value: unknown): string | null {
@@ -125,6 +160,9 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
         startDate: integer(standard ? item.startDate : item.startdate, 0),
         endDate: integer(standard ? item.endDate : item.enddate, 0),
         visible: true,
+        favourite: standard ? enabled(item.favourite) : enabled(item.isfavourite),
+        progress: standard ? integer(item.progress, 0)
+          : enabled(item.hasprogress) ? integer(item.progress, 0) : null,
       });
     }
     return { courses: courses, nextOffset: offset };
@@ -132,7 +170,7 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
   if (method === 'state') {
     const standard = raw.courseId !== undefined;
     const course = record(raw.course);
-    const courseId = standard ? integer(raw.courseId, 1) : course === null ? null : integer(course.id, 1);
+    const courseId = standard ? stateInteger(raw.courseId, 1) : course === null ? null : stateInteger(course.id, 1);
     const rawSections = standard ? raw.sections : raw.section;
     const rawModules = standard ? raw.modules : raw.cm;
     if (courseId === null || !Array.isArray(rawSections) || !Array.isArray(rawModules)) return null;
@@ -141,18 +179,21 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
     for (let index = 0; index < rawSections.length; index += 1) {
       const item = record(rawSections[index]);
       if (item === null || (!standard && !enabled(item.visible))) continue;
-      const id = integer(item.id, 1);
-      const number = integer(item.number, 0);
+      const id = stateInteger(item.id, 1);
+      const number = stateInteger(item.number, 0);
       const title = text(item.title);
       const list = standard ? item.moduleIds : item.cmlist;
       if (id === null || number === null || title === null || !Array.isArray(list)) continue;
       if (sectionsById[String(id)]) continue;
       const moduleIds: number[] = [];
       for (let moduleIndex = 0; moduleIndex < list.length; moduleIndex += 1) {
-        const moduleId = integer(list[moduleIndex], 1);
+        const moduleId = stateInteger(list[moduleIndex], 1);
         if (moduleId !== null && moduleIds.indexOf(moduleId) < 0) moduleIds.push(moduleId);
       }
-      const section = { id: id, number: number, title: title, moduleIds: moduleIds };
+      const section = { id: id, number: number, title: title, moduleIds: moduleIds,
+        url: safeUrl(standard ? item.url : item.sectionurl),
+        visible: enabled(item.visible),
+        current: item.current === true };
       sections.push(section);
       sectionsById[String(id)] = section;
     }
@@ -161,8 +202,8 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
     for (let index = 0; index < rawModules.length; index += 1) {
       const item = record(rawModules[index]);
       if (item === null || !enabled(item.visible)) continue;
-      const id = integer(item.id, 1);
-      const sectionId = integer(standard ? item.sectionId : item.sectionid, 1);
+      const id = stateInteger(item.id, 1);
+      const sectionId = stateInteger(standard ? item.sectionId : item.sectionid, 1);
       const type = text(standard ? item.type : item.module);
       const name = text(item.name);
       if (id === null || sectionId === null || type === null || name === null) continue;
@@ -175,6 +216,11 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
         id: id, sectionId: sectionId, type: type, name: name,
         url: userVisible ? safeUrl(item.url) : null,
         visible: true, userVisible: userVisible, accessVisible: accessVisible,
+        restrictions: standard ? enabled(item.restrictions) : enabled(item.hascmrestrictions),
+        completion: standard ? completionOf(item.completion) : (() => {
+          const state = stateInteger(item.completionstate, 0);
+          return state === null ? null : { state: state, complete: item.isoverallcomplete === true };
+        })(),
       };
       modules.push(module);
       modulesById[String(id)] = module;
@@ -196,9 +242,11 @@ export function parseMoodleResponse(method: MoodleMethod, data: unknown): Moodle
     const standard = raw.lastId !== undefined;
     const first = standard ? raw.firstId : raw.firstid;
     const last = standard ? raw.lastId : raw.lastid;
-    const firstId = first === null ? null : integer(first, 1);
-    const lastId = last === null ? null : integer(last, 1);
-    if ((firstId === null && first !== null) || (lastId === null && last !== null)) return null;
+    // Campus 4.5 omits both cursors entirely when the page is empty (`{"events":[]}`).
+    const firstId = first === null || first === undefined ? null : integer(first, 1);
+    const lastId = last === null || last === undefined ? null : integer(last, 1);
+    if ((firstId === null && first !== null && first !== undefined)
+      || (lastId === null && last !== null && last !== undefined)) return null;
     const events: MoodleActionEvent[] = [];
     const seen: Record<string, boolean> = {};
     for (let index = 0; index < raw.events.length; index += 1) {

@@ -5,7 +5,7 @@ const CONTENT = {
   zh: {
     back: '← 返回首页',
     title: '用户服务协议',
-    updated: '最后更新：2026-06-08',
+    updated: '最后更新：2026-10-09',
     sections: [
       { title: '1. 服务说明', paragraphs: ['XMUMDorm（厦马小筑）是面向厦门大学马来西亚分校（XMUM）学生的校园社交与生活平台。我们提供帖子发布、食堂信息浏览、社团管理、二手交易、跑腿任务等功能。'] },
       { title: '2. 用户行为准则', paragraphs: ['在使用 XMUMDorm 时，你同意不发布以下内容：'], bullets: ['违法或违反校规的内容', '骚扰、威胁、欺凌或侵犯他人隐私的内容', '仇恨言论、歧视性言论', '色情或露骨内容', '垃圾信息、恶意广告或钓鱼链接', '侵犯他人知识产权的内容', '虚假信息或冒充他人身份'] },
@@ -20,7 +20,7 @@ const CONTENT = {
   en: {
     back: '← Back Home',
     title: 'Terms of Service',
-    updated: 'Last updated: June 8, 2026',
+    updated: 'Last updated: October 9, 2026',
     sections: [
       { title: '1. Service Overview', paragraphs: ['XMUMDorm is a campus social and lifestyle platform for students at Xiamen University Malaysia (XMUM). We provide features such as posting, canteen information, club management, second-hand trading, and errands.'] },
       { title: '2. User Conduct', paragraphs: ['When using XMUMDorm, you agree not to post the following:'], bullets: ['Illegal content or content that violates campus rules', 'Harassment, threats, bullying, or invasions of privacy', 'Hate speech or discriminatory language', 'Pornographic or explicit content', 'Spam, malicious ads, or phishing links', 'Content that infringes on intellectual property', 'False information or impersonation of others'] },

@@ -77,21 +77,24 @@ describe('P0-06 二级顶部 Tab 条', () => {
   });
 
   describe('集合声明：已定的落库，未定的留空（C-03/C-04/C-05）', () => {
-    it('「广场」= 7 个同页模块（所有者 2026-10-12 裁决；集合只有一处定义）', () => {
+    it('「广场」= 今日 / 树洞 / 万能墙 / 食堂 / 跑腿（所有者 2026-10-18 裁决；集合只有一处定义）', () => {
       expect(SQUARE_TABS.map((tab) => tab.key)).toEqual([
+        'today',
         'confession',
         'wall',
         'canteen',
-        'market',
         'errand',
-        'guides',
-        'clubs',
       ]);
     });
 
-    it('工具 / 我的 暂为空（待所有者拍板，⛔ 不猜）', () => {
+    it('工具仍未拍板（C-04，⛔ 不猜）；「我的」已拍板为四集合（C-05，2026-10-18）', () => {
       expect(SECONDARY_TABS.tools).toEqual([]);
-      expect(SECONDARY_TABS.me).toEqual([]);
+      expect(SECONDARY_TABS.me.map((tab) => tab.key)).toEqual([
+        'posts',
+        'marketplace',
+        'errands',
+        'reviews',
+      ]);
     });
   });
 
@@ -106,11 +109,25 @@ describe('P0-06 二级顶部 Tab 条', () => {
       expect(() => assertNoOverflowMenu(false)).not.toThrow();
     });
 
-    it('⛔ 全仓 0 处 PagerView / 横向分页切 Tab（R6）', () => {
+    /**
+     * R6 **已被覆盖**（原裁决：内容区不做横滑，2026-10-12）。
+     *
+     * 所有者 2026-10-18 拍板：「我的」四个内容 Tab 提升到一级页后**要**横滑
+     * （C-05 + R-M4）→ `MeScreen` 成为 R6 的**唯一例外**，其余各处仍为 0。
+     * 裁决变了，守卫就得跟着变，否则它守的是一条已经作废的规则。
+     */
+    it('⛔ PagerView 只出现在「我的」内容区，其余 0 处（R6，2026-10-18 已覆盖）', () => {
+      const allowed = new Set([path.join('features', 'me', 'MeScreen.tsx')]);
       const hits = walkSource(SRC_ROOT).filter((f) =>
-        /PagerView|react-native-pager-view/.test(fs.readFileSync(f, 'utf8'))
+        /PagerView|react-native-pager-view/.test(readCode(f))
       );
-      expect(hits.map((f) => path.relative(SRC_ROOT, f))).toEqual([]);
+      expect(
+        hits.map((f) => path.relative(SRC_ROOT, f)).filter((f) => !allowed.has(f))
+      ).toEqual([]);
+      // 例外必须真的存在（否则这条守卫会被"没人用 pager"静默满足）
+      expect(hits.map((f) => path.relative(SRC_ROOT, f))).toContain(
+        path.join('features', 'me', 'MeScreen.tsx')
+      );
     });
 
     it('⛔ 0 处下拉菜单式溢出（R5）', () => {
@@ -141,7 +158,7 @@ describe('P0-06 二级顶部 Tab 条', () => {
           <TopTabStrip tabs={SQUARE_TABS} selectedKey="confession" onSelect={() => undefined} />
         )
       );
-      const first = view.getByTestId('top-tab-confession');
+      const first = view.getByTestId('top-tab-today');
       expect(first.props.accessibilityRole).toBe('tab');
       expect(String(first.props.accessibilityLabel)).toContain('1');
       expect(String(first.props.accessibilityLabel)).toContain(String(SQUARE_TABS.length));

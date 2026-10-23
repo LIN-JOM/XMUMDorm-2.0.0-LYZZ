@@ -4,7 +4,8 @@ import {loadNotificationClient, type NotificationClient} from './client';
 
 export type NotificationPermission = 'granted' | 'denied' | 'undetermined' | 'unavailable';
 
-const CHANNEL_ID = 'class-reminders';
+const CHANNEL_ID = 'reminders';
+const CHANNEL_NAME = 'Reminders';
 
 function readStatus(status: Notifications.NotificationPermissionsStatus, client: NotificationClient): NotificationPermission {
   if (status.granted) return 'granted';
@@ -20,12 +21,12 @@ function readStatus(status: Notifications.NotificationPermissionsStatus, client:
 async function ensureAndroidChannel(client: NotificationClient): Promise<void> {
   if (Platform.OS !== 'android') return;
   await client.setNotificationChannelAsync(CHANNEL_ID, {
-    name: 'Class reminders',
+    name: CHANNEL_NAME,
     importance: client.AndroidImportance.DEFAULT,
   });
 }
 
-/** The only App boundary for notification consent; scheduling remains the timetable domain's work. */
+/** The only App boundary for notification consent; the reminder domain schedules after consent. */
 export const notificationPermission = {
   async read(): Promise<NotificationPermission> {
     const client = await loadNotificationClient();

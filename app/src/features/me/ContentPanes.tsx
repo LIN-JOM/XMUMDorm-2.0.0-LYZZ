@@ -1,14 +1,18 @@
 /**
- * 我的帖子（`M-04`）—— 页面级组合（P2C-04）
+ * 「我的」四个内容分页（`M-04` 迁来）—— 主页 pager 的四个页面（R-M3）
  *
- * 形态依据：
- *   · **骨架**：`P2` 列表 → `K05 ListScreen`（四态与分页状态机只在骨架里）
- *   · **两步取数**：先 `/api/users/me` 拿自己的 `id`，再取该 id 的 profile（⛔ 不猜 id、⛔ 没有 `?mine` 这种接口）
- *   · **空态**用 `firstRun`（引导去发布），不是 `noResult`
+ * ## 为什么从 `PostsScreen` 搬出来
+ * C-05 拍板后这四个模块是**一级主页的同页模块**，不再是子页面里的局部切换。
+ * 页面没了，逻辑留在这里，由主页的 pager 挂载。
  *
- * ⚠️ 两处如实登记：
+ * ## `active` 门（pager 四页常驻带来的新约束）
+ * pager 会把四个页面**同时挂载**（不是条件渲染）。若不设门，一进主页就并发四个请求。
+ * 这里的口径是：**首次激活才取数**，切走再切回不重复请求（滚动位置与游标都在
+ * `secondaryTabStore` 里，由 `ListScreen` 恢复，不需要靠重新取数来"刷新观感"）。
+ *
+ * ## 两处如实登记（从 `PostsScreen` 原样带来）
  *   1. 行**不可点**：帖子详情（`C-02`）是丙的页面，App 里还没有这个路由 —— ⛔ 不跳到 404；
- *   2. 删帖成功后**本地先移除**：服务端 profile 有 10s 缓存，刷新可能又看到它（缺口，登记在案）。
+ *   2. 删帖成功后**本地先移除**：服务端 profile 有 10s 缓存，等它过期会让用户以为没删掉。
  */
 
 import * as React from 'react';
@@ -20,8 +24,6 @@ import { AlertDialog } from '@/components/ui/AlertDialog';
 import { EntityCard } from '@/components/ui/EntityCard';
 import { IconButton } from '@/components/ui/IconButton';
 import { ListScreen, useListPagination } from '@/components/ui/ListScreen';
-import { Screen } from '@/components/ui/Screen';
-import { TopTabStrip } from '@/components/ui/TopTabStrip';
 import { useTheme } from '@/design-system/theme';
 import { useI18n } from '@/i18n';
 import { getMe, getProfile } from '../../../../shared/api/users';
@@ -42,30 +44,33 @@ import {
 } from './posts';
 
 const PAGE_SIZE = 20;
-const SCOPE = { primaryTab: 'me', secondaryTab: 'posts' } as const;
 
-type ContentKey = 'posts' | 'marketplace' | 'errands' | 'reviews';
+export type MeContentKey = 'posts' | 'marketplace' | 'errands' | 'reviews';
 type ContentRow = MarketItem | ErrandItem | MyReviewRow;
 
-const CONTENT_TABS = [
-  { key: 'posts', labelKey: 'me.content.posts' },
-  { key: 'marketplace', labelKey: 'me.content.marketplace' },
-  { key: 'errands', labelKey: 'me.content.errands' },
-  { key: 'reviews', labelKey: 'me.content.reviews' },
-] as const;
+/** 主页四个分页的唯一入口：`kind` 决定取哪份数据，`active` 决定什么时候取。 */
+export function MeContentPane({
+  kind,
+  active,
+}: {
+  kind: MeContentKey;
+  active: boolean;
+}): React.ReactElement {
+  return kind === 'posts' ? <MePostsPane active={active} /> : <MeOwnedPane kind={kind} active={active} />;
+}
 
-export function PostsScreen(): React.ReactElement {
+function MePostsPane({ active }: { active: boolean }): React.ReactElement {
   const { t } = useI18n();
   const theme = useTheme();
   const router = useRouter();
 
   const [rows, setRows] = React.useState<readonly MyPostRow[]>([]);
-  const [selectedKey, setSelectedKey] = React.useState<ContentKey>('posts');
   const [pendingDelete, setPendingDelete] = React.useState<MyPostRow | null>(null);
   const myIdRef = React.useRef<number | null>(null);
   const pageRef = React.useRef(1);
+  const loadedRef = React.useRef(false);
   const { pagination, dispatch, restoredScrollOffset, persistScrollOffset } = useListPagination({
-    scope: SCOPE,
+    scope: { primaryTab: 'me', secondaryTab: 'posts' },
   });
 
   const load = React.useCallback(
@@ -101,8 +106,10 @@ export function PostsScreen(): React.ReactElement {
   );
 
   React.useEffect(() => {
+    if (!active || loadedRef.current) return;
+    loadedRef.current = true;
     void load('refresh');
-  }, [load]);
+  }, [active, load]);
 
   const confirmDelete = React.useCallback(async () => {
     const target = pendingDelete;
@@ -119,62 +126,53 @@ export function PostsScreen(): React.ReactElement {
   }, [load, pendingDelete]);
 
   return (
-    <Screen testID="screen-me-posts" titleKey="me.content.title" bottomMode="none">
-      <TopTabStrip
-        testID="me-content-tabs"
-        tabs={CONTENT_TABS}
-        selectedKey={selectedKey}
-        onSelect={(key) => setSelectedKey(key as ContentKey)}
-      />
-      {selectedKey === 'posts' ? <View style={{ flex: 1 }}>
-          <ListScreen
-          testID="me-posts-list"
-          data={rows}
-          keyExtractor={(row) => String(row.id)}
-          pagination={pagination}
-          onRefresh={() => void load('refresh')}
-          onEndReached={() => void load('append')}
-          onRetryRefresh={() => void load('refresh')}
-          onRetryAppend={() => void load('append')}
-          restoredScrollOffset={restoredScrollOffset}
-          onScrollOffset={persistScrollOffset}
-          labels={{
-            empty: {
-              kind: 'firstRun',
-              title: t('me.posts.empty.title'),
-              description: t('me.posts.empty.description'),
-              actionLabel: t('me.posts.empty.action'),
-              onAction: () => router.push('/publish-center'),
-            },
-            errorActionLabel: t('action.retry'),
-            retryLabel: t('action.retry'),
-            endLabel: t('mailbox.conversations.end'),
-          }}
-          renderItem={(row) => (
-            <View
-              testID={`me-post-${row.id}`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space('space_1') }}
-            >
-              <View style={{ flex: 1 }}>
-                {/* ⛔ 行不可点：帖子详情（C-02）是丙的页面，App 里还没有这个路由 */}
-                <EntityCard
-                  domain="post"
-                  title={postExcerpt(row.excerpt, t('me.posts.noText'))}
-                  subtitle={t('me.posts.meta', { likes: row.likeCount, comments: row.commentCount })}
-                  mediaUri={row.imageUri ?? undefined}
-                />
-              </View>
-              <IconButton
-                testID={`me-post-delete-${row.id}`}
-                Icon={Trash}
-                accessibilityLabel={t('me.posts.delete')}
-                onPress={() => setPendingDelete(row)}
+    <View style={{ flex: 1 }} testID="me-content-pane-posts">
+      <ListScreen
+        testID="me-posts-list"
+        data={rows}
+        keyExtractor={(item) => String(item.id)}
+        pagination={pagination}
+        onRefresh={() => void load('refresh')}
+        onEndReached={() => void load('append')}
+        onRetryRefresh={() => void load('refresh')}
+        onRetryAppend={() => void load('append')}
+        restoredScrollOffset={restoredScrollOffset}
+        onScrollOffset={persistScrollOffset}
+        labels={{
+          empty: {
+            kind: 'firstRun',
+            title: t('me.posts.empty.title'),
+            description: t('me.posts.empty.description'),
+            actionLabel: t('me.posts.empty.action'),
+            onAction: () => router.push('/publish-center'),
+          },
+          errorActionLabel: t('action.retry'),
+          retryLabel: t('action.retry'),
+          endLabel: t('mailbox.conversations.end'),
+        }}
+        renderItem={(item) => (
+          <View
+            testID={`me-post-${item.id}`}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space('space_1') }}
+          >
+            <View style={{ flex: 1 }}>
+              {/* ⛔ 行不可点：帖子详情（C-02）是丙的页面，App 里还没有这个路由 */}
+              <EntityCard
+                domain="post"
+                title={postExcerpt(item.excerpt, t('me.posts.noText'))}
+                subtitle={t('me.posts.meta', { likes: item.likeCount, comments: item.commentCount })}
+                mediaUri={item.imageUri ?? undefined}
               />
             </View>
-          )}
-          />
-        </View> : <OwnedContentList key={selectedKey} kind={selectedKey} />}
-
+            <IconButton
+              testID={`me-post-delete-${item.id}`}
+              Icon={Trash}
+              accessibilityLabel={t('me.posts.delete')}
+              onPress={() => setPendingDelete(item)}
+            />
+          </View>
+        )}
+      />
       <AlertDialog
         testID="me-posts-delete-dialog"
         visible={pendingDelete !== null}
@@ -186,55 +184,64 @@ export function PostsScreen(): React.ReactElement {
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmDelete()}
       />
-    </Screen>
+    </View>
   );
 }
 
-function OwnedContentList({ kind }: { kind: Exclude<ContentKey, 'posts'> }): React.ReactElement {
+function MeOwnedPane({
+  kind,
+  active,
+}: {
+  kind: Exclude<MeContentKey, 'posts'>;
+  active: boolean;
+}): React.ReactElement {
   const { t } = useI18n();
   const router = useRouter();
   const [rows, setRows] = React.useState<readonly ContentRow[]>([]);
   const pageRef = React.useRef(0);
+  const loadedRef = React.useRef(false);
   const { pagination, dispatch, restoredScrollOffset, persistScrollOffset } = useListPagination({
     scope: { primaryTab: 'me', secondaryTab: kind },
   });
 
-  const load = React.useCallback(async (mode: 'refresh' | 'append') => {
-    dispatch({ type: mode === 'refresh' ? 'refresh:start' : 'append:start' });
-    try {
-      const page = mode === 'refresh' ? 1 : pageRef.current + 1;
-      let nextRows: readonly ContentRow[];
-      let hasMore: boolean;
-      if (kind === 'marketplace') {
-        const result = readMarketPage(await listMarketplaceMyItems({ page, pageSize: PAGE_SIZE }));
-        nextRows = result.rows;
-        hasMore = result.hasMore;
-      } else if (kind === 'errands') {
-        const result = readErrandPage(await listMyErrands({ page, pageSize: PAGE_SIZE }));
-        nextRows = result.rows;
-        hasMore = result.hasMore;
-      } else {
-        const result = readMyReviewPage(await getMyProductReviews({ page, pageSize: PAGE_SIZE }));
-        nextRows = result.rows;
-        hasMore = result.hasMore;
+  const load = React.useCallback(
+    async (mode: 'refresh' | 'append') => {
+      dispatch({ type: mode === 'refresh' ? 'refresh:start' : 'append:start' });
+      try {
+        const page = mode === 'refresh' ? 1 : pageRef.current + 1;
+        let nextRows: readonly ContentRow[];
+        let hasMore: boolean;
+        if (kind === 'marketplace') {
+          const result = readMarketPage(await listMarketplaceMyItems({ page, pageSize: PAGE_SIZE }));
+          nextRows = result.rows;
+          hasMore = result.hasMore;
+        } else if (kind === 'errands') {
+          const result = readErrandPage(await listMyErrands({ page, pageSize: PAGE_SIZE }));
+          nextRows = result.rows;
+          hasMore = result.hasMore;
+        } else {
+          const result = readMyReviewPage(await getMyProductReviews({ page, pageSize: PAGE_SIZE }));
+          nextRows = result.rows;
+          hasMore = result.hasMore;
+        }
+        pageRef.current = page;
+        setRows((previous) => (mode === 'refresh' ? nextRows : mergeContentRows(previous, nextRows)));
+        dispatch({ type: mode === 'refresh' ? 'refresh:success' : 'append:success', hasMore });
+      } catch (error) {
+        dispatch({
+          type: mode === 'refresh' ? 'refresh:failure' : 'append:failure',
+          error: toMailboxError(error),
+        });
       }
-      pageRef.current = page;
-      setRows((previous) => (mode === 'refresh' ? nextRows : mergeContentRows(previous, nextRows)));
-      dispatch({ type: mode === 'refresh' ? 'refresh:success' : 'append:success', hasMore });
-    } catch (error) {
-      dispatch({
-        type: mode === 'refresh' ? 'refresh:failure' : 'append:failure',
-        error: toMailboxError(error),
-      });
-    }
-  }, [dispatch, kind]);
+    },
+    [dispatch, kind]
+  );
 
   React.useEffect(() => {
+    if (!active || loadedRef.current) return;
+    loadedRef.current = true;
     void load('refresh');
-    return () => {
-      pageRef.current = 0;
-    };
-  }, [load]);
+  }, [active, load]);
 
   const emptyCopy = {
     marketplace: ['me.content.marketplace.empty.title', 'me.content.marketplace.empty.description'],
@@ -244,7 +251,7 @@ function OwnedContentList({ kind }: { kind: Exclude<ContentKey, 'posts'> }): Rea
   const [titleKey, descriptionKey] = emptyCopy[kind];
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }} testID={`me-content-pane-${kind}`}>
       <ListScreen
         testID={`me-content-${kind}`}
         data={rows}
@@ -274,7 +281,10 @@ function OwnedContentList({ kind }: { kind: Exclude<ContentKey, 'posts'> }): Rea
   );
 }
 
-function mergeContentRows(previous: readonly ContentRow[], incoming: readonly ContentRow[]): ContentRow[] {
+function mergeContentRows(
+  previous: readonly ContentRow[],
+  incoming: readonly ContentRow[]
+): ContentRow[] {
   const seen = new Set(previous.map((row) => row.id));
   const merged = [...previous];
   for (const row of incoming) {
@@ -287,7 +297,7 @@ function mergeContentRows(previous: readonly ContentRow[], incoming: readonly Co
 
 function renderOwnedContentCard(
   row: ContentRow,
-  kind: Exclude<ContentKey, 'posts'>,
+  kind: Exclude<MeContentKey, 'posts'>,
   t: ReturnType<typeof useI18n>['t'],
   router: ReturnType<typeof useRouter>
 ): React.ReactElement {

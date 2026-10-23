@@ -170,42 +170,101 @@
 }
 
 /* ---------------------------------------------------------------- 课程列表 */
+/* 索引式列表：每一行是一门课，行内三列（课程 / 讲师 / 份数），不是一张卡片。
+ *
+ * ① 为什么去掉卡片：课程本身只有 课程名 / 讲师 / 份数 三个字段，用带边框+圆角+投影的
+ *    卡片装它们，等于给三个字段包一层壳 —— 信息密度低、上下留白多；而且外层 section
+ *    已经是玻璃卡片，里面再套一层就是「卡片里长卡片」，这是这页最扎眼的毛病。
+ *    现在改成无底色、无圆角、只有一条分隔线的行。
+ * ② 为什么不是「三列并排的课程」：实测这个站点的内容栏宽度上限只有 ~730px（1920 视口
+ *    下也是 730，两侧导航/侧栏吃掉其余宽度）。三列并排 → 每列 204~236px，
+ *    「SWE203-Human computer interaction」会被截成「SWE203-Human c…」。
+ *    所以把「三列」放在**行内**：课程名、讲师、份数各占一列，任何宽度都不截断主字段。 */
 .mat-course-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 8px;
 }
 
-.mat-course-card {
-  padding: 14px;
-  cursor: pointer;
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
-  display: block;
+.mat-course-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 34%) 64px;
+  grid-template-areas: "name lect count";
+  align-items: baseline;
+  column-gap: 14px;
+  padding: 11px 8px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  /* 圆角只服务于 hover 底色，不是卡片外壳 */
+  border-radius: 6px;
   text-decoration: none;
   color: inherit;
+  transition: background 0.14s ease;
 }
 
-.mat-course-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-2, 0 16px 36px rgba(15, 23, 42, 0.12));
+.mat-course-row:hover {
+  background: rgba(99, 102, 241, 0.07);
+}
+
+.mat-course-row:hover .mat-course-name {
+  color: #4338ca;
+}
+
+.mat-course-row:focus-visible {
+  outline: 2px solid var(--brand-2, #6366f1);
+  outline-offset: -2px;
 }
 
 .mat-course-name {
+  grid-area: name;
+  min-width: 0;
   font-size: 15px;
   font-weight: 800;
-  line-height: 1.4;
-  word-break: break-word;
+  line-height: 1.45;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.14s ease;
 }
 
-.mat-course-meta {
-  margin-top: 6px;
-  font-size: 12px;
+.mat-course-lecturer {
+  grid-area: lect;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
   color: rgba(15, 23, 42, 0.55);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mat-course-count {
+  grid-area: count;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: rgba(15, 23, 42, 0.45);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* 窄屏（手机）：讲师退到第二行，课程名允许最多两行，避免半个词被切开 */
+@media (max-width: 600px) {
+  .mat-course-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name count"
+      "lect lect";
+    row-gap: 3px;
+  }
+
+  .mat-course-name {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 }
 
 .mat-pill {
@@ -225,13 +284,16 @@
   color: rgba(15, 23, 42, 0.7);
 }
 
-/* ---------------------------------------------------------------- Tab */
+/* ---------------------------------------------------------------- Tab（下划线式） */
+/* 选中态用下划线而不是填充胶囊。理由：这页已经有填充控件（mat-btn / mat-pill），
+ * 再给 tab 一个渐变填充胶囊，「当前在哪」和「能点什么」就混成同一类视觉了；
+ * 下划线只标记位置，不抢注意力，横向滚动时也不会有胶囊被截断的尴尬。 */
 .mat-tabs {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   overflow-x: auto;
-  padding-bottom: 4px;
-  margin-top: 12px;
+  margin-top: 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
   scrollbar-width: none;
 }
 
@@ -241,22 +303,41 @@
 
 .mat-tab {
   flex: 0 0 auto;
-  height: 34px;
+  height: 42px;
   padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  background: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  font-size: 14px;
   font-weight: 700;
-  color: rgba(15, 23, 42, 0.7);
+  color: rgba(15, 23, 42, 0.55);
   cursor: pointer;
   white-space: nowrap;
+  transition: color 0.14s ease, border-color 0.14s ease;
 }
 
-.mat-tab--active {
-  background: linear-gradient(135deg, var(--brand-2, #6366f1), var(--brand-3, #8b5cf6));
-  border-color: transparent;
-  color: #fff;
+.mat-tab:hover:not(:disabled) {
+  color: #0f172a;
+  border-bottom-color: rgba(15, 23, 42, 0.2);
+}
+
+.mat-tab:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.55);
+  outline-offset: -2px;
+}
+
+.mat-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mat-tab--active,
+.mat-tab--active:hover:not(:disabled) {
+  background: transparent;
+  color: #4338ca;
+  /* 下划线与文字同色：换成 --brand-2 会得到一条比文字浅得多的蓝线，看着像两个状态 */
+  border-bottom-color: currentColor;
 }
 
 /* ---------------------------------------------------------------- 资料列表 */
@@ -502,6 +583,22 @@
   background: rgba(99, 102, 241, 0.12);
 }
 
+.mat-status-loader,
+.mat-step-loader {
+  animation: mat-status-spin 0.9s linear infinite;
+}
+
+.mat-status-note {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-left: 3px solid var(--brand-2, #6366f1);
+  border-radius: 0 var(--radius-sm, 8px) var(--radius-sm, 8px) 0;
+  background: rgba(99, 102, 241, 0.07);
+  color: rgba(49, 46, 129, 0.92);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .mat-step--done {
   color: #166534;
   font-weight: 700;
@@ -520,6 +617,17 @@
 .mat-step--fail .mat-step-dot {
   border-color: #ef4444;
   background: rgba(239, 68, 68, 0.12);
+}
+
+@keyframes mat-status-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mat-status-loader,
+  .mat-step-loader {
+    animation: none;
+  }
 }
 
 /* ---------------------------------------------------------------- 预览器 */

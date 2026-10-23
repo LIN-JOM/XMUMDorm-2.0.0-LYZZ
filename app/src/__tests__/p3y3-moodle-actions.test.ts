@@ -4,9 +4,10 @@ import { partitionMoodleDeadlines, planMoodleDeadlineReminders } from '@/feature
 
 const now = Date.parse('2026-10-11T00:00:00Z');
 const url = 'https://l.xmu.edu.my/mod/assign/view.php?id=101';
-const state = { courseId: 1, sections: [{ id: 1, number: 1, title: 'Week one', moduleIds: [101] }],
+const state = { courseId: 1, sections: [{ id: 1, number: 1, title: 'Week one', moduleIds: [101],
+  url: null, visible: true, current: false }],
   modules: [{ id: 101, sectionId: 1, type: 'assign', name: 'Assignment', url,
-    visible: true, userVisible: true, accessVisible: true }] };
+    visible: true, userVisible: true, accessVisible: true, restrictions: false, completion: null }] };
 beforeEach(() => clearMoodleCache());
 
 it('p3y3 projects official action fields through native memory cache without secrets', () => {

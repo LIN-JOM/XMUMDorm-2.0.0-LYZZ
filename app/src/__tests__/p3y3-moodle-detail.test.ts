@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { JSDOM } from 'jsdom';
 import { buildMoodleDetailReadScript, parseMoodleDetailMessage, authorizeMoodleDetail,
+  extractMoodleDetail, projectMoodleFileHeaders, safeMoodleReadUrl,
   type MoodleDetailRequest } from '@/features/tools/moodle/detail';
+import { EXTRACT_MOODLE_DETAIL_SOURCE, PROJECT_MOODLE_FILE_HEADERS_SOURCE,
+  SAFE_MOODLE_URL_SOURCE } from '@/features/tools/moodle/injected-sources';
 import { clearMoodleCache, moodleCacheGeneration, selectMoodleCourses, writeMoodleCache } from '@/features/tools/moodle/cache';
 
 const fixture = (name: string) => readFileSync(join(__dirname, 'fixtures/moodle/details', `${name}.html`), 'utf8');
@@ -10,7 +13,7 @@ const request = (kind: MoodleDetailRequest['kind']): MoodleDetailRequest => ({ k
   url: kind === 'discussion' ? 'https://l.xmu.edu.my/mod/forum/discuss.php?d=71'
     : `https://l.xmu.edu.my/mod/${kind}/view.php?id=101` });
 
-async function run(kind: MoodleDetailRequest['kind'], options: { redirect?: boolean; changedIdentity?: boolean } = {}) {
+async function run(kind: MoodleDetailRequest['kind'], options: { redirect?: boolean; changedIdentity?: boolean; fixtureName?: string } = {}) {
   const dom = new JSDOM(fixture('forum'), { url: 'https://l.xmu.edu.my/my/', runScripts: 'outside-only' });
   const messages: string[] = [];
   const win = dom.window;
@@ -19,7 +22,7 @@ async function run(kind: MoodleDetailRequest['kind'], options: { redirect?: bool
   const fetch = jest.fn(async (_url: string, init: { method: string }) => {
     if (options.changedIdentity) (win as unknown as { M: { cfg: { userId: number } } }).M.cfg.userId = 124;
     return { type: options.redirect ? 'opaqueredirect' : 'basic', status: options.redirect ? 0 : 200,
-      ok: !options.redirect, url: _url, text: async () => fixture(kind),
+      ok: !options.redirect, url: _url, text: async () => fixture(options.fixtureName ?? kind),
       headers: new Headers({ 'Content-Type': 'application/pdf; charset=UTF-8', 'Content-Length': '321',
         'Last-Modified': 'Sat, 10 Oct 2026 01:00:00 GMT', 'Content-Disposition': 'attachment; filename="notes.pdf"',
         'Set-Cookie': 'secret', ETag: 'private-hash', Location: 'https://outside.example/private' }) };
@@ -57,6 +60,25 @@ describe('p3y3 official-derived synthetic detail DOM and generated page command'
       submission: 'submitted', grading: 'not-graded', rows: expect.any(Array) } });
     expect(result).not.toHaveProperty('data.deadline');
   });
+  it('finds campus 4.x folder files whether the filename element is the anchor or wraps one', async () => {
+    const { result } = await run('folder', { fixtureName: 'folder-real' });
+    expect(result).toMatchObject({ status: 'success', data: { kind: 'folder',
+      files: [{ name: 'brief.pdf' }, { name: 'notes.pdf' }] } });
+  });
+  it('reads the campus assign activity dates and submission attachments', async () => {
+    const { result } = await run('assign', { fixtureName: 'assign-real' });
+    expect(result).toMatchObject({ status: 'success', data: { kind: 'assign',
+      submission: 'submitted', grading: 'not-graded',
+      activityDates: expect.stringContaining('Due: Sunday, 28 December 2025'),
+      attachments: [{ name: 'hw.pdf',
+        url: 'https://l.xmu.edu.my/pluginfile.php/9/mod_assign/submission_files/100/hw.pdf' }] } });
+  });
+  it('finds the campus 4.x resource link outside the legacy resourceworkaround wrapper', async () => {
+    const { result, fetch } = await run('resource', { fixtureName: 'resource-real' });
+    expect(fetch.mock.calls.map((call) => call[1].method)).toEqual(['GET', 'HEAD']);
+    expect(result).toMatchObject({ status: 'success', data: { kind: 'resource',
+      file: { name: 'notes.pdf', mimeType: 'application/pdf' } } });
+  });
   it('reads folder file links without directory or archive actions', async () => {
     const { result } = await run('folder');
     expect(result).toMatchObject({ status: 'success', data: { files: [{ name: 'brief.pdf' }] } });
@@ -87,5 +109,53 @@ describe('p3y3 official-derived synthetic detail DOM and generated page command'
     expect(authorizeMoodleDetail({ ...request('assign'), moduleId: 102 })).toBe(false);
     expect(authorizeMoodleDetail({ ...request('assign'), url: 'https://l.xmu.edu.my/mod/assign/view.php?id=102' })).toBe(false);
     expect(authorizeMoodleDetail(request('discussion'))).toBe(false);
+  });
+});
+
+describe('injected literal sources match the native reference implementations', () => {
+  const evaluate = <T,>(source: string, dependencies: Record<string, unknown> = {}): T => {
+    const names = Object.keys(dependencies);
+    const values = names.map((name) => dependencies[name]);
+    return new Function(...names, `return (${source});`)(...values) as T;
+  };
+  const literalSafe = evaluate<typeof safeMoodleReadUrl>(SAFE_MOODLE_URL_SOURCE);
+  const literalExtract = evaluate<typeof extractMoodleDetail>(EXTRACT_MOODLE_DETAIL_SOURCE,
+    { safeMoodleReadUrl: literalSafe });
+  const literalHeaders = evaluate<typeof projectMoodleFileHeaders>(PROJECT_MOODLE_FILE_HEADERS_SOURCE);
+
+  const urls = [
+    'https://l.xmu.edu.my/mod/assign/view.php?id=101',
+    'https://l.xmu.edu.my/mod/assign/view.php?id=101&action=submit',
+    'https://l.xmu.edu.my/mod/forum/discuss.php?d=71',
+    'https://l.xmu.edu.my/mod/forum/discuss.php?d=71#p81',
+    'https://l.xmu.edu.my/course/view.php?id=42',
+    'https://outside.example/mod/assign/view.php?id=1',
+    'https://l.xmu.edu.my/pluginfile.php/9/mod_assign/submission_files/100/hw.pdf',
+    'https://l.xmu.edu.my/pluginfile.php/9/mod_resource/content/1/notes.pdf',
+    'https://l.xmu.edu.my/pluginfile.php/9/mod_folder/content/1/notes.pdf',
+  ] as const;
+
+  it('keeps the read-only URL whitelist byte-identical for pages and files', () => {
+    for (const url of urls) {
+      expect(literalSafe(url)).toBe(safeMoodleReadUrl(url));
+      expect(literalSafe(url, true)).toBe(safeMoodleReadUrl(url, true));
+    }
+  });
+
+  it('extracts identical details from the four synthetic fixture kinds', () => {
+    for (const kind of ['forum', 'discussion', 'assign', 'folder', 'resource'] as const) {
+      const dom = new JSDOM(`<body>${fixture(kind)}</body>`);
+      const root = dom.window.document;
+      expect(literalExtract(request(kind), root)).toEqual(extractMoodleDetail(request(kind), root));
+      dom.window.close();
+    }
+  });
+
+  it('projects identical file headers', () => {
+    const file = { name: 'notes.pdf', url: 'https://l.xmu.edu.my/pluginfile.php/9/mod_resource/content/1/notes.pdf',
+      mimeType: null, size: null, modifiedAt: null };
+    const headers = new Headers({ 'Content-Type': 'application/pdf; charset=UTF-8', 'Content-Length': '321',
+      'Last-Modified': 'Sat, 10 Oct 2026 01:00:00 GMT', 'Content-Disposition': 'attachment; filename="notes.pdf"' });
+    expect(literalHeaders(file, headers)).toEqual(projectMoodleFileHeaders(file, headers));
   });
 });
