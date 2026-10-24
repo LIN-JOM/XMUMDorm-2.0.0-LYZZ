@@ -176,7 +176,7 @@ export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
       };
     }
     return clampToThrowBounds(pos, boundsNow());
-  }, [pet.position, size, h, boundsNow]);
+  }, [pet.id, pet.position, size, h, boundsNow]);
 
   /** Q 弹挤压：force > 0 = 点击回应（固定幅度）；force < 0 = 落地冲击（按 |force| 速度映射幅度） */
   const runSquash = useCallback((force) => {
@@ -607,14 +607,14 @@ export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
       applyPos();
     };
     window.addEventListener('resize', onResize);
+    // dragRef.current 自初始化后只改字段不换对象，挂载时捕获即可安全用于清理
+    const drag = dragRef.current;
     return () => {
       window.removeEventListener('resize', onResize);
       if (endedTimerRef.current) clearTimeout(endedTimerRef.current);
       if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
-      if (dragRef.current.lpTimer) clearTimeout(dragRef.current.lpTimer);
-      dragFollowTokenRef.current++;
-      throwTokenRef.current++;
-      moveTokenRef.current++;
+      if (drag && drag.lpTimer) clearTimeout(drag.lpTimer);
+      // rAF 直接取消即可终止各运动循环；无需再动 token（那是给运行期换源竞态用的）
       if (dragFollowRef.current !== null) cancelAnimationFrame(dragFollowRef.current);
       if (throwRef.current !== null) cancelAnimationFrame(throwRef.current);
       if (moveRef.current !== null) cancelAnimationFrame(moveRef.current);
@@ -657,7 +657,6 @@ export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
             <AnimLayer layer={layer} onReady={handleReady} onError={handleVideoError} />
           </div>
         ))}
-        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
         <div
           className="pet-hit"
           style={hitStyle}
@@ -679,8 +678,7 @@ export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
       {menu && (
         <>
           {/* 点外关闭：全屏背板接住指针，点它 = 关菜单（不把这一次点击透给页面） */}
-          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-          <div
+            <div
             className="pet-menu-backdrop"
             onPointerDown={(e) => {
               e.preventDefault();
