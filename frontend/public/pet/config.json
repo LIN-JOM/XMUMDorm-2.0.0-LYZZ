@@ -1,0 +1,59 @@
+{
+  "_comment": [
+    "Web 桌宠配置（结构复刻 dsh-pet 的 assets/config.jsonc，运行时由 PetOverlay fetch 本文件；",
+    "字段缺失/写错回落内置默认值 frontend/src/pet/engine/config.js）。改完刷新页面即生效。",
+    "",
+    "source: 'video' = 播放 main-animation/webm/ 下的 VP9-Alpha 透明 webm（动画名 = 文件名）。",
+    "素材由 AI 视频生成（Vidu）+ scripts/pet/pet_pipeline.py 素材链产出（360×360 方形归一：",
+    "站立高 312 / 脚底 350 / 水平居中；六点键色 colorkey 抠像 + alpha 硬化）。",
+    "",
+    "当前映射（动画名 = webm 文件名）：",
+    "  idle   东张西望（长期方案：专属「待机呼吸」素材搁置，暂无生成预算；轻声细语因灰影",
+    "        严重已整体下线，见实现记录第五轮）",
+    "  turn   东张西望（转向：播完翻转朝向）  drag 被吓一跳（被抓起的惊吓反馈，长期方案）",
+    "  clicks 跳起来/害羞/生气傲娇/挥手打招呼  move 螃蟹走（真实位移）",
+    "  categories 小动作=伸懒腰/睡觉 玩耍=玩魔方  events.whisper 空 = 碎碎念只弹气泡不切动画",
+    "双语：pets[].name/nameEn（中/英显示名）、categories[].labelEn、whisper.phrases/phrasesEn",
+    "  按站点 LanguageContext 的 lang 取；英文池缺失时回落中文池。动作名 = 文件名，不翻译。",
+    "physics/animationWeights/moves 参数语义与 dsh-pet 完全一致（见 Web桌宠设计.md）。"
+  ],
+  "source": "video",
+  "assetRoot": "main-animation",
+  "animationWeights": { "idle": 10, "turn": 5, "move": 5 },
+  "eventsRefreshSec": { "whisper": 180 },
+  "physics": {
+    "gravity": 1400,
+    "restitution": 0.78,
+    "groundFriction": 2.5,
+    "ceilingBounce": true,
+    "throwPower": 1.0
+  },
+  "pets": [
+    {
+      "id": "main",
+      "name": "铃湾",
+      "nameEn": "Cornie",
+      "size": 240,
+      "fixedEnabled": false,
+      "display": "both",
+      "position": { "corner": "bottom-right", "marginX": 24, "marginY": 24 }
+    }
+  ],
+  "animations": {
+    "idle": ["东张西望"],
+    "turn": ["东张西望"],
+    "drag": ["被吓一跳"],
+    "clicks": ["跳起来", "害羞", "生气傲娇", "挥手打招呼"],
+    "moves": {
+      "default": { "minDist": 60, "maxDist": 240, "margin": 20, "leadSec": 1.2, "tailSec": 1.5 },
+      "actions": [{ "name": "螃蟹走" }]
+    },
+    "categories": [
+      { "id": "小动作", "labelEn": "Little moves", "weight": 45, "actions": ["伸懒腰", "睡觉"] },
+      { "id": "玩耍", "labelEn": "Play", "weight": 35, "actions": ["玩魔方", "挥手打招呼", "跳起来"] }
+    ],
+    "events": {
+      "whisper": []
+    }
+  }
+}

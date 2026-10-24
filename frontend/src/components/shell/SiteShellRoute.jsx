@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import Layout from '../Layout';
 import SiteWebShell from './SiteWebShell';
 import { ShellAsideProvider } from '../../context/ShellAsideContext';
+import PetOverlay from '../pet/PetOverlay';
+import '../pet/pet.css';
 
 const TABLET_MIN_WIDTH = 768;
 const DESKTOP_MIN_WIDTH = 1024;
@@ -41,6 +43,7 @@ export default function SiteShellRoute() {
     return (
       <ShellAsideProvider>
         <Layout mode="mobile" />
+        <PetOverlay />
       </ShellAsideProvider>
     );
   }
@@ -60,6 +63,7 @@ export default function SiteShellRoute() {
       >
         <Layout mode="desktop" />
       </SiteWebShell>
+      <PetOverlay />
     </ShellAsideProvider>
   );
 }
