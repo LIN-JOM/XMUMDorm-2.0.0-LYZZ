@@ -66,3 +66,10 @@ data/materials-index.cache.json
 
 # Local shop runtime and generated credentials
 .local/
+
+# Web 桌宠（铃湾 Cornie）
+# AI 生成的绿幕源片母带（~30MB，仅本机保留）：重制 webm 走 scripts/pet/pet_pipeline.py
+frontend/public/pet/video/*
+!frontend/public/pet/video/README.md
+# 素材链临时目录
+frontend/public/pet/main-animation/webm/.pipeline-tmp/
