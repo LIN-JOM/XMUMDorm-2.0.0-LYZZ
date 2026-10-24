@@ -181,6 +181,14 @@
   font-weight: 600;
 }
 
+/* ---------------- 认证页吉祥物槽位（PetAnchorSlot 的占位） ---------------- */
+
+.pet-anchor-slot {
+  width: 100%;
+  max-width: 15rem;
+  aspect-ratio: 1;
+}
+
 /* ---------------- 召唤星（隐藏后的唤回入口） ---------------- */
 
 .pet-summon {

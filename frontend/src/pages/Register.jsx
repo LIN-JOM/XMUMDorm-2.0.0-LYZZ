@@ -5,7 +5,7 @@ import { getApiErrorMessage } from '@shared/utils/apiError';
 import { useLanguage } from '../context/LanguageContextState';
 import { sendVerificationCode, register as apiRegister } from '@shared/api/auth';
 import AuthPageShell from '../components/auth/AuthPageShell';
-import MascotHero from '../components/auth/MascotHero';
+import PetAnchorSlot from '../components/pet/PetAnchorSlot';
 import LoginCard from '../components/auth/LoginCard';
 import InputField from '../components/auth/InputField';
 import Button from '../components/auth/Button';
@@ -112,7 +112,7 @@ function Register() {
         className="flex min-h-0 w-full max-w-4xl flex-1 flex-col items-center"
       >
         <div className="flex w-full min-h-0 flex-1 flex-col items-center gap-3">
-          <MascotHero compact />
+          <PetAnchorSlot />
           <LoginCard className="!border-0 flex w-full max-w-none flex-1 flex-col rounded-[1.25rem] px-6 pb-5 pt-5 sm:px-12 sm:pb-7 sm:pt-7 min-h-[28rem] sm:min-h-[30rem]">
             <div
               className="relative mb-4 flex w-full gap-0 rounded-full bg-slate-100 p-1"

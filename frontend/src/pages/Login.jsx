@@ -8,7 +8,7 @@ import { Toast } from '../context/toast';
 import { getApiErrorMessage } from '@shared/utils/apiError';
 import AuthPageShell from '../components/auth/AuthPageShell';
 import AuthCardBrandHeader from '../components/auth/AuthCardBrandHeader';
-import MascotHero from '../components/auth/MascotHero';
+import PetAnchorSlot from '../components/pet/PetAnchorSlot';
 import LoginCard from '../components/auth/LoginCard';
 import InputField from '../components/auth/InputField';
 import Button from '../components/auth/Button';
@@ -66,7 +66,7 @@ function Login() {
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="flex w-full max-w-md flex-col items-center gap-3"
       >
-        <MascotHero />
+        <PetAnchorSlot />
         <LoginCard>
           <AuthCardBrandHeader title="XMUMDorm" />
           <form className="mt-0 space-y-4" onSubmit={handleSubmit}>

@@ -85,7 +85,7 @@ function AnimLayer({ layer, onReady, onError }) {
  * 与 dsh-pet 的差异（按本项目要求）：**拖拽目标与松手落点钳进 throwBounds**（身体贴视口边
  * 为止，拖不出屏幕）——dsh-pet 原版允许拖出界（它有桌面端全局坐标，我们没有）。
  */
-export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
+export default function PetCard({ cfg, pet, lang = 'zh', anchorEl = null, onHide }) {
   const physics = cfg.physics || DEFAULT_PHYSICS;
   const size = pet.size;
   const h = size * PET_BOX_ASPECT;
@@ -151,12 +151,21 @@ export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
   }, [squashTick]);
 
   const persistPos = useCallback(() => {
+    if (anchorEl) return; // 锚定挂载（认证页）：不落盘，与主壳桌宠的位置存储互不干扰
     try {
       window.localStorage.setItem(POS_STORAGE_PREFIX + pet.id, JSON.stringify(boxPxRef.current));
     } catch { /* 隐私模式等场景 localStorage 不可用：静默跳过 */ }
-  }, [pet.id]);
+  }, [anchorEl, pet.id]);
 
   const initialPos = useCallback(() => {
+    // 锚定挂载：初始位置 = 锚槽中心的视口坐标（不读存档——认证页的宠物是无状态的）
+    if (anchorEl && anchorEl.current) {
+      const r = anchorEl.current.getBoundingClientRect();
+      return clampToThrowBounds(
+        { x: r.left + (r.width - size) / 2, y: r.top + (r.height - h) / 2 },
+        boundsNow(),
+      );
+    }
     let pos = null;
     try {
       const saved = window.localStorage.getItem(POS_STORAGE_PREFIX + pet.id);
@@ -176,7 +185,7 @@ export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
       };
     }
     return clampToThrowBounds(pos, boundsNow());
-  }, [pet.id, pet.position, size, h, boundsNow]);
+  }, [anchorEl, pet.id, pet.position, size, h, boundsNow]);
 
   /** Q 弹挤压：force > 0 = 点击回应（固定幅度）；force < 0 = 落地冲击（按 |force| 速度映射幅度） */
   const runSquash = useCallback((force) => {
@@ -603,7 +612,12 @@ export default function PetCard({ cfg, pet, lang = 'zh', onHide }) {
     applyTransform();
     startChain();
     const onResize = () => {
-      boxPxRef.current = clampToThrowBounds(boxPxRef.current, boundsNow());
+      // 锚定挂载跟随锚槽走（认证页布局变化）；自由挂载只夹回视口
+      if (anchorEl && anchorEl.current) {
+        boxPxRef.current = initialPos();
+      } else {
+        boxPxRef.current = clampToThrowBounds(boxPxRef.current, boundsNow());
+      }
       applyPos();
     };
     window.addEventListener('resize', onResize);
