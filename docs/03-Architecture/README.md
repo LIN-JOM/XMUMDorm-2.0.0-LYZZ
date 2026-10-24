@@ -9,4 +9,5 @@
 | [product-architecture/](./product-architecture) | 技术选型和产品能力设计 |
 | [校园商城店铺管理与收款设计](./product-architecture/校园商城店铺管理与收款设计.md) | 店铺删除、收款配置和本地清理计划 |
 | [frontend-design/](./frontend-design) | 前端设计体系 |
+| [商城优惠券设计与实施计划](./product-architecture/商城优惠券设计与实施计划.md) | 单店固定金额券、服务端计价、核销与待审实施计划 |
 | [navigation/](./navigation) | 代码导航和功能到文件的索引 |

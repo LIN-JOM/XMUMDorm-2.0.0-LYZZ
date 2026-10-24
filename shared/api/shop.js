@@ -33,6 +33,11 @@ return {
   deleteStore: id => request(`/api/shop/admin/stores/${id}`, { method: 'DELETE' }),
   adminOrders: filters => request(`${base}/admin/orders?${new URLSearchParams(Object.entries(filters).filter(([,v]) => v))}`),
   status: (id, status) => request(`${base}/admin/orders/${id}/status`, { method: 'PATCH', body: { status } }),
+  quote: body => request(`${base}/checkout-quote`,{method:'POST',body}),
+  coupons: (page=1) => request(`${base}/admin/coupons?page=${page}`),
+  createCoupon: (body,key) => request(`${base}/admin/coupons`,{method:'POST',body,headers:{'Idempotency-Key':key}}),
+  couponStatus: (id,status) => request(`${base}/admin/coupons/${id}/status`,{method:'PATCH',body:{status}}),
+  couponRedemptions: (id,page=1) => request(`${base}/admin/coupons/${id}/redemptions?page=${page}`),
 };
 }
 export const shopApi = createShopApi();
